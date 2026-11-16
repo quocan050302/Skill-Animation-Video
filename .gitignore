@@ -1,0 +1,45 @@
+# Bytecode & Python environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# OS & editor files
+.DS_Store
+*.swp
+*.swo
+
+# Local machine Antigravity symlink
+.agents/
+
+# Node / Playwright caches & dependencies
+node_modules/
+vendor/claude-animation-skills/kit/node_modules/
+vendor/claude-animation-skills/kit/.venv/
+vendor/claude-animation-skills/kit/models/
+vendor/claude-animation-skills/kit/vendor/
+
+# Rendered outputs, run directories & media artifacts
+runs/
+*.mp4
+*.part.mp4
+*.mov
+*.mkv
+*.wav
+*.aiff
+*.m4a
+*.srt
+*.log
+*.tmp
+/final_4k.mp4
+/preview_1080.mp4
+/art_bible.md
+/qc_report.json
+/run_manifest.json
+/storyboard.json
+/style_decisions.json
+/style_lock_audit.json
+/contact_sheet.jpg

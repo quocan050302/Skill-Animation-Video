@@ -1,0 +1,19 @@
+{
+  "name": "short-director",
+  "displayName": "Short Director",
+  "version": "0.2.0",
+  "description": "Single-engine vertical shorts director (9:16, 1080p preview + 2160x3840 4K delivery) with strict fail-closed style locking, bespoke procedural animation, voiceover alignment, sound design, and technical QA.",
+  "logo": "assets/logo.svg",
+  "author": {
+    "name": "Short Director Engineering"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/artemnovitckii/claude-animation-skills"
+  },
+  "suggestedPrompts": [
+    "/short-director --skill stick-figure Why does a 20-minute power nap sharpen your memory while a 60-minute nap makes you groggy?",
+    "/short-director --skill graph Open-source stars climbed from 400 in Q1 to 1,900 in Q2, 11,000 in Q3, and 48,000 in Q4",
+    "/short-director --skill breakdown Mechanical keyboard switch anatomy: keycap, cross stem, housing top, actuation leaf, coil spring, nylon base"
+  ]
+}

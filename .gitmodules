@@ -1,0 +1,3 @@
+[submodule "vendor/claude-animation-skills"]
+	path = vendor/claude-animation-skills
+	url = https://github.com/artemnovitckii/claude-animation-skills.git

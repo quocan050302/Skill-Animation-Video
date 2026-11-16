@@ -1,0 +1,1344 @@
+"""Single-Engine Adapter for `zach-d-films` (3D Cartoon Three.js Studio Explainer).
+
+Uses ONLY:
+- `vendor/claude-animation-skills/skills/zach-d-films/engine/src/{anim.js,human.js,props.js,materials.js,textures.js}`
+- Shared `kit/node_modules/three` and `@fontsource/montserrat`
+- Bespoke procedural 3D modules generated solely inside `engine_work/src/` (`novel_props.js`, `shots.js`, `director_main.js`).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+from pathlib import Path
+from typing import Any, Dict, List
+
+
+NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
+import { materials } from './materials.js';
+import { rng, woodTexture } from './textures.js';
+
+function shadow(o) {
+  o.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+  return o;
+}
+
+export function forcePedestal() {
+  const M = materials();
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.92, 36), M.steelDark);
+  base.position.y = 0.46;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.44, 0.06, 36), M.steelBright);
+  top.position.y = 0.95;
+  g.add(base, top);
+  return shadow(g);
+}
+
+export function energyCore(accentHex = 0x3fa9f5) {
+  const g = new THREE.Group();
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: accentHex, emissive: accentHex, emissiveIntensity: 0.65, roughness: 0.2, metalness: 0.1
+  });
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 3), coreMat);
+  const ringMat = new THREE.MeshStandardMaterial({ color: 0xd8dee9, metalness: 0.9, roughness: 0.25 });
+  const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.016, 12, 64), ringMat);
+  const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.014, 12, 64), ringMat);
+  r2.rotation.x = Math.PI / 2;
+  g.add(core, r1, r2);
+  g.core = core; g.r1 = r1; g.r2 = r2;
+  return shadow(g);
+}
+
+export function cutawaySlabStack() {
+  const M = materials();
+  const g = new THREE.Group();
+  const layers = [
+    [0.52, 0.06, 0.52, M.steelBright],
+    [0.48, 0.09, 0.48, M.copper],
+    [0.52, 0.08, 0.52, M.steelDark],
+  ];
+  g.layers = [];
+  layers.forEach(([w, h, d, mat]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    g.add(m);
+    g.layers.push(m);
+  });
+  return shadow(g);
+}
+
+// ---------- Procedural Seeded Textures for Bespoke Roman Props ----------
+function makeSandTexture(seed = 17) {
+  const r = rng(seed);
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(256, 256, 20, 256, 256, 256);
+  grad.addColorStop(0, '#e6c696');
+  grad.addColorStop(0.65, '#d8b482');
+  grad.addColorStop(1, '#c59e6a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 4200; i++) {
+    const x = r() * 512, y = r() * 512;
+    const shade = r() < 0.5 ? 245 : 155;
+    ctx.fillStyle = `rgba(${shade}, ${Math.round(shade * 0.82)}, ${Math.round(shade * 0.58)}, ${0.08 + r() * 0.14})`;
+    ctx.fillRect(x, y, 1.5 + r() * 2.5, 1.5 + r() * 2.5);
+  }
+  ctx.strokeStyle = 'rgba(130, 95, 55, 0.16)';
+  ctx.lineWidth = 3;
+  for (let rad = 50; rad <= 230; rad += 38) {
+    ctx.beginPath();
+    ctx.arc(256, 256, rad, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function makeScutumTexture(emblemHex = '#f4c430') {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 384;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#8b1e24';
+  ctx.fillRect(0, 0, 256, 384);
+  ctx.strokeStyle = emblemHex;
+  ctx.lineWidth = 10;
+  ctx.strokeRect(14, 14, 228, 356);
+  ctx.fillStyle = emblemHex;
+  for (const sy of [-1, 1]) {
+    ctx.save();
+    ctx.translate(128, 192 + sy * 88);
+    ctx.scale(1, sy);
+    ctx.beginPath();
+    ctx.moveTo(0, -18); ctx.lineTo(64, -46); ctx.lineTo(42, -8); ctx.lineTo(74, 12); ctx.lineTo(14, 6);
+    ctx.lineTo(0, 32); ctx.lineTo(-14, 6); ctx.lineTo(-74, 12); ctx.lineTo(-42, -8); ctx.lineTo(-64, -46);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeTabletTexture(headerTxt, bigTxt, bgHex = '#2a211b', borderHex = '#d9a441', bigColor = '#ffd166') {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 340;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = bgHex;
+  ctx.fillRect(0, 0, 512, 340);
+  ctx.strokeStyle = borderHex;
+  ctx.lineWidth = 16;
+  ctx.strokeRect(14, 14, 484, 312);
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(28, 28, 456, 284);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Auto-scale text cleanly inside tablet safe padding (420px max width) so long words NEVER clip!
+  const fitFont = (txt, startPx) => {
+    let sz = startPx;
+    while (sz > 28) {
+      ctx.font = `700 ${sz}px Cap, sans-serif`;
+      if (ctx.measureText(txt).width <= 420) break;
+      sz -= 4;
+    }
+  };
+
+  ctx.fillStyle = '#e9dec9';
+  fitFont(headerTxt, 42);
+  ctx.fillText(headerTxt, 256, 102);
+
+  ctx.fillStyle = bigColor;
+  fitFont(bigTxt, 92);
+  ctx.fillText(bigTxt, 256, 224);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+let _romanMats = null;
+export function romanMaterials() {
+  if (_romanMats) return _romanMats;
+  const sandTex = makeSandTexture(42);
+  const woodTex = woodTexture(19);
+  _romanMats = {
+    sand: new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.94, metalness: 0.02 }),
+    travertine: new THREE.MeshStandardMaterial({ color: 0xe3d2b4, roughness: 0.86, metalness: 0.04 }),
+    travertineDark: new THREE.MeshStandardMaterial({ color: 0xbda682, roughness: 0.9 }),
+    bronze: new THREE.MeshPhysicalMaterial({ color: 0xd49a45, metalness: 0.92, roughness: 0.28, clearcoat: 0.2 }),
+    gold: new THREE.MeshPhysicalMaterial({ color: 0xf4c430, metalness: 0.96, roughness: 0.18, emissive: 0x3b2600, emissiveIntensity: 0.25 }),
+    silver: new THREE.MeshPhysicalMaterial({ color: 0xdbe2ea, metalness: 0.94, roughness: 0.22 }),
+    crimson: new THREE.MeshStandardMaterial({ color: 0xa4161a, roughness: 0.72 }),
+    darkWood: new THREE.MeshStandardMaterial({ map: woodTex, color: 0x6f4528, roughness: 0.8 }),
+    leatherWrap: new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.7 }),
+    scutumFace: new THREE.MeshStandardMaterial({ map: makeScutumTexture('#f4c430'), roughness: 0.55, metalness: 0.15, side: THREE.DoubleSide }),
+  };
+  return _romanMats;
+}
+
+// Add leather/bronze gladiator wrist bracers ('manica') cleanly covering human wrist seam
+export function addGladiatorBracers(human) {
+  const RM = romanMaterials();
+  for (const side of ['lWr', 'rWr']) {
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.044, 0.11, 18), RM.leatherWrap);
+    cuff.position.y = 0.015;
+    cuff.castShadow = cuff.receiveShadow = true;
+    human.j[side].add(cuff);
+  }
+}
+
+// Fluted Roman travertine plinth pedestal (grounded on arena floor)
+export function romanPlinth(height = 0.72, topR = 0.30) {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(topR * 2.2, 0.10, topR * 2.2), RM.travertineDark);
+  base.position.y = 0.05;
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(topR * 0.78, topR * 0.90, height - 0.18, 20), RM.travertine);
+  col.position.y = 0.10 + (height - 0.18) * 0.5;
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(topR * 2.15, 0.09, topR * 2.15), RM.travertine);
+  cap.position.y = height - 0.045;
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(topR * 0.85, 0.018, 10, 28), RM.bronze);
+  trim.rotation.x = Math.PI / 2;
+  trim.position.y = height - 0.09;
+  g.add(base, col, cap, trim);
+  return shadow(g);
+}
+
+// Roman wooden combat training post ('palus') driven into the arena sand
+export function trainingPalus() {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.08, 24), RM.travertineDark);
+  base.position.y = 0.04;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 1.52, 20), RM.darkWood);
+  post.position.y = 0.80;
+  for (const y of [0.55, 0.95, 1.32]) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.092, 0.014, 8, 24), RM.bronze);
+    band.rotation.x = Math.PI / 2;
+    band.position.y = y;
+    g.add(band);
+  }
+  const top = new THREE.Mesh(new THREE.SphereGeometry(0.09, 20, 14), RM.darkWood);
+  top.position.y = 1.56;
+  g.add(base, post, top);
+  return shadow(g);
+}
+
+// Roman Coliseum sandy floor + distant curved stone arcade
+export function arenaStage({ radius = 4.6, wallArc = true } = {}) {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const floor = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius + 0.15, 0.08, 64), RM.sand);
+  floor.position.y = -0.041;
+  floor.receiveShadow = true;
+  g.add(floor);
+
+  const curb = new THREE.Mesh(new THREE.TorusGeometry(radius - 0.12, 0.11, 12, 64), RM.travertine);
+  curb.rotation.x = Math.PI / 2;
+  curb.position.y = 0.02;
+  curb.receiveShadow = true;
+  g.add(curb);
+
+  if (wallArc) {
+    const wallR = radius + 0.95;
+    const count = 9;
+    for (let i = 0; i < count; i++) {
+      const a = Math.PI + ((i / (count - 1)) - 0.5) * 1.95;
+      const px = Math.sin(a) * wallR, pz = Math.cos(a) * wallR;
+      const pil = new THREE.Mesh(new THREE.BoxGeometry(0.46, 2.6, 0.42), RM.travertine);
+      pil.position.set(px, 1.3, pz);
+      pil.lookAt(0, 1.3, 0);
+      pil.castShadow = pil.receiveShadow = true;
+      g.add(pil);
+      if (i < count - 1) {
+        const a2 = Math.PI + (((i + 0.5) / (count - 1)) - 0.5) * 1.95;
+        const lx = Math.sin(a2) * wallR, lz = Math.cos(a2) * wallR;
+        const span = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.42, 0.36), RM.travertineDark);
+        span.position.set(lx, 2.38, lz);
+        span.lookAt(0, 2.38, 0);
+        g.add(span);
+      }
+    }
+  }
+  return g;
+}
+
+// Roman Imperial Galea Helmet: sits high cleanly above eyes & eyebrows (eyes 100% visible!)
+export function romanHelmet(crestHex = 0xb81d24) {
+  const RM = romanMaterials();
+  const M = materials();
+  const g = new THREE.Group();
+  // Upper bowl ends at phi = 0.44 * PI so it leaves eyes (y=0.11) & brows (y=0.134) unobstructed!
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.124, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.44), RM.bronze);
+  dome.position.set(0, 0.134, -0.008);
+  dome.scale.set(0.98, 1.15, 1.08);
+  dome.rotation.x = -0.10;
+  g.add(dome);
+  // Forehead brow guard above eyebrows
+  const brow = new THREE.Mesh(new THREE.TorusGeometry(0.118, 0.011, 8, 32, Math.PI * 0.85), RM.gold);
+  brow.rotation.set(Math.PI * 0.44, 0, Math.PI * 0.075);
+  brow.position.set(0, 0.155, 0.018);
+  g.add(brow);
+  // Hinged cheek guards set beside face (z = -0.01 so face remains expressive)
+  for (const s of [-1, 1]) {
+    const cg = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.09, 0.055), RM.bronze);
+    cg.position.set(s * 0.095, 0.095, -0.005);
+    cg.rotation.set(0.08, -s * 0.25, -s * 0.08);
+    g.add(cg);
+  }
+  // Angled neck apron flare behind skull
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.042, 0.075), M.steel);
+  neck.position.set(0, 0.095, -0.102);
+  neck.rotation.x = 0.62;
+  g.add(neck);
+  // Arched horsehair crest cleanly above dome top
+  const crestMat = new THREE.MeshStandardMaterial({ color: crestHex, roughness: 0.78 });
+  for (let i = 0; i < 11; i++) {
+    const t = (i / 10) * 2 - 1;
+    const ang = t * 1.05;
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.085, 0.036), crestMat);
+    seg.position.set(0, 0.275 + Math.cos(ang) * 0.04, Math.sin(ang) * 0.115 - 0.01);
+    seg.rotation.x = ang;
+    g.add(seg);
+  }
+  return shadow(g);
+}
+
+// Solid 3D Curved Rectangular Roman Scutum Shield (matches props.js solid ExtrudeGeometry method!)
+export function romanScutum() {
+  const RM = romanMaterials();
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.22, -0.32);
+  shape.lineTo(0.22, -0.32);
+  shape.lineTo(0.23, 0.32);
+  shape.lineTo(-0.23, 0.32);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.020,
+    bevelEnabled: true,
+    bevelThickness: 0.008,
+    bevelSize: 0.008,
+    bevelSegments: 2,
+    curveSegments: 16,
+  });
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    p.setZ(i, p.getZ(i) - x * x * 1.15);
+  }
+  geo.computeVertexNormals();
+
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(geo, RM.scutumFace);
+  g.add(body);
+
+  // Brass rim edges top/bottom & central bronze Umbo boss
+  for (const y of [-0.32, 0.32]) {
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.024, 0.034), RM.bronze);
+    trim.position.set(0, y, -0.02);
+    g.add(trim);
+  }
+  const umbo = new THREE.Mesh(new THREE.SphereGeometry(0.064, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.50), RM.gold);
+  umbo.rotation.x = Math.PI / 2;
+  umbo.position.set(0, 0, 0.016);
+  g.add(umbo);
+  return shadow(g);
+}
+
+// Gleaming Roman coin stack
+export function denariusStack({ count = 12, radius = 0.075, height = 0.018, gold = true } = {}) {
+  const RM = romanMaterials();
+  const mat = gold ? RM.gold : RM.silver;
+  const g = new THREE.Group();
+  g.coins = [];
+  for (let i = 0; i < count; i++) {
+    const coin = new THREE.Group();
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height * 0.85, 24), mat);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.93, height * 0.24, 8, 24), mat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = height * 0.38;
+    coin.add(disc, rim);
+    const jx = Math.sin(i * 2.1) * radius * 0.08;
+    const jz = Math.cos(i * 3.3) * radius * 0.08;
+    coin.position.set(jx, height * 0.5 + i * height * 1.02, jz);
+    g.add(coin);
+    g.coins.push(coin);
+  }
+  return shadow(g);
+}
+
+// Roman wax-and-bronze display tablet with auto-fitted crisp label text
+export function romanScrollTablet(headerTxt, bigTxt, accentHex = 0xd4a017) {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const hexStr = '#' + accentHex.toString(16).padStart(6, '0');
+  const tex = makeTabletTexture(headerTxt, bigTxt, '#211915', hexStr, hexStr);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.45, 0.045), RM.darkWood);
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.62, 0.40),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45, emissive: accentHex, emissiveIntensity: 0.14 })
+  );
+  face.position.z = 0.024;
+  g.add(frame, face);
+  return shadow(g);
+}
+
+// Roman Organizers' crimson shoulder toga sash attached cleanly onto chest group
+export function togaSash() {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.205, 0.036, 12, 36), RM.crimson);
+  band.scale.set(1.06, 1.38, 0.68);
+  band.position.set(0, 0.12, 0);
+  band.rotation.z = -0.58;
+  g.add(band);
+  return shadow(g);
+}
+
+// Compact 9:16-framed Roman Balance Scale comparing 1x Rent vs 50x Penalty inside safe zone
+export function balanceScale50x() {
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const plinth = romanPlinth(0.22, 0.26);
+  g.add(plinth);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.040, 1.18, 24), RM.bronze);
+  post.position.y = 0.80;
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.052, 20, 14), RM.gold);
+  finial.position.y = 1.41;
+  g.add(post, finial);
+
+  const beamPivot = new THREE.Group();
+  beamPivot.position.set(0, 1.30, 0);
+  g.add(beamPivot);
+
+  // Beam half-width 0.30 so BOTH 1x and 50x plaques stay 100% inside narrow 9:16 frame!
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.034, 0.040), RM.bronze);
+  beamPivot.add(beam);
+
+  const mkPan = (xOff) => {
+    const arm = new THREE.Group();
+    arm.position.set(xOff, -0.015, 0);
+    beamPivot.add(arm);
+    for (const dx of [-0.07, 0.07]) {
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.34, 8), RM.bronze);
+      rod.position.set(dx * 0.5, -0.17, 0);
+      rod.rotation.z = dx > 0 ? 0.16 : -0.16;
+      arm.add(rod);
+    }
+    const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.115, 0.030, 28), RM.gold);
+    pan.position.y = -0.35;
+    arm.add(pan);
+    return arm;
+  };
+
+  const leftArm = mkPan(-0.32);
+  const rightArm = mkPan(0.32);
+
+  const stack1x = denariusStack({ count: 3, radius: 0.062, height: 0.016, gold: false });
+  stack1x.position.set(0, -0.33, 0);
+  leftArm.add(stack1x);
+
+  const tab1x = romanScrollTablet('RENTAL', '1x', 0xdbe2ea);
+  tab1x.scale.setScalar(0.50);
+  beamPivot.add(tab1x);
+  tab1x.position.set(-0.30, 0.24, 0.02);
+
+  const stack50x = denariusStack({ count: 24, radius: 0.068, height: 0.016, gold: true });
+  stack50x.position.set(0, -0.33, 0);
+  rightArm.add(stack50x);
+
+  const tab50x = romanScrollTablet('PENALTY', '50x', 0xff4d4d);
+  tab50x.scale.setScalar(0.54);
+  beamPivot.add(tab50x);
+  tab50x.position.set(0.30, 0.28, 0.02);
+
+  g.setTilt = (rad) => {
+    beamPivot.rotation.z = rad;
+    leftArm.rotation.z = -rad;
+    rightArm.rotation.z = -rad;
+    tab1x.rotation.z = -rad;
+    tab50x.rotation.z = -rad;
+  };
+  g.stack50x = stack50x;
+  g.rightPan = rightArm;
+  return shadow(g);
+}
+"""
+
+
+DIRECTOR_MAIN_JS = r"""import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { SHOTS, CAPTIONS, DURATION, FADES } from './shots.js';
+
+const params = new URLSearchParams(location.search);
+const SCALE = Math.max(1, Number(params.get('scale') || 1));
+const W = 1080, H = 1920;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(SCALE);
+renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.03;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').prepend(renderer.domElement);
+
+const SKY_FRAG = `
+  uniform vec3 top, mid, horizon, floorC; varying vec3 vDir;
+  void main(){
+    vec3 d = normalize(vDir);
+    float y = d.y;
+    vec3 c = y > 0.0 ? mix(mix(horizon, mid, smoothstep(0.0,0.12,y)), top, smoothstep(0.1,0.8,y))
+                     : mix(horizon, floorC, smoothstep(0.0,-0.08,y));
+    gl_FragColor = vec4(c,1.0);
+    #include <colorspace_fragment>
+  }`;
+function skyMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      top: { value: new THREE.Color(0x2b78d6) }, mid: { value: new THREE.Color(0x5b9fea) },
+      horizon: { value: new THREE.Color(0x92c3f2) }, floorC: { value: new THREE.Color(0xa9cdf1) },
+    },
+    vertexShader: `varying vec3 vDir; void main(){ vDir = (modelMatrix*vec4(position,1.)).xyz - cameraPosition; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); gl_Position.z = gl_Position.w; }`,
+    fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false, toneMapped: false,
+  });
+}
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+{
+  const s = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), skyMaterial());
+  s.material.toneMapped = true; envScene.add(s);
+  const panel = (w, h, pos, inten) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(inten, inten, inten), side: THREE.DoubleSide }));
+    m.position.set(...pos); m.lookAt(0, 0, 0); envScene.add(m);
+  };
+  panel(8, 4, [-6, 8, 6], 3.0);
+  panel(4, 10, [9, 3, -2], 1.5);
+}
+const envTex = pmrem.fromScene(envScene, 0.02).texture;
+
+export function makeStage({ shadowSize = 3, sunDir = [-3, 6, 4], sun = 2.35 } = {}) {
+  const scene = new THREE.Scene();
+  scene.environment = envTex;
+  scene.environmentIntensity = 1.0;
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), skyMaterial());
+  sky.frustumCulled = false; sky.renderOrder = -10;
+  scene.add(sky); scene.userData.sky = sky;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ color: 0x1a3a66, opacity: 0.30 }));
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  scene.add(new THREE.HemisphereLight(0xcfe4ff, 0x7f93ad, 0.78));
+  const key = new THREE.DirectionalLight(0xfff3e6, sun);
+  key.position.set(...sunDir); key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  const c = key.shadow.camera; c.left = c.bottom = -shadowSize; c.right = c.top = shadowSize; c.near = 0.5; c.far = 30;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0xdbe9ff, 1.25); rim.position.set(4, 3, -5); scene.add(rim);
+  return scene;
+}
+
+const rt = new THREE.WebGLRenderTarget(W * SCALE, H * SCALE, { samples: SCALE >= 2 ? 0 : 2, type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, rt);
+const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
+const bloom = new UnrealBloomPass(new THREE.Vector2(W * SCALE, H * SCALE), 0.22, 0.4, 1.5);
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.25 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+      vec2 q = vUv - 0.5; q.x *= 0.5625;
+      c.rgb *= 1.0 - uVig * smoothstep(0.18, 0.62, length(q));
+      gl_FragColor = c; }`,
+});
+composer.addPass(renderPass);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(grade);
+
+const capEl = document.getElementById('cap');
+const fadeEl = document.getElementById('fade');
+const built = new Map();
+function getShot(i) {
+  if (!built.has(i)) built.set(i, SHOTS[i].build({ makeStage, W, H }));
+  return built.get(i);
+}
+
+window.TOTAL_DURATION = DURATION;
+window.SHOT_SPANS = SHOTS.map(s => [s.start, s.end]);
+
+window.renderAtTime = (rawT) => {
+  const t = Math.max(0, Math.min(rawT, DURATION - 1e-4));
+  let idx = SHOTS.findIndex(s => t >= s.start && t < s.end);
+  if (idx < 0) idx = SHOTS.length - 1;
+  const def = SHOTS[idx];
+  const shot = getShot(idx);
+  const lt = Math.max(0, t - def.start);
+  const r = shot.update(lt, t) || {};
+  const cam = shot.camera;
+  cam.aspect = W / H; cam.updateProjectionMatrix();
+  shot.scene.userData.sky.position.copy(cam.position);
+  renderPass.scene = shot.scene;
+  renderPass.camera = cam;
+  bloom.strength = (r.bloom ?? 0.30) * 0.52;
+  renderer.toneMappingExposure = r.exposure ?? 1.03;
+  composer.render();
+
+  const c = CAPTIONS.filter(c => t >= c[0]).pop();
+  capEl.textContent = c && (c[2] == null || t < c[2]) ? c[1] : '';
+  let f = 0;
+  for (const [a, b, c2, d] of FADES) {
+    if (t >= a && t < d) f = Math.max(f, t < b ? (t - a) / (b - a) : t < c2 ? 1 : (d - t) / (d - c2));
+  }
+  fadeEl.style.opacity = f;
+  return idx;
+};
+
+window.SHORT_DIRECTOR_READY = document.fonts.ready.then(() => { window.renderAtTime(0); return true; });
+"""
+
+
+def _build_captions_list(words: List[Dict[str, Any]]) -> List[List[Any]]:
+    out: List[List[Any]] = []
+    cur: List[Dict[str, Any]] = []
+    for i, w in enumerate(words):
+        cur.append(w)
+        txt = " ".join(x["w"] for x in cur)
+        stop = txt.endswith((".", ",", "?", "!", ";", ":"))
+        if stop or len(cur) >= 3 or len(txt) >= 18:
+            clean = txt.rstrip(".,;:")
+            entry: List[Any] = [round(cur[0]["s"], 3), clean]
+            if i == len(words) - 1:
+                entry.append(round(cur[-1]["e"] + 0.35, 3))
+            out.append(entry)
+            cur = []
+    if cur:
+        clean = " ".join(x["w"] for x in cur).rstrip(".,;:")
+        out.append([round(cur[0]["s"], 3), clean, round(cur[-1]["e"] + 0.35, 3)])
+    return out
+
+
+def _roman_shot_code(i: int, shot: Dict[str, Any], total_shots: int) -> str:
+    start, end = shot["start"], shot["end"]
+    dur = max(0.2, round(end - start, 3))
+    low = shot["narration_text"].lower()
+    setup = shot["setup_type"]
+
+    # 1. Hook ("In Rome, killing your opponent could cost a fortune.")
+    if i == 0:
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, sunDir: [-3, 7, 5] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
+  fighter.root.position.set(-0.46, 0, 0.16); fighter.root.rotation.y = 1.08; scene.add(fighter.root);
+  const fHelm = romanHelmet(0xc92a2a); fighter.j.head.add(fHelm);
+  const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.84);
+  const fSw = sword(); fighter.j.rWr.add(fSw); fSw.position.set(0, -0.065, 0); fSw.rotation.x = Math.PI / 2;
+
+  const opp = makeHuman('plate'); addGladiatorBracers(opp);
+  opp.root.position.set(0.46, 0, -0.14); opp.root.rotation.y = -1.78; scene.add(opp.root);
+  const oHelm = romanHelmet(0xd9a441); opp.j.head.add(oHelm);
+  const oSw = sword(); opp.j.rWr.add(oSw); oSw.position.set(0, -0.065, 0); oSw.rotation.x = Math.PI / 2;
+
+  const ped = romanPlinth(0.55, 0.24); ped.position.set(0.02, 0, 0.72); scene.add(ped);
+  const coins = denariusStack({{ count: 14, radius: 0.065, height: 0.017, gold: true }});
+  coins.position.set(0.02, 0.56, 0.72); scene.add(coins);
+
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const bob = Math.sin(lt * 3.1) * 0.03;
+      fighter.setPose({{
+        ...STAND, drop: -0.09 + bob * 0.4,
+        spine: [0.12, 0.18, 0], chest: [0.06, 0.14, 0],
+        lHip: [-0.28, 0, 0.14], lKn: [0.42, 0, 0], rHip: [0.16, 0, -0.14], rKn: [0.22, 0, 0],
+        lSh: [-0.55, 0.25, 0.25], lEl: [-0.85, 0, 0], rSh: [-0.45, -0.1, -0.32], rEl: [-0.62, 0, 0],
+      }});
+      opp.setPose({{
+        ...STAND, drop: -0.08 - bob * 0.4,
+        spine: [0.12, -0.18, 0], chest: [0.08, -0.14, 0],
+        lHip: [-0.26, 0, 0.14], lKn: [0.40, 0, 0], rHip: [0.20, 0, -0.14], rKn: [0.24, 0, 0],
+        rSh: [-0.82 + Math.sin(lt * 2.2) * 0.08, 0, -0.22], rEl: [-0.72, 0, 0], lSh: [-0.35, 0, 0.3], lEl: [-0.8, 0, 0],
+      }});
+      coins.rotation.y = lt * 0.85;
+      const pop = easeOut(clamp(u * 2.2, 0, 1));
+      coins.scale.set(1, Math.max(0.05, pop), 1);
+      const s = shake(lt, 0.4, 1);
+      place(c, [lerp(-0.35, 0.15, easeInOut(u)) + s[0], lerp(1.26, 1.12, easeInOut(u)) + s[1], lerp(4.05, 3.35, easeInOut(u))], [0.0, 0.90, 0.10]);
+      return {{ bloom: 0.34 }};
+    }}
+  }};
+}}"""
+
+    # 2. Slow-motion blade halting inches from chest + Red Force Ripple ("You expect the final blow. But it doesn't come.")
+    if "final blow" in low or "doesn't come" in low or setup == "novel_slowmo_ripple_cutaway":
+        TI = round(dur * 0.46, 3)
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.2, sunDir: [-2, 6, 5] }});
+  scene.add(arenaStage({{ radius: 4.2, wallArc: false }}));
+
+  const fallen = makeHuman('vest'); addGladiatorBracers(fallen);
+  fallen.root.position.set(0.0, 0, 0.15); fallen.root.rotation.y = 0.25; scene.add(fallen.root);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.28, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
+  disc.position.set(0.02, 0.82, 0.29); scene.add(disc);
+  const rp = rippleOverlay(disc);
+
+  const sw = sword(); scene.add(sw);
+  const sp = sparks(85, {{ speed: 0.42, spread: 1.4, gravity: -0.35, life: 0.9, size: 0.008, seed: 29, dir: V(0, 0.4, 1), color: [1, 0.32, 0.14] }});
+  sp.position.set(0.02, 0.84, 0.30); scene.add(sp);
+  const tab = romanScrollTablet('BLOW', 'HALTED', 0xff4d4d);
+  tab.scale.setScalar(0.46); tab.position.set(0.02, 1.32, 0.08); scene.add(tab);
+
+  const c = cam(36);
+  const TI = {TI};
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const before = easeOut(clamp(lt / TI, 0, 1));
+      const hitT = lt - TI;
+      const tremble = hitT > 0 ? Math.sin(hitT * 26) * Math.exp(-hitT * 2.2) * 0.014 : 0;
+
+      fallen.setPose({{
+        drop: -0.48,
+        pelvis: [-0.25, 0.1, 0], spine: [-0.24, 0, 0], chest: [-0.15 + tremble, 0, 0],
+        neck: [-0.28, 0.15, 0], head: [-0.22, 0.12, 0],
+        lHip: [-1.2, 0, 0.18], lKn: [1.6, 0, 0], rHip: [-0.8, 0, -0.16], rKn: [1.4, 0, 0],
+        lSh: [-0.95, 0.1, 0.35], lEl: [-0.75, 0, 0], rSh: [-0.95, -0.1, -0.35], rEl: [-0.75, 0, 0],
+      }});
+      fallen.setMouth(hitT < 0 ? 0.65 * before : lerp(0.65, 0.22, clamp(hitT * 1.4, 0, 1)));
+
+      const stopTarget = V(0.02, 0.84, 0.34);
+      const bladeDir = V(-0.42, -0.82, -0.38).normalize();
+      const swDist = lerp(0.88, 0.05, before) + tremble;
+      const tipPos = stopTarget.clone().addScaledVector(bladeDir, -swDist);
+      sw.quaternion.setFromUnitVectors(V(0, 1, 0), bladeDir);
+      sw.position.copy(tipPos).addScaledVector(bladeDir, -0.94);
+
+      const ru = rp.material.uniforms;
+      ru.uCenter.value.set(0, 0, 0);
+      ru.uAmp.value = hitT > 0 ? Math.min(1.0, hitT * 4.5) * (1.0 - 0.35 * smooth(range(hitT, 0.8, 2.0))) : 0.0;
+      ru.uRadius.value = hitT > 0 ? 0.04 + easeOut(range(hitT, 0, 1.2)) * 0.24 : 0.0;
+      ru.uRings.value = 180.0; ru.uSpot.value = 0.045; ru.uSpotAmp.value = 1.1; ru.uTime.value = lt * 0.8;
+
+      tab.scale.setScalar(hitT > 0.05 ? 0.48 * easeOut(clamp((hitT - 0.05) * 4, 0, 1)) : 0.001);
+      sp.update(hitT);
+
+      const shk = hitT > 0 && hitT < 0.35 ? shake(lt * 10, 2.2, {i}) : shake(lt, 0.32, {i});
+      place(c, [lerp(0.62, 0.40, easeInOut(u)) + shk[0], lerp(1.22, 1.14, u) + shk[1], lerp(1.98, 1.66, easeInOut(u))], [0.02, 1.00, 0.16]);
+      return {{ bloom: hitT > 0 && hitT < 0.35 ? 0.62 : 0.34 }};
+    }}
+  }};
+}}"""
+
+    # 3. Balance Scale 50X Catch ("Here's the catch: if a rented gladiator died... fifty times the rental fee.")
+    if "fifty times" in low or "catch" in low or setup == "mechanism_cross_section_3d":
+        TSLAM = round(dur * 0.24, 3)
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.5, sunDir: [-3, 7, 4] }});
+  scene.add(arenaStage({{ radius: 4.3, wallArc: true }}));
+
+  const scaleObj = balanceScale50x();
+  scaleObj.position.set(0, 0.0, 0.05);
+  scene.add(scaleObj);
+
+  const rippleDisc = new THREE.Mesh(new THREE.CircleGeometry(0.45, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
+  rippleDisc.rotation.x = -Math.PI / 2;
+  rippleDisc.position.set(0.32, 0.05, 0.05);
+  scene.add(rippleDisc);
+  const rp = rippleOverlay(rippleDisc);
+
+  const sp = sparks(110, {{ speed: 1.5, spread: 1.6, gravity: -3.5, life: 0.75, size: 0.015, seed: 50, color: [1.0, 0.78, 0.18] }});
+  sp.position.set(0.32, 0.92, 0.05); scene.add(sp);
+
+  const c = cam(39);
+  const TSLAM = {TSLAM};
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const dropProgress = easeOut(clamp((lt - TSLAM) / 0.35, 0, 1));
+      const bounce = lt > TSLAM ? Math.exp(-(lt - TSLAM) * 5.2) * Math.sin((lt - TSLAM) * 18) * 0.08 : 0;
+
+      scaleObj.stack50x.coins.forEach((cn, idx) => {{
+        const reveal = clamp(dropProgress * 24 - idx * 0.45, 0, 1);
+        cn.visible = reveal > 0.02;
+        cn.scale.setScalar(easeOut(reveal));
+      }});
+      scaleObj.setTilt(-0.34 * dropProgress + bounce);
+
+      const it = lt - TSLAM;
+      const ru = rp.material.uniforms;
+      ru.uCenter.value.set(0, 0, 0);
+      ru.uAmp.value = it > 0 ? Math.min(1.0, it * 5.0) * (1.0 - 0.25 * smooth(range(it, 0.9, 2.5))) : 0.0;
+      ru.uRadius.value = it > 0 ? 0.06 + easeOut(range(it, 0, 1.2)) * 0.38 : 0.0;
+      ru.uRings.value = 150.0; ru.uSpot.value = 0.06; ru.uSpotAmp.value = 0.9; ru.uTime.value = lt;
+      sp.update(it - 0.15);
+
+      const shk = it > 0 && it < 0.45 ? shake(lt * 10, 2.4, 50) : shake(lt, 0.35, 50);
+      place(c, [lerp(-0.28, 0.20, easeInOut(u)) + shk[0], lerp(1.18, 1.26, u) + shk[1], lerp(3.45, 3.05, easeInOut(u))], [0.0, 0.96, 0.05]);
+      return {{ bloom: it > 0 && it < 0.4 ? 0.58 : 0.34 }};
+    }}
+  }};
+}}"""
+
+    # 4. Knocked down / Towering opponent ("knocked into the sand", "stands over him")
+    if "knocked into the sand" in low or "stands over him" in low or "sword ready" in low:
+        is_up_angle = "stands over him" in low or "sword ready" in low
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-2.5, 7, 4] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const fallen = makeHuman('vest'); addGladiatorBracers(fallen);
+  fallen.root.position.set(-0.20, 0, 0.28); fallen.root.rotation.y = 0.42; scene.add(fallen.root);
+  const droppedSh = romanScutum();
+  droppedSh.position.set(-0.52, 0.045, 0.48); droppedSh.rotation.set(-Math.PI / 2, 0.25, 0.38); droppedSh.scale.setScalar(0.76); scene.add(droppedSh);
+
+  const opp = makeHuman('plate'); addGladiatorBracers(opp);
+  opp.root.position.set(0.28, 0, -0.32); opp.root.rotation.y = -0.32; scene.add(opp.root);
+  const oHelm = romanHelmet(0xc92a2a); opp.j.head.add(oHelm);
+  const oSw = sword(); opp.j.rWr.add(oSw); oSw.position.set(0, -0.065, 0); oSw.rotation.x = Math.PI / 2;
+
+  const spDust = sparks(45, {{ speed: 1.1, spread: 1.4, gravity: -2.8, life: 0.75, size: 0.016, seed: 12, dir: V(0, 0.5, 0.4), color: [0.95, 0.78, 0.52] }});
+  spDust.position.set(-0.20, 0.08, 0.28); scene.add(spDust);
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const dropImpact = {'1.0' if is_up_angle else 'easeOut(clamp(u * 2.1, 0, 1))'};
+      const slump = Math.sin(u * Math.PI) * 0.03;
+      fallen.setPose({{
+        drop: -0.45 * dropImpact - 0.06,
+        pelvis: [-0.22 * dropImpact, 0.15, 0], spine: [-0.28 * dropImpact + slump, 0, 0], chest: [-0.15 * dropImpact, -0.1, 0],
+        neck: [-0.32, 0.12, 0], head: [-0.24, 0.15, 0],
+        lHip: [-1.18, 0, 0.18], lKn: [1.58, 0, 0], rHip: [-0.72, 0, -0.18], rKn: [1.35, 0, 0],
+        lSh: [0.42, 0, 0.35], lEl: [-0.25, 0, 0], rSh: [-0.82, -0.1, -0.25], rEl: [-0.65, 0, 0],
+      }});
+      fallen.setMouth(dropImpact > 0.3 ? 0.52 : 0.1);
+      const raise = {'lerp(0.65, 1.0, easeInOut(u))' if is_up_angle else 'easeInOut(range(lt, 0.4, 2.0))'};
+      opp.setPose({{
+        ...STAND, drop: -0.05,
+        spine: [0.12, 0.18 * raise, 0], chest: [0.12, 0.22 * raise, 0],
+        neck: [0.22, -0.12, 0], head: [0.15, -0.08, 0],
+        lSh: [-0.25, 0, 0.32], lEl: [-0.55, 0, 0],
+      }});
+      opp.root.updateMatrixWorld(true);
+      const handPos = opp.root.localToWorld(V(lerp(-0.25, -0.12, raise), lerp(1.38, 1.88, raise), lerp(0.32, 0.22, raise)));
+      const tipHint = V(lerp(0.1, -0.15, raise), lerp(-0.5, 0.65, raise), lerp(0.9, 0.45, raise)).applyQuaternion(opp.root.quaternion);
+      ikArm(opp, 'r', handPos, opp.root.localToWorld(V(-0.55, 1.25, -0.45)), tipHint);
+
+      spDust.update(lt - 0.15);
+      const s = shake(lt, dropImpact < 0.8 ? 1.8 : 0.4, {i});
+      {'place(c, [lerp(-0.72, -0.42, easeInOut(u)) + s[0], lerp(0.88, 1.22, u) + s[1], lerp(2.75, 2.35, easeInOut(u))], [0.05, 0.92, 0.0]);' if is_up_angle else 'place(c, [lerp(-0.98, -0.58, easeInOut(u)) + s[0], lerp(1.05, 1.18, u) + s[1], lerp(3.45, 2.85, easeInOut(u))], [0.02, 0.85, 0.0]);'}
+      return {{ bloom: 0.30 }};
+    }}
+  }};
+}}"""
+
+    # 5. Training & Preparation ("These fighters were expensive to train, feed, and prepare.")
+    if "train" in low or "feed" in low or "prepare" in low:
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const trainee = makeHuman('vest'); addGladiatorBracers(trainee);
+  trainee.root.position.set(-0.34, 0, 0.12); trainee.root.rotation.y = 0.88; scene.add(trainee.root);
+  const tSh = romanScutum(); trainee.j.lEl.add(tSh); tSh.position.set(0.08, -0.15, 0.06); tSh.rotation.set(0, 1.15, 0); tSh.scale.setScalar(0.80);
+  const tSw = sword(); trainee.j.rWr.add(tSw); tSw.position.set(0, -0.065, 0); tSw.rotation.x = Math.PI / 2;
+
+  const palus = trainingPalus();
+  palus.position.set(0.32, 0, -0.04); scene.add(palus);
+
+  const spHit = sparks(55, {{ speed: 1.2, spread: 1.4, gravity: -3.5, life: 0.55, size: 0.013, seed: 34, dir: V(-1, 0.4, 0.5), color: [1.0, 0.72, 0.25] }});
+  spHit.position.set(0.24, 1.05, 0.0); scene.add(spHit);
+
+  const tab = romanScrollTablet('TRAINING', 'COSTS', 0xf4c430);
+  tab.scale.setScalar(0.50); tab.position.set(0.24, 1.82, -0.04); scene.add(tab);
+
+  const c = cam(39);
+  const TH = 1.25;
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const strike = easeIn(range(lt, 0.4, TH));
+      const rec = lt > TH ? Math.sin(Math.min(lt - TH, 0.6) / 0.6 * Math.PI) * 0.12 : 0;
+      trainee.setPose({{
+        ...STAND, drop: -0.08,
+        spine: [0.10, lerp(-0.22, 0.35, strike), 0], chest: [0.06, lerp(-0.20, 0.28, strike), 0],
+        lSh: [-0.52, 0.2, 0.25], lEl: [-0.85, 0, 0],
+        rSh: [lerp(-0.35, -1.05, strike), lerp(-0.35, 0.22, strike), -0.2], rEl: [lerp(-0.95, -0.35, strike), 0, 0],
+      }});
+      palus.rotation.z = -rec * 0.35;
+      spHit.update(lt - TH);
+      const s = shake(lt, lt > TH && lt < TH + 0.35 ? 1.8 : 0.35, {i});
+      place(c, [lerp(-0.45, 0.28, easeInOut(u)) + s[0], lerp(1.18, 1.12, u) + s[1], lerp(3.45, 2.95, easeInOut(u))], [0.0, 0.96, 0.05]);
+      return {{ bloom: 0.32 }};
+    }}
+  }};
+}}"""
+
+    # 6. Rental contract over stone counter ("Organizers often rented them from their owners.")
+    if "rented" in low or "owners" in low:
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 4] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const fighter = makeHuman('chainmail'); addGladiatorBracers(fighter);
+  fighter.root.position.set(-0.40, 0, -0.05); fighter.root.rotation.y = 0.25; scene.add(fighter.root);
+  const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.76);
+
+  const org = makeHuman('vest'); addGladiatorBracers(org);
+  org.root.position.set(0.42, 0, 0.08); org.root.rotation.y = -0.38; scene.add(org.root);
+  org.j.chest.add(togaSash());
+
+  const plinth = romanPlinth(0.84, 0.20); plinth.position.set(0.02, 0, 0.28); scene.add(plinth);
+  const stack = denariusStack({{ count: 10, radius: 0.062, height: 0.017, gold: true }});
+  stack.position.set(0.02, 0.85, 0.28); scene.add(stack);
+
+  const tab = romanScrollTablet('GLADIATOR', 'RENTED', 0xf4c430);
+  tab.scale.setScalar(0.50); tab.position.set(0.02, 1.48, 0.16); scene.add(tab);
+
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      fighter.setPose({{
+        ...STAND, chest: [Math.sin(lt * 1.8) * 0.02, 0.1, 0],
+        lSh: [-0.28, 0, 0.28], lEl: [-0.85, 0, 0], rSh: [-0.30, -0.1, -0.22], rEl: [-0.55, 0, 0],
+      }});
+      org.setPose({{
+        ...STAND,
+        chest: [0.04, -0.12, 0], head: [Math.sin(lt * 2.5) * 0.05, -0.18, 0],
+        lSh: [-0.55 - easeInOut(u) * 0.2, 0.1, 0.22], lEl: [-0.65, 0, 0],
+      }});
+      org.setMouth(0.2 + 0.22 * Math.abs(Math.sin(lt * 7.0)));
+      const rise = easeOut(clamp(u * 1.8, 0, 1));
+      stack.coins.forEach((cn, k) => {{ cn.visible = k < Math.max(1, Math.round(rise * 10)); }});
+      stack.rotation.y = lt * 0.9;
+      const s = shake(lt, 0.35, {i});
+      place(c, [lerp(-0.28, 0.24, easeInOut(u)) + s[0], lerp(1.22, 1.16, u) + s[1], lerp(3.45, 3.05, easeInOut(u))], [0.0, 1.02, 0.05]);
+      return {{ bloom: 0.32 }};
+    }}
+  }};
+}}"""
+
+    # 7. Losing didn't mean death / Granted mercy ("losing a match", "granted mercy", "leave the arena alive")
+    if "losing a match" in low or "mercy" in low and ("alive" in low or "leave" in low):
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
+  fighter.root.position.set(-0.28, 0, 0.10); fighter.root.rotation.y = 0.35; scene.add(fighter.root);
+
+  const victor = makeHuman('plate'); addGladiatorBracers(victor);
+  victor.root.position.set(0.38, 0, -0.06); victor.root.rotation.y = -0.45; scene.add(victor.root);
+  const vHelm = romanHelmet(0xd9a441); victor.j.head.add(vHelm);
+  const vSw = sword(); victor.j.rWr.add(vSw); vSw.position.set(0, -0.065, 0); vSw.rotation.x = Math.PI / 2;
+
+  const badge = romanScrollTablet('MERCY', 'ALIVE', 0x52b788);
+  badge.scale.setScalar(0.50); badge.position.set(0.04, 1.80, 0.06); scene.add(badge);
+
+  const sp = sparks(45, {{ speed: 0.65, spread: 1.5, gravity: 0.4, life: 1.2, size: 0.015, seed: 71, dir: V(0, 1, 0), color: [0.4, 0.95, 0.55] }});
+  sp.position.set(-0.2, 0.85, 0.15); scene.add(sp);
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const standUp = easeInOut(clamp(u * 1.35, 0, 1));
+      fighter.setPose({{
+        drop: lerp(-0.36, -0.02, standUp),
+        spine: [lerp(-0.16, 0.02, standUp), 0, 0], chest: [lerp(-0.08, 0.03, standUp), 0.10, 0],
+        head: [lerp(-0.18, 0.0, standUp), 0.20, 0],
+        lHip: [lerp(-0.90, 0.0, standUp), 0, 0.1], lKn: [lerp(1.20, 0.0, standUp), 0, 0],
+        rHip: [lerp(-0.52, 0.0, standUp), 0, -0.1], rKn: [lerp(0.90, 0.0, standUp), 0, 0],
+        lSh: [lerp(0.2, -0.15, standUp), 0, 0.25], rSh: [lerp(0.15, -0.35, standUp), 0, -0.25],
+      }});
+      fighter.setMouth(0.15 + 0.12 * standUp);
+      victor.setPose({{
+        ...STAND,
+        chest: [0.02, -0.20, 0], head: [0.02, -0.20, 0],
+        lSh: [-0.52 * standUp, 0.1, 0.28], lEl: [-0.58, 0, 0],
+        rSh: [lerp(-0.45, 0.12, standUp), 0, -0.25], rEl: [lerp(-0.7, -0.15, standUp), 0, 0],
+      }});
+      badge.scale.setScalar(0.50 * easeOut(clamp(u * 2.2, 0, 1)));
+      sp.update(lt - 0.35);
+      const s = shake(lt, 0.32, {i});
+      place(c, [lerp(0.45, -0.22, easeInOut(u)) + s[0], lerp(1.18, 1.26, u) + s[1], lerp(3.25, 3.45, easeInOut(u))], [0.02, 1.00, 0.04]);
+      return {{ bloom: 0.35 }};
+    }}
+  }};
+}}"""
+
+    # 8. Valuable investment / financial sense ("valuable investment", "financial sense")
+    if "investment" in low or "financial sense" in low:
+        tab_top = 'INVESTMENT' if 'investment' in low else 'MATH'
+        tab_bot = 'SAVED' if 'investment' in low else 'CLEAR'
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const org = makeHuman('vest'); addGladiatorBracers(org);
+  org.root.position.set(-0.34, 0, 0.05); org.root.rotation.y = 0.28; scene.add(org.root);
+  org.j.chest.add(togaSash());
+
+  const plinth = romanPlinth(0.84, 0.22); plinth.position.set(0.30, 0, 0.15); scene.add(plinth);
+  const coins = denariusStack({{ count: 16, radius: 0.070, height: 0.017, gold: true }});
+  coins.position.set(0.30, 0.85, 0.15); scene.add(coins);
+  const tab = romanScrollTablet('{tab_top}', '{tab_bot}', 0x52b788);
+  tab.scale.setScalar(0.48); tab.position.set(0.30, 1.54, 0.15); scene.add(tab);
+
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      org.setPose({{
+        ...STAND,
+        chest: [0.03, -0.18, 0], head: [0.04, -0.22, 0],
+        rSh: [-0.72 - Math.sin(u * Math.PI) * 0.18, 0.12, -0.22], rEl: [-0.45, 0, 0],
+      }});
+      org.setMouth(0.18 + 0.18 * Math.abs(Math.sin(lt * 6.0)));
+      coins.rotation.y = lt * 0.85;
+      tab.rotation.y = -0.15 + Math.sin(lt * 1.5) * 0.08;
+      const s = shake(lt, 0.32, {i});
+      place(c, [lerp(-0.32, 0.22, easeInOut(u)) + s[0], lerp(1.22, 1.16, u) + s[1], lerp(3.35, 3.05, easeInOut(u))], [0.0, 1.00, 0.08]);
+      return {{ bloom: 0.34 }};
+    }}
+  }};
+}}"""
+
+    # 9. Final Payoff ("The danger was real... bill.")
+    if i == total_shots - 1 or setup == "payoff_full_stage_reveal" or "bill" in low:
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, sunDir: [-3, 7, 5] }});
+  scene.add(arenaStage({{ radius: 4.6, wallArc: true }}));
+
+  const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
+  fighter.root.position.set(-0.34, 0, 0.10); fighter.root.rotation.y = 0.25; scene.add(fighter.root);
+  const fHelm = romanHelmet(0xd9a441); fighter.j.head.add(fHelm);
+  const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.82);
+  const fSw = sword(); fighter.j.rWr.add(fSw); fSw.position.set(0, -0.065, 0); fSw.rotation.x = Math.PI / 2;
+
+  const ped = romanPlinth(0.68, 0.22); ped.position.set(0.32, 0, 0.15); scene.add(ped);
+  const coins = denariusStack({{ count: 20, radius: 0.072, height: 0.017, gold: true }});
+  coins.position.set(0.32, 0.69, 0.15); scene.add(coins);
+  const billTab = romanScrollTablet('SURVIVAL', 'THE BILL', 0xf5b700);
+  billTab.scale.setScalar(0.48); billTab.position.set(0.32, 1.48, 0.15); scene.add(billTab);
+
+  const sp = sparks(65, {{ speed: 0.9, spread: 1.8, gravity: 0.3, life: 1.4, size: 0.016, seed: 99, dir: V(0, 1, 0), color: [1.0, 0.85, 0.25] }});
+  sp.position.set(0.32, 1.05, 0.15); scene.add(sp);
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      fighter.setPose({{
+        ...STAND,
+        chest: [Math.sin(lt * 1.8) * 0.02, -0.08, 0], head: [0.02, -0.10, 0],
+        lSh: [-0.25, 0.15, 0.25], lEl: [-0.65, 0, 0],
+        rSh: [-0.45 - Math.sin(u * Math.PI) * 0.22, 0, -0.25], rEl: [-0.45, 0, 0],
+      }});
+      coins.rotation.y = lt * 0.7;
+      billTab.rotation.y = Math.sin(lt * 1.4) * 0.10 - 0.12;
+      sp.update(lt - 0.15);
+      const s = shake(lt, 0.32, 9);
+      place(c, [lerp(-0.18, 0.05, easeInOut(u)) + s[0], lerp(1.16, 1.38, easeInOut(u)) + s[1], lerp(3.15, 3.85, easeInOut(u))], [0.0, 0.98, 0.08]);
+      return {{ bloom: 0.38 }};
+    }}
+  }};
+}}"""
+
+    # 10. Suspense / Danger ("mercy was never guaranteed", "danger was real")
+    return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-2.5, 6.5, 4] }});
+  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
+
+  const org = makeHuman('vest'); addGladiatorBracers(org);
+  org.root.position.set(-0.28, 0, 0.10); org.root.rotation.y = 0.28; scene.add(org.root);
+  org.j.chest.add(togaSash());
+  const plinth = romanPlinth(0.84, 0.20); plinth.position.set(0.30, 0, 0.16); scene.add(plinth);
+  const coins = denariusStack({{ count: 14, radius: 0.068, height: 0.017, gold: true }});
+  coins.position.set(0.30, 0.85, 0.16); scene.add(coins);
+
+  const sw = sword();
+  sw.position.set(0.42, 1.62, -0.10); sw.rotation.set(0.25, 0, 2.75); scene.add(sw);
+  const badge = romanScrollTablet('MERCY?', 'NOT SURE', 0xe63946);
+  badge.scale.setScalar(0.48); badge.position.set(0.28, 1.54, 0.16); scene.add(badge);
+
+  const c = cam(39);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      org.setPose({{
+        ...STAND,
+        chest: [Math.sin(lt * 2.1) * 0.02, -0.14, 0], head: [0.04, -0.20 + Math.sin(lt * 3.0) * 0.08, 0],
+        rSh: [-0.58 - easeOut(u) * 0.18, 0, -0.26], rEl: [-0.55, 0, 0],
+      }});
+      org.setMouth(0.22 + 0.2 * Math.abs(Math.sin(lt * 6.0)));
+      coins.rotation.y = lt * 0.95;
+      sw.position.y = 1.60 + Math.sin(lt * 2.8) * 0.04;
+      const s = shake(lt, 0.45, {i});
+      place(c, [lerp(0.40, -0.18, easeInOut(u)) + s[0], lerp(1.20, 1.14, u) + s[1], lerp(3.35, 3.00, easeInOut(u))], [0.0, 1.00, 0.10]);
+      return {{ bloom: 0.34 }};
+    }}
+  }};
+}}"""
+
+
+def _generic_armor_shot_code(i: int, s: Dict[str, Any], total_shots: int) -> str:
+    start, end = s["start"], s["end"]
+    dur = max(0.2, round(end - start, 3))
+    outfits = ["vest", "chainmail", "plate", "archer"]
+    outfit = outfits[i % len(outfits)]
+    setup = s["setup_type"]
+
+    if setup == "novel_slowmo_ripple_cutaway":
+        TI = round(dur * 0.48, 3)
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.2 }});
+  const man = makeHuman('{outfit}'); man.root.rotation.y = -0.35; scene.add(man.root);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.32, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
+  disc.position.set(0, 1.32, 0.18); scene.add(disc);
+  const rp = rippleOverlay(disc);
+  const sp = sparks(90, {{ speed: 0.32, spread: 1.5, gravity: -0.5, life: 0.85, size: 0.008, dir: V(0, 0.2, 1), seed: {i + 3}, color: [1, 0.35, 0.15] }});
+  sp.position.set(0, 1.32, 0.19); scene.add(sp);
+  const orb = energyCore(0xff4d4d); scene.add(orb);
+  const c = cam(32);
+  const TI = {TI};
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const hitT = lt - TI;
+      const recoil = hitT > 0 ? Math.exp(-hitT * 3.5) * Math.sin(hitT * 14) * 0.18 : 0;
+      man.setPose({{ ...STAND, chest: [-recoil, 0, 0], head: [-recoil * 0.8, 0, 0], lSh: [0.2, 0, 0.35], rSh: [0.2, 0, -0.35] }});
+      man.setMouth(hitT > 0 && hitT < 0.7 ? 0.65 : 0.05);
+      orb.position.set(0, 1.32, hitT < 0 ? lerp(1.25, 0.22, clamp(lt / TI, 0, 1)) : 0.22 + hitT * 0.08);
+      orb.scale.setScalar(hitT < 0 ? 0.45 : Math.max(0.01, 0.45 * (1 - hitT * 1.8)));
+      orb.r1.rotation.y = lt * 4.0; orb.r2.rotation.z = lt * 3.2;
+      const ru = rp.material.uniforms;
+      ru.uCenter.value.set(0, 0, 0);
+      ru.uAmp.value = hitT > 0 ? Math.min(1.0, hitT * 5.0) * (1.0 - 0.3 * smooth(range(hitT, 0.8, 2.0))) : 0.0;
+      ru.uRadius.value = hitT > 0 ? 0.03 + easeOut(range(hitT, 0, 1.1)) * 0.26 : 0.0;
+      ru.uRings.value = 180.0; ru.uSpot.value = 0.04; ru.uSpotAmp.value = 1.0; ru.uTime.value = lt;
+      sp.update(hitT);
+      const shk = hitT > 0 && hitT < 0.4 ? shake(lt * 8, 2.2, {i}) : shake(lt, 0.4, {i});
+      place(c, [lerp(0.65, 0.38, easeInOut(u)) + shk[0], 1.42 + shk[1], lerp(1.55, 1.15, easeInOut(u))], [0, 1.30, 0.12]);
+      return {{ bloom: hitT > 0 && hitT < 0.3 ? 0.65 : 0.35 }};
+    }}
+  }};
+}}"""
+
+    if setup == "mechanism_cross_section_3d":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.5 }});
+  const ped = forcePedestal(); scene.add(ped);
+  const stack = cutawaySlabStack(); stack.position.set(0, 1.05, 0); scene.add(stack);
+  const core = energyCore(0x3fa9f5); core.position.set(0, 1.42, 0); scene.add(core);
+  const c = cam(34);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const sep = easeInOut(clamp(u * 1.3, 0, 1));
+      stack.layers.forEach((m, k) => {{
+        m.position.y = (k - 1) * (0.09 + sep * 0.22);
+        m.rotation.y = lt * 0.55 + k * 0.2;
+      }});
+      core.position.y = 1.12 + sep * 0.42 + Math.sin(lt * 3) * 0.02;
+      core.r1.rotation.x = lt * 2.2; core.r2.rotation.y = lt * 2.9;
+      place(c, [Math.sin(u * 0.7 + 0.4) * 1.45, lerp(1.65, 1.45, u), Math.cos(u * 0.7 + 0.4) * 1.45], [0, 1.25, 0]);
+      return {{ bloom: 0.45 }};
+    }}
+  }};
+}}"""
+
+    return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.8 }});
+  const man = makeHuman('{outfit}'); man.root.position.set(-0.22, 0, 0); man.root.rotation.y = 0.32; scene.add(man.root);
+  const ped = forcePedestal(); ped.position.set(0.32, 0, 0.08); scene.add(ped);
+  const core = energyCore({0xffb703 if i == total_shots - 1 else 0x4cc9f0}); core.position.set(0.32, 1.22, 0.08); core.scale.setScalar(0.68); scene.add(core);
+  const c = cam(35);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const wave = Math.sin(lt * 2.6) * 0.06;
+      man.setPose({{
+        ...STAND,
+        chest: [Math.sin(lt * 1.8) * 0.02, -0.15, 0],
+        head: [wave * 0.5, -0.22, 0],
+        rSh: [-0.65 - easeOut(u) * 0.25, 0, -0.25],
+        rEl: [-0.45, 0, 0]
+      }});
+      man.setMouth(0.18 + 0.22 * Math.abs(Math.sin(lt * 6.5)));
+      core.r1.rotation.y = lt * 2.4; core.r2.rotation.x = lt * 1.9;
+      core.position.y = 1.22 + Math.sin(lt * 3.1) * 0.03;
+      const s = shake(lt, 0.45, {i});
+      place(c, [lerp({-0.55 if i % 2 == 0 else 0.65}, 0.08, easeInOut(u)) + s[0], lerp(1.52, 1.38, u) + s[1], lerp(2.35, 1.85, easeInOut(u))], [0.05, 1.26, 0.04]);
+      return {{ bloom: 0.34 }};
+    }}
+  }};
+}}"""
+
+
+def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]) -> str:
+    shots = storyboard["shots"]
+    total_dur = storyboard["total_duration_sec"]
+    captions = _build_captions_list(words)
+    motifs = set(storyboard.get("entities_and_facts", {}).get("detected_motifs", []))
+    is_roman = bool({"roman_gladiator", "roman_ledger_50x"} & motifs)
+
+    fades: List[List[float]] = []
+    for s in shots:
+        if s["transition_out"] == "dip_to_black":
+            t_c = s["end"]
+            fades.append([round(t_c - 0.16, 3), round(t_c - 0.03, 3), round(t_c + 0.04, 3), round(t_c + 0.18, 3)])
+
+    fn_blocks: List[str] = []
+    list_entries: List[str] = []
+
+    for i, s in enumerate(shots):
+        if is_roman:
+            fn_blocks.append(_roman_shot_code(i, s, len(shots)))
+        else:
+            fn_blocks.append(_generic_armor_shot_code(i, s, len(shots)))
+        list_entries.append(f"  {{ start: {s['start']}, end: {s['end']}, build: shot_{i} }},")
+
+    header = f"""import * as THREE from 'three';
+import {{ makeHuman }} from './human.js';
+import {{ sword, sparks, rippleOverlay }} from './props.js';
+import {{ clamp, lerp, smooth, easeOut, easeIn, easeInOut, range, V, cam, place, shake, ikArm }} from './anim.js';
+import {{
+  forcePedestal, energyCore, cutawaySlabStack,
+  addGladiatorBracers, romanPlinth, trainingPalus,
+  arenaStage, romanHelmet, romanScutum, denariusStack,
+  romanScrollTablet, togaSash, balanceScale50x
+}} from './novel_props.js';
+
+export const DURATION = {total_dur};
+export const CAPTIONS = {json.dumps(captions, ensure_ascii=False)};
+export const FADES = {json.dumps(fades)};
+
+const STAND = {{
+  lSh: [0.05, 0, 0.16], rSh: [0.05, 0, -0.16], lEl: [-0.25, 0, 0], rEl: [-0.25, 0, 0],
+  lHip: [0, 0, 0.07], rHip: [0, 0, -0.07], lAn: [0, 0, -0.07], rAn: [0, 0, 0.07],
+}};
+"""
+    return header + "\n".join(fn_blocks) + "\nexport const SHOTS = [\n" + "\n".join(list_entries) + "\n];\n"
+
+
+def generate_engine_project(
+    project_root: Path,
+    run_dir: Path,
+    storyboard: Dict[str, Any],
+    parsed_script: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Create `<run_dir>/engine_work` using ONLY `skills/zach-d-films` 3D modules + shared `kit`."""
+    upstream_zdf = project_root / "vendor" / "claude-animation-skills" / "skills" / "zach-d-films" / "engine"
+    kit_dir = project_root / "vendor" / "claude-animation-skills" / "kit"
+    work_dir = run_dir / "engine_work"
+    if work_dir.exists():
+        shutil.rmtree(work_dir)
+    src_dst = work_dir / "src"
+    src_dst.mkdir(parents=True, exist_ok=True)
+
+    visual_sources: List[str] = []
+    for fname in ("anim.js", "human.js", "props.js", "materials.js", "textures.js"):
+        src = (upstream_zdf / "src" / fname).resolve()
+        shutil.copy2(src, src_dst / fname)
+        visual_sources.append(str(src))
+
+    # Symlink shared neutral kit/node_modules
+    nm_link = work_dir / "node_modules"
+    os.symlink(str((kit_dir / "node_modules").resolve()), str(nm_link))
+
+    novel_p = src_dst / "novel_props.js"
+    novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
+
+    shots_p = src_dst / "shots.js"
+    shots_p.write_text(_build_zach_shots_js(storyboard, parsed_script["voice"]["words"]), encoding="utf-8")
+
+    main_p = src_dst / "director_main.js"
+    main_p.write_text(DIRECTOR_MAIN_JS, encoding="utf-8")
+
+    index_html = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; background: #000; overflow: hidden; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+  canvas { display: block; width: 1080px; height: 1920px; }
+  #cap {
+    position: absolute; left: 100px; width: 880px; top: 1390px; text-align: center;
+    font: 700 66px/1.1 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
+    text-shadow: 0 0 4px rgba(0,0,0,.78), 0 4px 16px rgba(0,0,0,.72);
+  }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head><body>
+<div id="stage"><div id="fade"></div><div id="cap"></div></div>
+<script type="module" src="./src/director_main.js"></script>
+</body></html>
+"""
+    index_p = work_dir / "index.html"
+    index_p.write_text(index_html, encoding="utf-8")
+
+    visual_sources.extend([
+        str(Path(__file__).resolve()),
+        str(novel_p.resolve()),
+        str(shots_p.resolve()),
+        str(main_p.resolve()),
+        str(index_p.resolve()),
+    ])
+
+    return {
+        "engine": "zach-d-films",
+        "work_dir": str(work_dir.resolve()),
+        "entry_html": str(index_p.resolve()),
+        "capture_mode": "page_jpeg",
+        "supports_native_4k": True,
+        "uses_webgl": True,
+        "visual_sources": visual_sources,
+    }
