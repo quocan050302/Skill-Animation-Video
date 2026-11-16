@@ -1,8 +1,8 @@
 {
   "name": "short-director",
   "displayName": "Short Director",
-  "version": "0.2.0",
-  "description": "Single-engine vertical shorts director (9:16, 1080p preview + 2160x3840 4K delivery) with strict fail-closed style locking, bespoke procedural animation, voiceover alignment, sound design, and technical QA.",
+  "version": "0.3.0",
+  "description": "Single-engine vertical shorts director (9:16, 1080p preview + 2160x3840 4K delivery) with strict fail-closed style locking, bespoke procedural animation, adaptive music & licensed SFX direction, voiceover alignment, and post-encode audio/video QC.",
   "logo": "assets/logo.svg",
   "author": {
     "name": "Short Director Engineering"

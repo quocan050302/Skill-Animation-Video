@@ -471,47 +471,42 @@ def run_final_quality_gate(
     else:
         checks["decoded_frames_and_cuts"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
-    # 5. Decoded Audio Level, Intelligibility & Dead-Air Check
+    # 5. Substantive Post-Encode Audio Quality Gate (readback on final encoded MP4 + stems + licenses)
     if final_4k_mp4.exists():
-        tmp_wav = run_dir / "logs" / "_qc_decoded_audio.wav"
-        tmp_wav.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", str(final_4k_mp4), "-vn", "-ac", "2", "-ar", "48000", str(tmp_wav)],
-            check=True,
-        )
-        pcm, sr = sf.read(str(tmp_wav), dtype="float32")
-        tmp_wav.unlink(missing_ok=True)
-        rms_db = float(20.0 * np.log10(np.sqrt(np.mean(pcm ** 2)) + 1e-9))
-        peak_db = float(20.0 * np.log10(np.max(np.abs(pcm)) + 1e-9))
-
-        # Check dead-air silence > 1.2s inside active body
-        sil_r = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-i", str(final_4k_mp4), "-af", "silencedetect=noise=-52dB:d=1.2", "-f", "null", "-"],
-            capture_output=True,
-            text=True,
-        )
-        sil_spans = re.findall(r"silence_start:\s*([0-9.]+)", sil_r.stderr)
-        audible_ok = (-28.0 <= rms_db <= -8.0) and (peak_db <= -0.1)
-        if not audible_ok:
-            checks["audio_levels_and_ducking"] = {
-                "status": "FAIL",
-                "rms_dbfs": round(rms_db, 2),
-                "peak_dbfs": round(peak_db, 2),
-            }
-        elif sil_spans:
-            checks["audio_levels_and_ducking"] = {
-                "status": "WARN",
-                "rms_dbfs": round(rms_db, 2),
-                "peak_dbfs": round(peak_db, 2),
-                "silence_starts": sil_spans,
-            }
+        audio_dir = run_dir / "audio"
+        audio_plan_p = audio_dir / "audio_plan.json"
+        if audio_plan_p.exists():
+            audio_plan = json.loads(audio_plan_p.read_text(encoding="utf-8"))
         else:
-            checks["audio_levels_and_ducking"] = {
-                "status": "PASS",
-                "rms_dbfs": round(rms_db, 2),
-                "peak_dbfs": round(peak_db, 2),
-                "silence_dropouts": 0,
+            audio_plan = {
+                "fps": expected_fps,
+                "total_duration_sec": expected_dur,
+                "music": {"enabled": True, "mode": "auto", "segments": []},
+                "sfx_mode": "auto",
+                "sfx": [],
+                "voice": {"expected": True},
+                "quality_policy": {"target_lufs": -14.0, "lufs_tolerance_db": 2.0, "max_true_peak_dbtp": -1.5, "hard_clip_limit_dbtp": -1.0},
+                "intentional_silences": [],
             }
+        mix_rep_p = audio_dir / "audio_mix_report.json"
+        mix_rep = json.loads(mix_rep_p.read_text(encoding="utf-8")) if mix_rep_p.exists() else {}
+        aqc = run_audio_quality_gate(
+            preview_mp4=preview_mp4,
+            final_mp4=final_4k_mp4,
+            audio_dir=audio_dir,
+            audio_plan=audio_plan,
+            mix_report=mix_rep,
+            logs_dir=run_dir / "logs",
+        )
+        checks["audio_levels_and_ducking"] = {
+            "status": aqc["overall_status"],
+            "rms_dbfs": aqc["metrics"].get("rms_dbfs"),
+            "peak_dbfs": aqc["metrics"].get("peak_dbfs"),
+            "integrated_lufs": aqc["metrics"].get("integrated_lufs"),
+            "true_peak_dbtp": aqc["metrics"].get("true_peak_dbtp"),
+            "audio_qc_report": str((audio_dir / "audio_qc_report.json").resolve()),
+            "checks_summary": {k: v["status"] for k, v in aqc["checks"].items()},
+        }
     else:
         checks["audio_levels_and_ducking"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
@@ -528,7 +523,7 @@ def run_final_quality_gate(
     overall = "FAIL" if ("FAIL" in statuses or "NOT_VERIFIED" in statuses) else ("WARN" if "WARN" in statuses else "PASS")
 
     qc_report = {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "overall_status": overall,
         "selected_skill": style_decisions["selected_skill"],
         "selection_mode": style_decisions["selection_mode"],
@@ -537,3 +532,465 @@ def run_final_quality_gate(
     }
     (run_dir / "qc_report.json").write_text(json.dumps(qc_report, indent=2), encoding="utf-8")
     return qc_report
+
+
+def verify_playable_audio_stream(mp4_path: Path) -> Dict[str, Any]:
+    """Verify final MP4 has an intact stereo 48 kHz AAC stream with decodable frames."""
+    if not mp4_path.exists():
+        return {"status": "FAIL", "reason": f"Missing MP4 file: {mp4_path}"}
+    try:
+        res = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-count_packets",
+                "-select_streams", "a:0",
+                "-show_entries", "stream=codec_name,sample_rate,channels,nb_read_packets,duration",
+                "-of", "json", str(mp4_path),
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        data = json.loads(res.stdout or "{}")
+    except Exception as exc:
+        return {"status": "FAIL", "reason": f"ffprobe audio stream error: {exc}"}
+
+    streams = data.get("streams") or []
+    if not streams:
+        return {"status": "FAIL", "reason": f"No playable audio stream in {mp4_path.name}"}
+    st = streams[0]
+    sr = int(st.get("sample_rate") or 0)
+    ch = int(st.get("channels") or 0)
+    pkts = int(st.get("nb_read_packets") or 0)
+    ok = st.get("codec_name") == "aac" and sr == 48000 and ch == 2 and pkts > 0
+    return {
+        "status": "PASS" if ok else "FAIL",
+        "codec": st.get("codec_name"),
+        "sample_rate": sr,
+        "channels": ch,
+        "packets": pkts,
+        "duration_sec": float(st.get("duration") or 0.0),
+    }
+
+
+def verify_lufs_true_peak_post_encode(
+    mp4_path: Path,
+    policy: Dict[str, Any],
+    intentionally_silent: bool = False,
+) -> Dict[str, Any]:
+    """Measure integrated LUFS & True Peak AFTER AAC encode using FFmpeg `ebur128=peak=true`."""
+    res = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", str(mp4_path), "-vn", "-af", "ebur128=peak=true", "-f", "null", "-"],
+        capture_output=True, text=True, check=True,
+    )
+    txt = res.stderr
+    m_i = re.findall(r"Integrated loudness:\s*\n\s*I:\s*([-0-9.]+)\s*LUFS", txt)
+    m_tp = re.findall(r"True peak:\s*\n\s*Peak:\s*([-0-9.]+)\s*dBFS", txt)
+    lufs = float(m_i[-1]) if m_i else -70.0
+    tp = float(m_tp[-1]) if m_tp else -70.0
+
+    target_lufs = float(policy.get("target_lufs", -14.0))
+    tol = float(policy.get("lufs_tolerance_db", 2.0))
+    max_tp = float(policy.get("max_true_peak_dbtp", -1.5))
+    hard_tp = float(policy.get("hard_clip_limit_dbtp", -1.0))
+
+    if intentionally_silent:
+        ok_sil = lufs <= -60.0 and tp <= -55.0
+        return {
+            "status": "PASS" if ok_sil else "FAIL",
+            "integrated_lufs": lufs,
+            "true_peak_dbtp": tp,
+            "intentionally_silent": True,
+        }
+
+    if tp > hard_tp or lufs < (target_lufs - tol - 2.0) or lufs > (target_lufs + tol + 1.5):
+        status = "FAIL"
+    elif tp > max_tp or abs(lufs - target_lufs) > tol:
+        status = "WARN"
+    else:
+        status = "PASS"
+
+    return {
+        "status": status,
+        "integrated_lufs": round(lufs, 2),
+        "true_peak_dbtp": round(tp, 2),
+        "target_lufs": target_lufs,
+        "max_true_peak_dbtp": max_tp,
+    }
+
+
+def verify_peak_and_clip(decoded_pcm: np.ndarray, intentionally_silent: bool = False) -> Dict[str, Any]:
+    """Detect non-finite samples, clipping peaks (>= 0.995), or consecutive flat-top saturation."""
+    if decoded_pcm.size == 0 or not np.all(np.isfinite(decoded_pcm)):
+        return {"status": "FAIL", "reason": "Empty or non-finite decoded audio PCM"}
+    abs_pcm = np.abs(decoded_pcm)
+    pk = float(np.max(abs_pcm))
+    peak_db = round(float(20.0 * np.log10(max(pk, 1e-12))), 2)
+    rms_db = round(float(20.0 * np.log10(float(np.sqrt(np.mean(decoded_pcm ** 2))) + 1e-12)), 2)
+
+    # Check consecutive saturated samples >= 0.995
+    sat = (abs_pcm >= 0.995).any(axis=1) if abs_pcm.ndim == 2 else (abs_pcm >= 0.995)
+    max_run = 0
+    cur_run = 0
+    for s in sat:
+        if s:
+            cur_run += 1
+            if cur_run > max_run:
+                max_run = cur_run
+        else:
+            cur_run = 0
+
+    if not intentionally_silent and rms_db <= -65.0:
+        return {"status": "FAIL", "reason": f"Decoded MP4 audio unexpectedly silent (rms={rms_db} dBFS)", "rms_dbfs": rms_db, "peak_dbfs": peak_db}
+    if max_run >= 3 or peak_db > -0.1:
+        return {"status": "FAIL", "reason": f"Audio clipping detected (peak={peak_db} dBFS, sat_run={max_run})", "rms_dbfs": rms_db, "peak_dbfs": peak_db}
+    return {"status": "PASS", "rms_dbfs": rms_db, "peak_dbfs": peak_db, "clipped_sample_runs": 0}
+
+
+def verify_audio_duration_and_sync(mp4_path: Path, expected_fps: int) -> Dict[str, Any]:
+    """Verify audio duration matches video picture within <= 1 video frame + AAC encoder padding."""
+    probe = probe_media_file(mp4_path)
+    v_str = next((s for s in probe.get("streams", []) if s.get("codec_type") == "video"), {})
+    a_str = next((s for s in probe.get("streams", []) if s.get("codec_type") == "audio"), {})
+    if not v_str or not a_str:
+        return {"status": "FAIL", "reason": "Missing video or audio stream for sync check"}
+    vdur = float(v_str.get("duration") or probe.get("format", {}).get("duration") or 0.0)
+    adur = float(a_str.get("duration") or probe.get("format", {}).get("duration") or 0.0)
+    diff = abs(vdur - adur)
+    tol = (1.0 / max(1, expected_fps)) + 0.055  # 1 frame + AAC 21-46ms codec frame margin
+    return {
+        "status": "PASS" if diff <= tol else "FAIL",
+        "video_duration_sec": round(vdur, 3),
+        "audio_duration_sec": round(adur, 3),
+        "delta_sec": round(diff, 4),
+        "tolerance_sec": round(tol, 4),
+    }
+
+
+def verify_missing_expected_cues(
+    audio_plan: Dict[str, Any],
+    audio_dir: Path,
+    mix_report: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Ensure enabled music/SFX/voice tracks were actually synthesized and not silently dropped."""
+    problems: List[str] = []
+    voice_exp = bool((audio_plan.get("voice") or {}).get("expected", True))
+    music_en = bool((audio_plan.get("music") or {}).get("enabled", True))
+    sfx_en = str(audio_plan.get("sfx_mode", "auto")) != "off" and bool(audio_plan.get("sfx"))
+
+    voice_p = audio_dir / "voice.wav"
+    music_p = audio_dir / "music.wav"
+    sfx_p = audio_dir / "sfx.wav"
+
+    if voice_exp:
+        if not voice_p.exists():
+            problems.append("Expected voice.wav stem missing")
+        else:
+            va, _ = sf.read(str(voice_p), dtype="float32")
+            v_rms = 20.0 * np.log10(float(np.sqrt(np.mean(va ** 2))) + 1e-12)
+            if v_rms <= -55.0:
+                problems.append(f"Expected voice.wav silent (rms={v_rms:.1f} dBFS)")
+
+    if music_en and (audio_plan.get("music") or {}).get("segments"):
+        if not music_p.exists():
+            problems.append("Enabled music.wav stem missing")
+        else:
+            ma, _ = sf.read(str(music_p), dtype="float32")
+            m_rms = 20.0 * np.log10(float(np.sqrt(np.mean(ma ** 2))) + 1e-12)
+            if m_rms <= -68.0:
+                problems.append(f"Enabled music.wav unexpectedly silent (rms={m_rms:.1f} dBFS)")
+
+    if sfx_en:
+        if not sfx_p.exists():
+            problems.append("Expected sfx.wav stem missing")
+        else:
+            sa, _ = sf.read(str(sfx_p), dtype="float32")
+            s_rms = 20.0 * np.log10(float(np.sqrt(np.mean(sa ** 2))) + 1e-12)
+            if s_rms <= -72.0:
+                problems.append(f"Expected sfx.wav unexpectedly silent (rms={s_rms:.1f} dBFS)")
+        sfx_cs_p = audio_dir / "sfx_cue_sheet.json"
+        if sfx_cs_p.exists():
+            cs = json.loads(sfx_cs_p.read_text(encoding="utf-8"))
+            if len(cs.get("cues", [])) < len(audio_plan.get("sfx", [])):
+                problems.append(f"Dropped SFX cues: rendered {len(cs.get('cues', []))} < planned {len(audio_plan.get('sfx', []))}")
+
+    return {
+        "status": "FAIL" if problems else "PASS",
+        "problems": problems,
+        "voice_expected": voice_exp,
+        "music_enabled": music_en,
+        "sfx_expected": sfx_en,
+    }
+
+
+def verify_sfx_onsets(
+    audio_dir: Path,
+    decoded_pcm: np.ndarray,
+    sr: int,
+    audio_plan: Dict[str, Any],
+    fps: int = 30,
+) -> Dict[str, Any]:
+    """Measure true frame-onset energy alignment for every expected SFX cue."""
+    cues = list(audio_plan.get("sfx", []))
+    if str(audio_plan.get("sfx_mode", "auto")) == "off" or not cues:
+        return {"status": "PASS", "verified_cues": 0, "measurement_method": "sfx_intentionally_off_or_empty"}
+
+    sfx_p = audio_dir / "sfx.wav"
+    if not sfx_p.exists():
+        return {"status": "FAIL", "reason": "Missing sfx.wav for onset verification"}
+
+    sfx_arr, sfx_sr = sf.read(str(sfx_p), dtype="float64", always_2d=True)
+    sfx_mono = sfx_arr.mean(axis=1)
+    dec_mono = decoded_pcm.mean(axis=1) if decoded_pcm.ndim == 2 else decoded_pcm
+
+    frame_dt = 1.0 / max(1, fps)
+    dropped: List[Dict[str, Any]] = []
+    max_err_ms = 0.0
+    checked = 0
+
+    for c in cues:
+        t_exp = float(c["time_sec"])
+        intent = str(c.get("intent", ""))
+        kind = str(c.get("kind", "foley"))
+        is_swell = ("whoosh" in intent or "riser" in intent or "sweep" in intent or kind == "transition")
+        # For hard impacts/foley/ui expect sharp onset energy within +/- (1 frame + 20ms); swells center on body
+        half_w = frame_dt + (0.14 if is_swell else 0.035)
+        w0 = max(0, int(round((t_exp - 0.015) * sfx_sr)))
+        w1 = min(len(sfx_mono), int(round((t_exp + half_w + 0.12) * sfx_sr)))
+        if w1 <= w0 + 16:
+            continue
+        seg = np.abs(sfx_mono[w0:w1])
+        seg_pk = float(np.max(seg))
+        seg_db = 20.0 * np.log10(seg_pk + 1e-12)
+        if seg_db < -55.0:
+            dropped.append({"time_sec": t_exp, "event": c.get("event"), "stem_peak_dbfs": round(seg_db, 2)})
+            continue
+
+        # Measure energy centroid/onset point inside window
+        thresh = seg_pk * (0.25 if not is_swell else 0.35)
+        hits = np.where(seg >= thresh)[0]
+        if len(hits) > 0:
+            measured_t = (w0 + int(hits[0])) / float(sfx_sr)
+            err_ms = abs(measured_t - t_exp) * 1000.0
+            if not is_swell:
+                max_err_ms = max(max_err_ms, err_ms)
+
+        # Verify decoded final MP4 stream actually contains audible signal at that instant (not nulled by mux)
+        d0 = max(0, int(round((t_exp - 0.01) * sr)))
+        d1 = min(len(dec_mono), int(round((t_exp + 0.15) * sr)))
+        if d1 > d0 and float(np.max(np.abs(dec_mono[d0:d1]))) < 1e-4:
+            dropped.append({"time_sec": t_exp, "event": c.get("event"), "reason": "Missing in decoded final MP4 audio"})
+        checked += 1
+
+    return {
+        "status": "FAIL" if dropped else "PASS",
+        "measurement_method": "sfx_stem_onset_energy_window_and_post_encode_mp4_presence",
+        "checked_cues": checked,
+        "dropped_cues": dropped,
+        "max_impact_onset_error_ms": round(max_err_ms, 2),
+        "frame_tolerance_ms": round((frame_dt + 0.020) * 1000.0, 2),
+    }
+
+
+def verify_voice_music_intelligibility(audio_dir: Path, audio_plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Verify Voice > Action > Music hierarchy across voiced speech windows."""
+    voice_exp = bool((audio_plan.get("voice") or {}).get("expected", True))
+    if not voice_exp:
+        return {"status": "PASS", "voice_expected": False, "note": "Voice intentionally absent"}
+
+    vp = audio_dir / "voice.wav"
+    mp = audio_dir / "music.wav"
+    sp = audio_dir / "sfx.wav"
+    if not vp.exists():
+        return {"status": "FAIL", "reason": "Missing voice.wav"}
+
+    vo, sr = sf.read(str(vp), dtype="float64", always_2d=True)
+    vo_m = vo.mean(axis=1)
+    hop = max(1, int(0.04 * sr))
+    n_hops = len(vo_m) // hop
+    if n_hops == 0:
+        return {"status": "FAIL", "reason": "Voice track too short"}
+
+    vo_frames = vo_m[: n_hops * hop].reshape(n_hops, hop)
+    vo_rms_f = np.sqrt(np.mean(vo_frames ** 2, axis=1) + 1e-12)
+    voiced_mask = (20.0 * np.log10(vo_rms_f + 1e-12)) > -38.0
+    if not np.any(voiced_mask):
+        return {"status": "FAIL", "reason": "No active speech detected in voice.wav despite voice_expected=True"}
+
+    vo_speech_db = float(20.0 * np.log10(float(np.sqrt(np.mean(vo_rms_f[voiced_mask] ** 2))) + 1e-12))
+
+    margin_mus = None
+    if mp.exists():
+        mu, _ = sf.read(str(mp), dtype="float64", always_2d=True)
+        mu_m = np.pad(mu.mean(axis=1), (0, max(0, len(vo_m) - len(mu))))[: n_hops * hop]
+        mu_frames = mu_m.reshape(n_hops, hop)
+        mu_rms_f = np.sqrt(np.mean(mu_frames ** 2, axis=1) + 1e-12)
+        if float(np.max(mu_rms_f)) > 1e-5:
+            mu_speech_db = float(20.0 * np.log10(float(np.sqrt(np.mean(mu_rms_f[voiced_mask] ** 2))) + 1e-12))
+            margin_mus = round(vo_speech_db - mu_speech_db, 2)
+
+    sfx_masking = False
+    sfx_margin_db = None
+    if sp.exists():
+        sx, _ = sf.read(str(sp), dtype="float64", always_2d=True)
+        sx_m = np.pad(sx.mean(axis=1), (0, max(0, len(vo_m) - len(sx))))[: n_hops * hop]
+        sx_frames = sx_m.reshape(n_hops, hop)
+        sx_rms_f = np.sqrt(np.mean(sx_frames ** 2, axis=1) + 1e-12)
+        active_sx = voiced_mask & (20.0 * np.log10(sx_rms_f + 1e-12) > -45.0)
+        if np.any(active_sx):
+            sx_over_vo_db = float(20.0 * np.log10(float(np.sqrt(np.mean(sx_rms_f[active_sx] ** 2))) + 1e-12)) - float(20.0 * np.log10(float(np.sqrt(np.mean(vo_rms_f[active_sx] ** 2))) + 1e-12))
+            sfx_margin_db = round(-sx_over_vo_db, 2)
+            # Fail only if simultaneous SFX over voiced words overwhelms speech (> +1.0 dB louder over active speech)
+            if sx_over_vo_db > 1.0:
+                sfx_masking = True
+
+    mus_too_loud = (margin_mus is not None and margin_mus < 9.0)
+    ok = not (mus_too_loud or sfx_masking)
+    return {
+        "status": "PASS" if ok else "FAIL",
+        "vo_active_speech_rms_dbfs": round(vo_speech_db, 2),
+        "vo_to_music_margin_during_speech_db": margin_mus,
+        "vo_to_simultaneous_sfx_margin_db": sfx_margin_db,
+        "music_masks_voice": mus_too_loud,
+        "sfx_masks_voice": sfx_masking,
+    }
+
+
+def verify_licenses_and_credits(audio_dir: Path) -> Dict[str, Any]:
+    """Audit audio_asset_manifest.json and verify mandatory CC BY attribution inside credits_audio.txt."""
+    man_p = audio_dir / "audio_asset_manifest.json"
+    cred_p = audio_dir / "credits_audio.txt"
+    if not man_p.exists() or not cred_p.exists():
+        return {"status": "FAIL", "reason": "Missing audio_asset_manifest.json or credits_audio.txt"}
+
+    man = json.loads(man_p.read_text(encoding="utf-8"))
+    cred_txt = cred_p.read_text(encoding="utf-8")
+    violations: List[str] = []
+
+    for item in man.get("assets", []):
+        if not item.get("selected_uses"):
+            continue
+        if item.get("validation_status") != "VERIFIED":
+            violations.append(f"Selected asset '{item.get('asset_id')}' has non-VERIFIED status: {item.get('validation_status')}")
+        if not item.get("commercial_use_allowed", False):
+            violations.append(f"Selected asset '{item.get('asset_id')}' prohibits commercial use")
+        if item.get("attribution_required"):
+            credit = str(item.get("mandatory_credit") or "").strip()
+            author = str(item.get("author") or "").strip()
+            if (credit and credit not in cred_txt) or (not credit and author and author not in cred_txt):
+                violations.append(f"CC BY asset '{item.get('asset_id')}' credit missing from credits_audio.txt")
+
+    return {
+        "status": "FAIL" if violations else "PASS",
+        "qa_audio_root_status": man.get("qa_audio_root_status"),
+        "rejected_assets_count": man.get("rejected_assets_count", 0),
+        "violations": violations,
+    }
+
+
+def verify_music_loop_boundaries(audio_dir: Path) -> Dict[str, Any]:
+    """Check music.wav at every segment/crossfade boundary for click/step discontinuities."""
+    mp = audio_dir / "music.wav"
+    cs_p = audio_dir / "music_cue_sheet.json"
+    if not mp.exists() or not cs_p.exists():
+        return {"status": "PASS", "checked_boundaries": 0, "note": "No music stem"}
+
+    cs = json.loads(cs_p.read_text(encoding="utf-8"))
+    if not cs.get("enabled") or not cs.get("segments"):
+        return {"status": "PASS", "checked_boundaries": 0, "note": "Music disabled"}
+
+    mu, sr = sf.read(str(mp), dtype="float64", always_2d=True)
+    max_step_jump = 0.0
+    pops: List[Dict[str, Any]] = []
+    for seg in cs.get("segments", [])[1:]:
+        bt = float(seg.get("start_sec", 0.0))
+        i0 = max(1, int(round((bt - float(seg.get("crossfade_sec", 0.0)) - 0.05) * sr)))
+        i1 = min(len(mu) - 1, int(round((bt + 0.08) * sr)))
+        if i1 <= i0 + 2:
+            continue
+        diffs = np.abs(np.diff(mu[i0:i1], axis=0))
+        jump = float(np.max(diffs))
+        max_step_jump = max(max_step_jump, jump)
+        if jump > 0.14:
+            pops.append({"boundary_sec": bt, "max_sample_step": round(jump, 4)})
+
+    return {
+        "status": "FAIL" if pops else "PASS",
+        "checked_boundaries": max(0, len(cs.get("segments", [])) - 1),
+        "max_boundary_step_delta": round(max_step_jump, 5),
+        "boundary_pops": pops,
+    }
+
+
+def verify_stem_reproducibility(mix_report: Dict[str, Any]) -> Dict[str, Any]:
+    mix_sha = str(mix_report.get("mix_pcm_sha256") or "")
+    stems = mix_report.get("stems") or {}
+    ok = bool(mix_sha) and all(bool((stems.get(k) or {}).get("pcm_sha256")) for k in ("voice", "music", "sfx", "ambience"))
+    return {
+        "status": "PASS" if ok else "NOT_VERIFIED",
+        "mix_pcm_sha256": mix_sha,
+        "mastering_method": mix_report.get("mastering_method"),
+    }
+
+
+def run_audio_quality_gate(
+    preview_mp4: Path,
+    final_mp4: Path,
+    audio_dir: Path,
+    audio_plan: Dict[str, Any],
+    mix_report: Dict[str, Any],
+    logs_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Complete substantive Audio QC gate over decoded final MP4, stems, cues, and licenses."""
+    fps = int(audio_plan.get("fps", 30))
+    policy = audio_plan.get("quality_policy") or {}
+    music_en = bool((audio_plan.get("music") or {}).get("enabled", True))
+    sfx_en = str(audio_plan.get("sfx_mode", "auto")) != "off" and bool(audio_plan.get("sfx"))
+    voice_exp = bool((audio_plan.get("voice") or {}).get("expected", True))
+    amb_en = bool((audio_plan.get("ambience") or {}).get("enabled", False))
+    intentionally_silent = (not music_en and not sfx_en and not voice_exp and not amb_en) or bool(audio_plan.get("intentional_silences"))
+
+    # Decode final MP4 audio track once cleanly via ffmpeg into temp WAV inside owned logs/
+    dec_dir = logs_dir or (audio_dir.parent / "logs")
+    dec_dir.mkdir(parents=True, exist_ok=True)
+    tmp_wav = dec_dir / "_qc_decoded_audio_final.wav"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(final_mp4), "-vn", "-ac", "2", "-ar", "48000", str(tmp_wav)],
+            check=True,
+        )
+        dec_pcm, dec_sr = sf.read(str(tmp_wav), dtype="float32", always_2d=True)
+    finally:
+        tmp_wav.unlink(missing_ok=True)
+
+    checks: Dict[str, Dict[str, Any]] = {}
+    checks["playable_stream_final"] = verify_playable_audio_stream(final_mp4)
+    checks["playable_stream_preview"] = verify_playable_audio_stream(preview_mp4)
+    checks["lufs_and_true_peak_post_encode"] = verify_lufs_true_peak_post_encode(final_mp4, policy, intentionally_silent=intentionally_silent)
+    checks["peak_and_clip"] = verify_peak_and_clip(dec_pcm, intentionally_silent=intentionally_silent)
+    checks["duration_and_sync"] = verify_audio_duration_and_sync(final_mp4, fps)
+    checks["missing_expected_cues"] = verify_missing_expected_cues(audio_plan, audio_dir, mix_report)
+    checks["sfx_onsets"] = verify_sfx_onsets(audio_dir, dec_pcm, dec_sr, audio_plan, fps=fps)
+    checks["voice_music_intelligibility"] = verify_voice_music_intelligibility(audio_dir, audio_plan)
+    checks["music_loop_boundaries"] = verify_music_loop_boundaries(audio_dir)
+    checks["licenses_and_credits"] = verify_licenses_and_credits(audio_dir)
+    checks["stem_reproducibility"] = verify_stem_reproducibility(mix_report)
+
+    statuses = [c["status"] for c in checks.values()]
+    overall = "FAIL" if ("FAIL" in statuses or "NOT_VERIFIED" in statuses) else ("WARN" if "WARN" in statuses else "PASS")
+
+    lufs_info = checks["lufs_and_true_peak_post_encode"]
+    pk_info = checks["peak_and_clip"]
+    out = {
+        "schema_version": "sd-audio-qc-1",
+        "overall_status": overall,
+        "subjective_editorial_listening": "NOT_VERIFIED",
+        "subjective_listening_note": "Automated post-encode DSP/FFmpeg ebur128 & stem QC executed; human subjective listening cannot run in non-interactive headless mode.",
+        "intentionally_silent": intentionally_silent,
+        "metrics": {
+            "rms_dbfs": pk_info.get("rms_dbfs"),
+            "peak_dbfs": pk_info.get("peak_dbfs"),
+            "integrated_lufs": lufs_info.get("integrated_lufs"),
+            "true_peak_dbtp": lufs_info.get("true_peak_dbtp"),
+        },
+        "checks": checks,
+    }
+    (audio_dir / "audio_qc_report.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    return out

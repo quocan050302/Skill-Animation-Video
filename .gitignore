@@ -26,6 +26,7 @@ vendor/claude-animation-skills/kit/vendor/
 runs/
 *.mp4
 *.part.mp4
+*.bak.mp4
 *.mov
 *.mkv
 *.wav

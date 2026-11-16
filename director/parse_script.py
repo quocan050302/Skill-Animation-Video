@@ -507,6 +507,54 @@ def synthesize_and_align_voice(
     }
 
 
+def _allocate_silent_voice_timings(
+    sentences: List[str],
+    audio_dir: Path,
+    lang: str = "en",
+) -> Dict[str, Any]:
+    """Allocate deterministic pacing word timings without synthesizing TTS when `--voice-mode off`."""
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    words_json_path = audio_dir / "words.json"
+    lines_meta: List[Dict[str, Any]] = []
+    all_words: List[Dict[str, Any]] = []
+    cursor = 0.0
+    for li, sent in enumerate(sentences):
+        toks = sent.split()
+        line_start = cursor
+        for w in toks:
+            dur_w = max(0.22, _estimate_word_weight(w) * 0.42)
+            all_words.append({
+                "w": w,
+                "s": round(cursor, 3),
+                "e": round(cursor + dur_w, 3),
+                "line": li,
+            })
+            cursor += dur_w
+        lines_meta.append({
+            "index": li,
+            "text": sent,
+            "start": round(line_start, 3),
+            "end": round(cursor, 3),
+            "duration": round(cursor - line_start, 3),
+        })
+        cursor += 0.25 if li == 0 or sent.endswith(("?", "!")) else 0.16
+
+    words_json_path.write_text(json.dumps(all_words, ensure_ascii=False, indent=2), encoding="utf-8")
+    (audio_dir / "lines.json").write_text(json.dumps(lines_meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "backend": "off",
+        "voice_id": "",
+        "language": lang,
+        "language_coverage_note": "Voiceover intentionally disabled via --voice-mode off.",
+        "alignment_method": "silent_syllabic_pacing",
+        "vo_wav_path": None,
+        "words_json_path": str(words_json_path),
+        "vo_duration_sec": round(cursor, 3),
+        "lines": lines_meta,
+        "words": all_words,
+    }
+
+
 def parse_script_and_build_voice(
     raw_script: str,
     selected_skill: str,
@@ -514,6 +562,7 @@ def parse_script_and_build_voice(
     kit_dir: Path,
     lang: str = "en",
     user_voice_file: Optional[Path] = None,
+    voice_mode: str = "auto",
 ) -> Dict[str, Any]:
     """Full STEP 1 implementation: script -> beats + fact check + voice + per-word timings."""
     raw_sentences = _split_sentences(raw_script)
@@ -529,13 +578,16 @@ def parse_script_and_build_voice(
     analysis = analyze_facts_and_entities(raw_script, sentences, selected_skill)
     all_fact_checks = expansion_notes + analysis["fact_checks"]
 
-    voice_info = synthesize_and_align_voice(
-        sentences=sentences,
-        audio_dir=run_dir / "audio",
-        kit_dir=kit_dir,
-        lang=lang,
-        user_voice_file=user_voice_file,
-    )
+    if voice_mode == "off":
+        voice_info = _allocate_silent_voice_timings(sentences=sentences, audio_dir=run_dir / "audio", lang=lang)
+    else:
+        voice_info = synthesize_and_align_voice(
+            sentences=sentences,
+            audio_dir=run_dir / "audio",
+            kit_dir=kit_dir,
+            lang=lang,
+            user_voice_file=user_voice_file,
+        )
 
     beats: List[Dict[str, Any]] = []
     n_s = len(sentences)

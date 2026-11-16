@@ -19,4 +19,6 @@ Whenever invoking `/short-director` or operating inside a Short Director run:
 
 4. **Licensing & Factual Integrity**:
    - Never rip third-party footage, copyrighted music, or unverified voice clones. Verify local TTS model language coverage before claiming support (e.g., Kokoro v1.0 does not support Vietnamese; macOS `say` supports Vietnamese only when a `vi_VN` voice such as `Linh` is installed).
+   - Verify SHA-256 checksums, explicit license JSON, commercial rights, and mandatory CC BY attribution (`audio/credits_audio.txt`) before using any external or optional read-only `QA-Unified-Video-Studio` audio asset; label native DSP audio as `procedural` (never `'copyright-free'`).
+   - Treat audio (`audio_catalog`, `audio_narrative`, `music_director`, `sfx_director`, `mix_audio`) strictly as a shared non-visual service: audio code must never open, import, or swap visual engine skills, and `--audio-only` must preserve picture packets losslessly (`-c:v copy`).
    - Never invent chart numbers in `graph` (hedge or label illustrative trajectories explicitly), and never claim `map-route` schematic city geometry is GIS-accurate.

@@ -3,14 +3,25 @@
 from __future__ import annotations
 
 import glob
+import json
 import os
 import platform
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+from .audio_catalog import (
+    AudioAsset,
+    LicensePolicy,
+    ValidationResult,
+    discover_native_audio_assets,
+    discover_qa_audio_assets,
+    discover_user_music_asset,
+    validate_audio_asset,
+)
 
 
 KOKORO_VERIFIED_LANGS = {
@@ -51,9 +62,150 @@ class PreflightResult:
     native_4k_capabilities: Dict[str, Any]
     notes: List[str]
     errors: List[str]
+    qa_audio_root: Optional[str] = None
+    qa_audio_status: str = "QA_LIBRARY_UNAVAILABLE"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+def resolve_qa_audio_root(
+    project_root: Path,
+    cli_qa_root: Optional[Path] = None,
+) -> Tuple[Optional[Path], str, str]:
+    """Locate optional read-only QA-Unified-Video-Studio root cleanly without unbounded HOME scans.
+
+    Priority order:
+      1. CLI `--qa-audio-root`
+      2. Env `SHORT_DIRECTOR_QA_ROOT`
+      3. Local config `<project_root>/.short_director_local.json` (`qa_audio_root`)
+      4. Trusted workspace sibling `<project_root.parent>/QA-Unified-Video-Studio`
+    """
+    candidates: List[Tuple[str, Path]] = []
+    if cli_qa_root is not None:
+        candidates.append(("cli_flag", cli_qa_root))
+    env_root = os.environ.get("SHORT_DIRECTOR_QA_ROOT")
+    if env_root:
+        candidates.append(("env:SHORT_DIRECTOR_QA_ROOT", Path(env_root)))
+    local_cfg = project_root / ".short_director_local.json"
+    if local_cfg.exists():
+        try:
+            cfg = json.loads(local_cfg.read_text(encoding="utf-8"))
+            if isinstance(cfg, dict) and cfg.get("qa_audio_root"):
+                candidates.append(("local_config", Path(str(cfg["qa_audio_root"]))))
+        except Exception:
+            pass
+    sibling = project_root.parent / "QA-Unified-Video-Studio"
+    candidates.append(("workspace_sibling", sibling))
+
+    for origin, cand in candidates:
+        try:
+            res = cand.resolve(strict=False)
+        except Exception:
+            continue
+        if res.exists() and res.is_dir() and (res / "audio").is_dir():
+            return res, "QA_LIBRARY_MOUNTED_READONLY", f"Resolved QA audio library ({origin}): {res}"
+
+    if cli_qa_root is not None:
+        return None, "QA_LIBRARY_UNAVAILABLE", f"Explicit --qa-audio-root missing or has no audio/: {cli_qa_root}"
+    return None, "QA_LIBRARY_UNAVAILABLE", "QA audio library not present locally; native procedural audio engine active."
+
+
+def preflight_audio_assets(
+    project_root: Path,
+    qa_audio_root: Optional[Path],
+    qa_status: str,
+    music_mode: str = "auto",
+    sfx_mode: str = "auto",
+    music_file: Optional[Path] = None,
+    music_rights_confirmed: bool = False,
+    disk_free_gb: float = 10.0,
+    prepare_qa_audio_library: bool = False,
+) -> Dict[str, Any]:
+    """Fail-closed preflight of audio sources BEFORE launching costly 4K scene rendering."""
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    estimated_audio_disk_mb = 45.0
+    if disk_free_gb * 1024.0 < estimated_audio_disk_mb * 2:
+        errors.append(f"Insufficient disk space for 48 kHz audio stems ({disk_free_gb:.2f} GiB free)")
+
+    # Explicit opt-in only for optional QA library build helper (never auto-triggered by missing files!)
+    if prepare_qa_audio_library:
+        if not qa_audio_root or not (qa_audio_root / "audio" / "build_audio.py").exists():
+            errors.append("--prepare-qa-audio-library requested, but QA audio/build_audio.py not found under resolved root.")
+        elif disk_free_gb < 5.0:
+            errors.append(f"Refusing --prepare-qa-audio-library under tight disk quota ({disk_free_gb:.2f} GiB < 5.0 GiB)")
+        else:
+            warnings.append("Explicit --prepare-qa-audio-library opt-in acknowledged (checking existing assets read-only first).")
+
+    native_catalog = discover_native_audio_assets(project_root)
+    qa_catalog = discover_qa_audio_assets(qa_audio_root) if (qa_audio_root and qa_status == "QA_LIBRARY_MOUNTED_READONLY") else []
+    catalog: List[AudioAsset] = native_catalog + qa_catalog
+
+    policy = LicensePolicy(allow_user_file_without_sidecar=music_rights_confirmed)
+    validations: Dict[str, ValidationResult] = {}
+    allowed_roots: List[Path] = []
+    if qa_audio_root and qa_audio_root.exists():
+        allowed_roots.append(qa_audio_root.resolve())
+    if music_file and music_file.exists():
+        allowed_roots.append(music_file.resolve().parent)
+
+    verified_qa_music: List[str] = []
+    verified_qa_sfx: List[str] = []
+    rejected_qa: List[Dict[str, str]] = []
+
+    for item in qa_catalog:
+        v = validate_audio_asset(item, policy, allowed_roots=allowed_roots or None)
+        validations[item.asset_id] = v
+        if v.ok:
+            if item.asset_type == "music":
+                verified_qa_music.append(item.asset_id)
+            elif item.asset_type == "sfx":
+                verified_qa_sfx.append(item.asset_id)
+        else:
+            rejected_qa.append({"asset_id": item.asset_id, "reason": v.reason})
+
+    if music_mode == "qa-library" and not verified_qa_music:
+        errors.append(
+            "Requested --music-mode qa-library failed preflight: no verified QA music beds available "
+            f"(qa_status={qa_status}, rejected={len(rejected_qa)}). Supply valid --qa-audio-root or switch to --music-mode auto."
+        )
+    if sfx_mode == "qa-library" and not verified_qa_sfx:
+        errors.append(
+            "Requested --sfx-mode qa-library failed preflight: no verified QA SFX assets available "
+            f"(qa_status={qa_status}, rejected={len(rejected_qa)})."
+        )
+
+    if music_mode == "file":
+        if music_file is None:
+            errors.append("--music-mode file requires --music-file <absolute-path>.")
+        else:
+            um = discover_user_music_asset(music_file, rights_confirmed=music_rights_confirmed)
+            v_u = validate_audio_asset(um, policy, allowed_roots=[music_file.resolve().parent])
+            validations[um.asset_id] = v_u
+            if not v_u.ok:
+                errors.append(f"--music-file preflight rejected: {v_u.reason}")
+
+    if qa_status == "QA_LIBRARY_UNAVAILABLE" and (music_mode == "auto" or sfx_mode == "auto"):
+        warnings.append("QA_LIBRARY_UNAVAILABLE: Standalone native procedural synthesis will be used cleanly.")
+    if rejected_qa:
+        warnings.append(f"Skipped {len(rejected_qa)} unverified/corrupt external QA asset(s) during preflight.")
+
+    return {
+        "ok": len(errors) == 0,
+        "qa_audio_root": str(qa_audio_root.resolve()) if qa_audio_root else None,
+        "qa_audio_status": qa_status,
+        "native_assets_count": len(native_catalog),
+        "qa_assets_discovered": len(qa_catalog),
+        "verified_qa_music_count": len(verified_qa_music),
+        "verified_qa_sfx_count": len(verified_qa_sfx),
+        "rejected_qa_assets": rejected_qa,
+        "catalog": catalog,
+        "estimated_audio_disk_mb": estimated_audio_disk_mb,
+        "warnings": warnings,
+        "errors": errors,
+    }
 
 
 def find_browser_executable() -> Optional[str]:
@@ -207,6 +359,8 @@ def run_preflight(
     user_voice_file: Optional[Path] = None,
     min_free_gb: float = 1.5,
     requested_workers: Optional[int] = None,
+    qa_audio_root: Optional[Path] = None,
+    voice_mode: str = "auto",
 ) -> PreflightResult:
     errors: List[str] = []
     notes: List[str] = []
@@ -278,10 +432,16 @@ def run_preflight(
     else:
         webgl_backend = "swiftshader"
 
-    v_ok, v_backend, v_id, v_note = verify_language_voice_support(lang, kit_dir, user_voice_file)
+    if voice_mode == "off":
+        v_ok, v_backend, v_id, v_note = True, "off", "", "Voiceover intentionally disabled via --voice-mode off."
+    else:
+        v_ok, v_backend, v_id, v_note = verify_language_voice_support(lang, kit_dir, user_voice_file)
     notes.append(v_note)
     if not v_ok:
         errors.append(v_note)
+
+    qa_root_res, qa_status, qa_note = resolve_qa_audio_root(project_root, qa_audio_root)
+    notes.append(qa_note)
 
     say_map = probe_macos_say_voices()
     voice_backends = {
@@ -333,4 +493,6 @@ def run_preflight(
         native_4k_capabilities=native_4k_caps,
         notes=notes,
         errors=errors,
+        qa_audio_root=str(qa_root_res) if qa_root_res else None,
+        qa_audio_status=qa_status,
     )

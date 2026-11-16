@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from .. import VALID_SKILLS
-from ..provenance_guard import StyleLockViolationError
+from ..provenance_guard import ProvenanceGuard, StyleLockViolationError
 
 
 def build_locked_engine_workspace(
@@ -26,6 +26,9 @@ def build_locked_engine_workspace(
         raise StyleLockViolationError(f"Refusing to load unknown skill adapter: {selected_skill}")
 
     mod_slug = selected_skill.replace("-", "_") + "_adapter"
+    guard = ProvenanceGuard.current()
+    if guard is not None:
+        guard.verify_adapter_allowed(mod_slug)
     mod = importlib.import_module(f"director.assets.{mod_slug}")
     result: Dict[str, Any] = mod.generate_engine_project(
         project_root=project_root,

@@ -39,7 +39,10 @@ All fonts used by the engines and Short Director adapters are open-source SIL OF
 - **GSAP** (`3.12.5`, Standard "No Charge" GreenSock License) — Deterministic timeline tweening for `graph` and `minimalistic-graphics`.
 - **Playwright** (`1.49.1`, Apache-2.0 License) — Headless Chromium / Metal WebGL deterministic frame rasterization.
 - **FFmpeg / FFprobe** (`6.0`, LGPL/GPL system binary) — Image-pipe H.264 video encoding, timeline muxing, EBU R128 loudness normalization (`loudnorm`), and technical QC inspection.
-- **NumPy & SciPy & SoundFile** (BSD Licenses) — Procedural sound synthesis (music underscore, room tone, whooshes, pops, impacts), vocal formant envelope word alignment, and sidechain ducking.
+- **NumPy & SciPy & SoundFile** (BSD Licenses) — Procedural 48 kHz sound synthesis (`director/audio_dsp.py`, `director/music_director.py`, `director/sfx_director.py`), vocal formant envelope word alignment, sidechain ducking, and stem hashing.
+- **Audio Assets & Licensing (`SD-AUDIO-01`, v0.3.0)**:
+  - Standalone procedural stems are synthesized natively via NumPy/SciPy (`license_type: "procedural"` — never claimed as `'copyright-free'`).
+  - Optional external read-only mounting (`--qa-audio-root <path>` or `SHORT_DIRECTOR_QA_ROOT`) supports verified commercial-safe `cc0` / `cc-by-*` beds and real SFX with mandatory SHA-256 verification and automatic CC BY credit generation in `audio/credits_audio.txt` (e.g., Kevin MacLeod / `incompetech.com` CC BY 4.0 when `"Dark Fog"` is resolved). Missing or non-commercial licenses fail closed.
 - **Voice Synthesis**:
   - macOS native `say` (`NSSpeechSynthesizer` system voices, e.g. `Samantha`/`Daniel` for `en`, `Linh` for `vi_VN` when installed locally) — offline system-licensed TTS.
   - Optional `kokoro-onnx` (`Apache-2.0`, Kokoro-82M v1.0) and `sherpa-onnx` (`Apache-2.0`, NVIDIA Parakeet TDT 0.6B v2) when installed via `--voice` models; language coverage is verified before invocation (Kokoro v1.0 is NOT used for Vietnamese).
@@ -59,4 +62,4 @@ All tracked files inside `vendor/claude-animation-skills` (`5dbea55c23aa6a5c93dc
 | `vendor/claude-animation-skills/skills/minimalistic-graphics/**` | **KEPT AS IS** | Upstream `build.py` + `template.html` preserved intact; multi-motif extension implemented in `director/assets/minimalistic_graphics_adapter.py`. |
 | `vendor/claude-animation-skills/skills/map-route/**` | **KEPT AS IS** | Upstream `build.py` + `template.html` preserved intact; multi-shot camera & custom street route extension implemented in `director/assets/map_route_adapter.py`. |
 | `vendor/claude-animation-skills/skills/breakdown/**` | **KEPT AS IS** | Upstream `build.py` + `template.html` preserved intact; parametric multi-layer 3D assembly extension implemented in `director/assets/breakdown_adapter.py`. |
-| `director/**`, `skills/short-director/SKILL.md`, `plugin.json`, `tests/**` | **NEW (v0.2.0)** | Full Antigravity Short Director plugin, fail-closed provenance guard, single-skill adapters, deterministic 4K renderer, audio DSP mixer, timeline editor, and QA gate. |
+| `director/**`, `skills/short-director/SKILL.md`, `plugin.json`, `rules/AGENTS.md`, `tests/**` | **v0.3.0 (`SD-AUDIO-01`)** | Full Antigravity Short Director plugin, fail-closed provenance guard, single-skill adapters, deterministic 4K renderer, narrative audio/music/SFX directors, license/SHA-256 gate, `--audio-only` lossless remuxer, timeline editor, and post-encode audio/video QA gate. |

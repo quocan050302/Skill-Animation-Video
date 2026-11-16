@@ -1,8 +1,8 @@
 # Skill-Animation-Video
 
-## Short Director (`v0.2.0`) — Antigravity Plugin
+## Short Director (`v0.3.0`) — Antigravity Plugin
 
-Production-hardened vertical shorts (`9:16`, `1080x1920` preview + `2160x3840` 4K delivery at `30`/`60` fps) built for Google Antigravity with a **machine-enforceable, fail-closed single-skill lock** across six procedural animation engines.
+Production-hardened vertical shorts (`9:16`, `1080x1920` preview + `2160x3840` 4K delivery at `30`/`60` fps) built for Google Antigravity with a **machine-enforceable, fail-closed single-skill lock** across the six existing animation engines plus narrative music & licensed SFX direction (`SD-AUDIO-01`).
 
 ## Supported Engines (Strict Single-Skill Lock)
 
@@ -56,21 +56,26 @@ python3 -m director.run \
   "Your fresh script or question here"
 ```
 
+## Narrative Music & SFX Director (`v0.3.0` Changelog)
+- **Visual-Grounded Audio Direction** (`audio_narrative.py`, `music_director.py`, `sfx_director.py`): Aligns cohesive thematic music arcs and frame-accurate Foley/SFX directly to shot setups, grounded objects, and transitions rather than generic per-cut pops/whooshes.
+- **Optional Read-Only `QA-Unified-Video-Studio` Integration** (`audio_catalog.py`): Supports `--qa-audio-root <path>` or `SHORT_DIRECTOR_QA_ROOT` with SHA-256 verification, `ffprobe` decodability checks, path-traversal guards, commercial rights gating, and automatic `audio/credits_audio.txt` attribution (falling back cleanly to procedural synthesis with `QA_LIBRARY_UNAVAILABLE` when absent).
+- **Audio Switches & Lossless `--audio-only` Remix**: `--music-mode auto|procedural|qa-library|file|off`, `--sfx-mode auto|procedural|qa-library|off`, `--sfx-density sparse|balanced|detailed`, `--music-gain-db`, `--sfx-gain-db`, `--music-intensity`, `--audio-plan-in`, `--audio-only` (preserves video packets losslessly via `-c:v copy`), and `--voice-mode auto|off`.
+- **Single-Pass Mastering & Post-Encode Audio QC**: `audio/voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`, plus post-AAC `ebur128` LUFS/True Peak, onset, intelligibility, boundary-click, and license QC in `audio/audio_qc_report.json`.
+
 ## Outputs Per Run
 
 Every completed run writes verified artifacts to `<out-dir>/`:
 - `style_decisions.json` — Immutable `selection_mode`, `selected_skill`, `style_lock`, and upstream commit provenance
 - `storyboard.json` & `art_bible.md` — Per-shot camera blocking, setups, transitions, style parameters, and `visual_assets` inventory
 - `style_lock_audit.json` — Recursive AST/HTML/JS source & `sys.addaudithook` runtime audit proving zero foreign-skill files or imports
+- `audio/` — `audio_plan.json`, `audio_director_notes.md`, `music_cue_sheet.json`, `sfx_cue_sheet.json`, `audio_asset_manifest.json`, `audio_mix_report.json`, `audio_qc_report.json`, `credits_audio.txt`, and 48 kHz stereo stems (`voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`)
 - `stills/` & `contact_sheet.jpg` — First, busiest, and end frames of every shot plus 9:16 safe-area sheet
-- `preview_1080.mp4` — `1080x1920` H.264 + `-14 LUFS` AAC stereo preview
-- `final_4k.mp4` — `2160x3840` H.264 + `-14 LUFS` AAC stereo master (with truthful `native_4k` vs `upscaled` declaration)
-- `qc_report.json` & `run_manifest.json` — Complete `PASS`/`FAIL`/`WARN`/`NOT_RUN` technical QC report and `ffprobe` metrics
+- `preview_1080.mp4` — `1080x1920` H.264 + single-pass `-14 LUFS` AAC stereo preview
+- `final_4k.mp4` — `2160x3840` H.264 + single-pass `-14 LUFS` AAC stereo master (with truthful `native_4k` vs `upscaled` declaration)
+- `qc_report.json` & `run_manifest.json` — Complete `PASS`/`FAIL`/`WARN`/`NOT_RUN` technical QC report and `ffprobe`/audio metrics
 
 ## Running the Test Suite
 
 ```bash
-python3 -m unittest -v tests/test_unit_and_negative.py
-python3 -m unittest -v tests/test_determinism_and_resources.py
-python3 -m unittest -v tests/test_smoke_all_engines.py
+python3 -m unittest discover -s tests -v
 ```

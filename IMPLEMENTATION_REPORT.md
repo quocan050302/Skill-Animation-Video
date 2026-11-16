@@ -1,4 +1,40 @@
-# Short Director `v0.2.0` — Implementation, QA & Resource Report
+# Short Director `v0.3.0` (`SD-AUDIO-01`) — Implementation, QA & Resource Report
+
+## 0. `SD-AUDIO-01` (`v0.3.0`) Audio Direction, Music Score & Licensed SFX Upgrade
+
+### What Was Added & Upgraded (`director/`)
+1. **Shared 48 kHz Procedural DSP Library (`director/audio_dsp.py`)**:
+   - Extracted shared synthesis primitives & bespoke Foley generators (`_whoosh`, `_pop`, `_thud`, `_chime`, `_blade_ring`, `_sword_draw`, `_shield_clang`, `_sand_thud`, `_coin_cascade`, `_tick`, `_mechanical_click`, `_pin_drop`, `_riser`, `_step_gravel`, `_pluck_note`, `_soft_pad_chord`) used consistently across all audio directors and legacy helpers.
+2. **License-Aware Audio Catalog & Read-Only QA Adapter (`director/audio_catalog.py`)**:
+   - Supports three governed sources cleanly: `native_procedural` (labeled `"procedural"`, never `'copyright-free'`), optional read-only `QA-Unified-Video-Studio` libraries (`--qa-audio-root <path>` / `SHORT_DIRECTOR_QA_ROOT` — missing locally on this host -> `"QA_LIBRARY_UNAVAILABLE"`, never faked), and explicit `--music-file <path>` (requires `--music-rights-confirmed`).
+   - Enforces path-traversal confinement, sample/size corruption checks, SHA-256 checksum validation against `licenses.json`, `commercial_use_allowed` checks, and automatic CC BY attribution generation into `audio/credits_audio.txt` + `audio/audio_asset_manifest.json`.
+3. **Narrative Audio Beat & Grounded SFX Planner (`director/audio_narrative.py`)**:
+   - `analyze_audio_beats` / `build_audio_narrative_plan`: schedules scene-grounded music arcs (`curious`, `tension`, `triumph`, `mystery`, `calm`, `wonder`) and visually evidenced SFX cues (`shot.prop:*`, `shot.transition_out:*`, `shot.camera:*`, `shot.beat_turn_ecu`, `shot.cutaway_threshold_cross`, `shot.payoff_resolve`) without blind per-cut whooshes or ungrounded object hallucinations.
+   - `preserve_manual_audio_events`: preserves manual cues (`manual: true` or `manual_locked_events`) across re-plans so manual edits win collisions without duplicate entries.
+   - `validate_audio_plan`: enforces bounds, finite numbers, dedup, gain/pan clamping, and reasonable cue density caps.
+4. **Adaptive Music Score & Spatial SFX Directors (`director/music_director.py`, `director/sfx_director.py`)**:
+   - Harmonic progression palettes (`D_minor`, `A_minor`, `F_major`, `G_mixolydian`, `C_pentatonic`), equal-power cosine loop/segment crossfades, 48 kHz stereo polyphase resampling (`scipy.signal.resample_poly`), and distance EQ + pan placement.
+5. **Hierarchy Mixer, Single-Pass Mastering, `--audio-only` Remux & Post-Encode Audio QC (`director/mix_audio.py`, `director/edit_timeline.py`, `director/quality_gate.py`, `director/run.py`)**:
+   - Outputs 48 kHz stereo stems (`audio/voice.wav`, `audio/music.wav`, `audio/sfx.wav`, `audio/ambience.wav`, `audio/master_pre.wav`, `audio/mix.wav`) with Voice > Grounded Action SFX > Music/Ambience priority, speech-activity sidechain ducking, single-pass FFmpeg `alimiter` + `loudnorm=I=-14:TP=-1.5:LRA=9` (`already_mastered=True` — skipped in `edit_timeline.py` so audio is never double-mastered), and lossless `-c:v copy` atomic `.partial.mp4` remux (`compute_video_stream_digest` packet MD5 parity verified + fail-closed rollback on QC failure).
+   - Post-encode Audio QC (`run_audio_quality_gate` -> `audio/audio_qc_report.json`) validates playable AAC streams, `ebur128=peak=true` integrated LUFS / True Peak after AAC encoding, decoded PCM clipping, A/V sync delta, missing expected cues, SFX onset accuracy, voice-to-music intelligibility margin, music loop boundary seams, license/CC BY credit completeness, and stem SHA-256 reproducibility, while marking `subjective_editorial_listening` honestly as `NOT_VERIFIED`.
+6. **Baseline Bug Fixed During Upgrade**:
+   - Fixed a same-process `ProvenanceGuard` bypass discovered in baseline full-suite runs (`baseline_audit.md`), where pre-cached `director.assets.*_adapter` entries in `sys.modules` skipped CPython `sys.audit('import')`. Now `ProvenanceGuard.activate()` evicts cached engine adapter modules and `director/assets/__init__.py` enforces `verify_adapter_allowed`.
+
+### `SD-AUDIO-01` Verification Summary (`v0.3.0`)
+- **Full `unittest` Suite (`python3 -m unittest discover -s tests -v`)**: **`27/27` tests PASS in `264.959s` (`Command exited with code 0`)** covering:
+  - `tests/test_audio_catalog_and_licenses.py` (4/4): native & `--qa-audio-root` detection, CC BY credits & CC0 provenance, missing/non-commercial rejection, zero-byte/hash mismatch/path-traversal rejection, early fail-closed QA mode & low-disk quota guard.
+  - `tests/test_audio_narrative_planning.py` (6/6): manual cue preservation, shot-relative + fps alignment, zero ungrounded hallucinations, intentional silence (`--music-mode off --sfx-mode off --voice-mode off`) vs unexpected missing voice failure, genre-specific music arcs, and `ProvenanceGuard` visual skill lock isolation (`style_lock_audit = PASS`).
+  - `tests/test_audio_mix_determinism.py` (2/2): byte-identical stem SHA-256 across seeded renders, sidechain ducking attenuation under speech, zero boundary pops across crossfades, and negative QC gate checks catching muted music, clipping, loud masking SFX, and missing CC BY credits.
+  - `tests/test_audio_only_remux.py` (1/1): `--audio-only` lossless `-c:v copy` remux preserving exact video packet MD5 + rolling back cleanly on failed candidate QC.
+  - `tests/test_audio_integration_smoke.py` (3/3): `stick-figure` native 4K E2E + `--audio-only` remix with preserved originals (`final_4k_remixed.mp4`), isolated read-only QA fixture with CC BY Kevin MacLeod (`Dark Fog`) + CC0 WAV verifying SHA-256 & `credits_audio.txt` without touching QA files, and `minimalistic-graphics` + `analyze_audio_beats`.
+  - Plus existing `test_unit_and_negative.py` (7/7), `test_determinism_and_resources.py` (2/2), and `test_smoke_all_engines.py` (2/2 — all 6 visual engines + clean unmodified `vendor/claude-animation-skills`).
+- **Fresh 4K Demo Run (`runs/sd_audio_demo_sf/`)**:
+  - Explicit `--skill stick-figure`, `30 fps`, `seed=2026`, `23.89s`, `native_4k: true` (`2160x3840`, `65,782,573` bytes) + `1080x1920` preview (`8,134,241` bytes), `3` music segments (`D_minor` @ `108 BPM`: `curious` -> `tension` -> `triumph`), `9` grounded SFX cues (`max_impact_onset_error_ms = 1.96 ms`, `vo_to_music_margin_during_speech_db = 27.24 dB`), `-14.2 LUFS` / `-1.8 dBTP`, `qc_report.json = PASS`, `style_lock_audit.json = PASS`, `audio_qc_report.json = PASS` (`subjective_editorial_listening = NOT_VERIFIED`).
+  - Verified CLI `--audio-only --sfx-density detailed --music-intensity high --preserve-original-on-remix` in `4.45s`: `12/12` grounded cues, `-14.2 LUFS` / `-1.7 dBTP`, `max_impact_onset_error_ms = 2.15 ms`, identical `video_packet_md5_4k = 284d3bbd5b7ce07b88276b47574b7f32` across `final_4k.mp4` and `final_4k_remixed.mp4`.
+
+---
+
+# Short Director `v0.2.0` — Implementation, QA & Resource History
 
 ## 1. Starter & Upstream Provenance Note
 

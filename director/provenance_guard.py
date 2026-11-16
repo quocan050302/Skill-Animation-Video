@@ -68,6 +68,10 @@ class ProvenanceGuard:
         selected_skill: Optional[str] = None,
     ) -> "ProvenanceGuard":
         with cls._lock:
+            # Clear cached skill adapters so subsequent imports always pass through the active lock check
+            for mod_name in list(sys.modules):
+                if mod_name.startswith("director.assets.") and _skill_for_adapter_stem(mod_name.rsplit(".", 1)[-1]) is not None:
+                    sys.modules.pop(mod_name, None)
             guard = cls(project_root)
             if selection_mode == "explicit":
                 if selected_skill not in VALID_SKILLS:
@@ -201,6 +205,17 @@ class ProvenanceGuard:
                     self._record_violation("foreign_adapter_access", msg, res_str)
                     raise StyleLockViolationError(msg)
                 self.opened_adapter_files.add(res_str)
+
+    def verify_adapter_allowed(self, adapter_stem: str) -> None:
+        """Explicitly verify that importing/loading a visual adapter respects the active lock."""
+        owner = _skill_for_adapter_stem(adapter_stem)
+        if owner is not None and (self.phase != "locked" or owner != self.selected_skill):
+            msg = (
+                f"FORBIDDEN foreign adapter load '{adapter_stem}' "
+                f"(locked to '{self.selected_skill}')"
+            )
+            self._record_violation("foreign_adapter_import", msg, adapter_stem)
+            raise StyleLockViolationError(msg)
 
     def _handle_event(self, event: str, args: Any) -> None:
         if not self.enabled:
