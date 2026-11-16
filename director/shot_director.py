@@ -1,0 +1,745 @@
+"""STEP 2 (SD-VISUAL-01): Novel Shot Coverage Planner & Anti-Repetition Selector.
+
+Replaces naive cyclic `mid_pool[i % len]` and duplicate-text splitting with semantic
+variable-length coverage planning, diverse candidate generation + anti-repetition scoring,
+intra-shot transformation scheduling, and strict single-skill provenance compliance.
+"""
+
+from __future__ import annotations
+
+import json
+import random
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from . import VALID_SKILLS
+from .visual_event_graph import classify_visual_clause
+
+
+# Rich per-engine candidate palettes — each entry strictly honors its locked engine's grammar.
+ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
+    "zach-d-films": [
+        {
+            "setup": "human_device_macro",
+            "families": ("human_device", "human_lifestyle", "human_studio"),
+            "framing": "CU_OverShoulder",
+            "angle": "three_quarter_hand_focus",
+            "move": "macro_push_in",
+            "focal_mm": 50,
+            "placement": "foreground_right",
+            "silhouette": "hand_screen_glow",
+            "pose": "tap_screen_lean",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "device_cutaway_pcb",
+            "families": ("electromechanical", "human_device"),
+            "framing": "ECU_Cutaway",
+            "angle": "exploded_oblique_35deg",
+            "move": "peel_orbit_reveal",
+            "focal_mm": 85,
+            "placement": "center_exploded",
+            "silhouette": "open_chassis_layers",
+            "pose": "cutaway_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "network_tower_relay",
+            "families": ("network_link", "energy_grid"),
+            "framing": "WS_LowHero",
+            "angle": "upward_tower_tilt",
+            "move": "crane_tilt_follow",
+            "focal_mm": 24,
+            "placement": "left_tower_axis",
+            "silhouette": "lattice_mast_rings",
+            "pose": "emissive_pulse_wave",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "subsea_fiber_conduit",
+            "families": ("ocean_infrastructure", "natural_environment"),
+            "framing": "MS_Tracking",
+            "angle": "underwater_low_glide",
+            "move": "dolly_along_conduit",
+            "focal_mm": 28,
+            "placement": "diagonal_floor_sweep",
+            "silhouette": "armored_fiber_beam",
+            "pose": "photon_pulse_stream",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "datacenter_aisle_sweep",
+            "families": ("datacenter_compute", "comparison_logic", "economy_reward"),
+            "framing": "WS_Corridor",
+            "angle": "one_point_symmetrical",
+            "move": "dolly_forward_aisle",
+            "focal_mm": 24,
+            "placement": "symmetrical_racks",
+            "silhouette": "blinking_server_monoliths",
+            "pose": "packet_route_flow",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "power_turbine_generator",
+            "families": ("energy_grid", "electromechanical", "mechanical_breakdown"),
+            "framing": "MS_Cutaway",
+            "angle": "elevated_isometric",
+            "move": "arc_around_rotor",
+            "focal_mm": 35,
+            "placement": "right_generator_bay",
+            "silhouette": "spinning_copper_coils",
+            "pose": "turbine_induction_spin",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "cosmic_scale_bridge",
+            "families": ("cosmic_scale", "micro_matter", "natural_environment"),
+            "framing": "ECU_to_VWS",
+            "angle": "orbital_horizon_roll",
+            "move": "scale_pullback_cosmos",
+            "focal_mm": 20,
+            "placement": "central_celestial_core",
+            "silhouette": "nebula_shell_rings",
+            "pose": "stardust_forge_bloom",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "anatomical_cutaway_3d",
+            "families": ("anatomical_cutaway",),
+            "framing": "ECU_XRay",
+            "angle": "frontal_medical_orbit",
+            "move": "focus_push_to_organ",
+            "focal_mm": 65,
+            "placement": "center_torso_slab",
+            "silhouette": "translucent_shell_organ",
+            "pose": "pulse_wave_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "hook_3d_action_launch",
+            "families": ("roman_historical", "metallic_clash", "human_studio"),
+            "framing": "MS",
+            "angle": "three_quarter_hero",
+            "move": "dolly_push_in",
+            "focal_mm": 35,
+            "placement": "left_rule_thirds",
+            "silhouette": "hero_character_prop",
+            "pose": "dynamic_reach",
+            "novel_non_template": False,
+        },
+        {
+            "setup": "belief_studio_demonstration",
+            "families": ("roman_historical", "human_studio", "comparison_logic", "economy_reward"),
+            "framing": "WS",
+            "angle": "low_studio_orbit",
+            "move": "orbit_right",
+            "focal_mm": 28,
+            "placement": "dual_stage_spread",
+            "silhouette": "wide_stage_confrontation",
+            "pose": "demonstrate_exchange",
+            "novel_non_template": False,
+        },
+        {
+            "setup": "novel_slowmo_ripple_cutaway",
+            "families": ("metallic_clash", "roman_historical"),
+            "framing": "ECU_Macro",
+            "angle": "projectile_tracking_side",
+            "move": "slowmo_track_impact",
+            "focal_mm": 85,
+            "placement": "center_tension_point",
+            "silhouette": "ripple_impact_wave",
+            "pose": "recoil_frozen_moment",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "mechanism_cross_section_3d",
+            "families": ("comparison_logic", "roman_historical", "mechanical_breakdown", "time_pacing"),
+            "framing": "MS_Cutaway",
+            "angle": "elevated_isometric",
+            "move": "push_toward_core",
+            "focal_mm": 50,
+            "placement": "balanced_pedestal",
+            "silhouette": "layered_balance_cutaway",
+            "pose": "precision_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "payoff_full_stage_reveal",
+            "families": ("payoff", "cosmic_scale", "human_studio", "roman_historical", "human_device"),
+            "framing": "WS",
+            "angle": "eye_level_clean",
+            "move": "pull_back_crane",
+            "focal_mm": 32,
+            "placement": "centered_horizon",
+            "silhouette": "open_hero_payoff",
+            "pose": "confident_resolve",
+            "novel_non_template": False,
+        },
+    ],
+    "stick-figure": [
+        {"setup": "hook_dynamic_cu", "framing": "CU", "angle": "eye_level_push", "move": "push_in_handheld", "focal_mm": 40, "placement": "left_char_right_prop", "silhouette": "torso_prop_reach", "pose": "lean_in_reach", "novel_non_template": False},
+        {"setup": "belief_wide_parallax", "framing": "WS", "angle": "slight_low_3plane", "move": "tracking_pan_right", "focal_mm": 24, "placement": "walking_across_planes", "silhouette": "multi_plane_horizon", "pose": "stride_walk", "novel_non_template": False},
+        {"setup": "turn_reaction_ecu", "framing": "ECU", "angle": "dutch_tilt_dramatic", "move": "snap_zoom_shake", "focal_mm": 70, "placement": "centered_large_face", "silhouette": "radial_burst_head", "pose": "hands_up_shock", "novel_non_template": False},
+        {"setup": "novel_mechanism_cutaway", "framing": "Cutaway_Macro", "angle": "orthographic_cross_section", "move": "focus_glide", "focal_mm": 55, "placement": "framed_inset_panel", "silhouette": "oscilloscope_cutaway_card", "pose": "pointer_analysis", "novel_non_template": True},
+        {"setup": "split_comparison_stage", "framing": "MS_Split", "angle": "frontal_duel", "move": "counter_drift", "focal_mm": 35, "placement": "split_left_right", "silhouette": "dual_versus_panel", "pose": "duel_contrast", "novel_non_template": True},
+        {"setup": "scale_ladder_pan", "framing": "MS_to_VWS", "angle": "vertical_pan_climb", "move": "pan_up_scale", "focal_mm": 28, "placement": "diagonal_scale_chain", "silhouette": "ascending_scale_nodes", "pose": "point_upward_leap", "novel_non_template": True},
+        {"setup": "payoff_sunny_pullback", "framing": "MS_to_WS", "angle": "heroic_eye_level", "move": "pull_back_settle", "focal_mm": 30, "placement": "centered_warm_stage", "silhouette": "dual_props_triumph", "pose": "hero_celebrate", "novel_non_template": False},
+    ],
+    "minimalistic-graphics": [
+        {"setup": "hook_solitary_dot_pulse", "framing": "Center_Void", "angle": "flat_orthographic", "move": "breath_pulse", "focal_mm": 50, "placement": "dead_center", "silhouette": "solitary_circle_ripple", "pose": "center_pulse", "novel_non_template": False},
+        {"setup": "novel_pendulum_or_labyrinth", "framing": "MS_Geometric", "angle": "flat_orthographic", "move": "arc_oscillation", "focal_mm": 40, "placement": "upper_pivot_arc", "silhouette": "pendulum_arc_vector", "pose": "swing_momentum", "novel_non_template": True},
+        {"setup": "kinetic_balance_beam", "framing": "WS_Equilibrium", "angle": "flat_orthographic", "move": "fulcrum_tilt_shift", "focal_mm": 32, "placement": "horizontal_fulcrum", "silhouette": "counterweight_beam", "pose": "balance_shift", "novel_non_template": True},
+        {"setup": "rising_hairline_steps", "framing": "WS_Ascending", "angle": "flat_orthographic", "move": "parabolic_hop_climb", "focal_mm": 28, "placement": "staircase_diagonal", "silhouette": "ascending_bars", "pose": "step_hop", "novel_non_template": False},
+        {"setup": "payoff_orbital_sparks", "framing": "MS_Apex_Orbit", "angle": "flat_orthographic", "move": "radial_bloom_hold", "focal_mm": 45, "placement": "apex_upper_right", "silhouette": "orbit_halo_sparks", "pose": "apex_rest", "novel_non_template": False},
+    ],
+    "graph": [
+        {"setup": "hook_metric_counter_intro", "framing": "Macro_Header", "angle": "flat_editorial", "move": "grid_reveal", "focal_mm": 35, "placement": "upper_counter_lead", "silhouette": "tabular_hero_axis", "pose": "baseline_init", "novel_non_template": False},
+        {"setup": "early_baseline_zoom", "framing": "CU_Curve_Origin", "angle": "flat_editorial", "move": "follow_tip_pan", "focal_mm": 65, "placement": "zoom_tip_follow", "silhouette": "magnified_curve_tip", "pose": "trace_early", "novel_non_template": False},
+        {"setup": "novel_inflection_tangent_delta", "framing": "MS_Inflection_Split", "angle": "flat_editorial", "move": "slope_highlight_sweep", "focal_mm": 50, "placement": "tangent_vector_center", "silhouette": "stems_plus_tangent", "pose": "highlight_slope", "novel_non_template": True},
+        {"setup": "milestone_delta_spotlight", "framing": "MS_Evidence_Callout", "angle": "flat_editorial", "move": "pan_milestone_window", "focal_mm": 45, "placement": "upper_right_peak", "silhouette": "delta_callout_grid", "pose": "compare_deltas", "novel_non_template": True},
+        {"setup": "payoff_full_horizon_curve", "framing": "WS_Full_Chart", "angle": "flat_editorial", "move": "settle_halo_drop", "focal_mm": 28, "placement": "full_chart_frame", "silhouette": "complete_spline_drop", "pose": "settle_halo", "novel_non_template": False},
+    ],
+    "map-route": [
+        {"setup": "departure_street_level", "framing": "CU_Origin_Block", "angle": "low_chase_32deg", "move": "pull_from_start_disc", "focal_mm": 35, "placement": "origin_block_low", "silhouette": "low_street_corridor", "pose": "launch_head", "novel_non_template": False},
+        {"setup": "mid_route_bridge_crossing", "framing": "MS_Aerial_Chase", "angle": "aerial_40deg_swing", "move": "ride_behind_route_head", "focal_mm": 28, "placement": "left_bank_river_arc", "silhouette": "bridge_over_river", "pose": "cruise_ribbon", "novel_non_template": True},
+        {"setup": "turn_park_corridor", "framing": "MS_Corner_Bank", "angle": "banked_aerial_35deg", "move": "corner_arc_track", "focal_mm": 32, "placement": "right_park_turn", "silhouette": "angled_corner_blocks", "pose": "bank_turn", "novel_non_template": False},
+        {"setup": "street_canopy_altitude_shift", "framing": "MS_Wide_Altitude", "angle": "elevated_oblique_50deg", "move": "climb_altitude_sweep", "focal_mm": 24, "placement": "panoramic_midtown", "silhouette": "skyline_route_arc", "pose": "altitude_climb", "novel_non_template": True},
+        {"setup": "arrival_pin_drop_pullback", "framing": "WS_Overview_Card", "angle": "high_overview_28deg", "move": "crane_pullback_reveal", "focal_mm": 22, "placement": "destination_pin_center", "silhouette": "pin_drop_eta_card", "pose": "pin_bounce_card", "novel_non_template": False},
+    ],
+    "breakdown": [
+        {"setup": "assembled_hero_silhouette", "framing": "MS_Studio_Hero", "angle": "three_quarter_rim", "move": "slow_turntable_intro", "focal_mm": 35, "placement": "center_hero_pedestal", "silhouette": "compact_closed_shell", "pose": "assembled_idle", "novel_non_template": False},
+        {"setup": "axial_layer_separation", "framing": "MS_Exploding_Stack", "angle": "elevated_30deg", "move": "dolly_out_with_explosion", "focal_mm": 28, "placement": "left_offset_stack", "silhouette": "separated_axial_stack", "pose": "explode_apart", "novel_non_template": False},
+        {"setup": "novel_internal_core_macro", "framing": "ECU_Internal_Core", "angle": "macro_oblique_22deg", "move": "focus_sweep_across_core", "focal_mm": 75, "placement": "macro_core_center", "silhouette": "coil_pcb_core_macro", "pose": "core_inspect", "novel_non_template": True},
+        {"setup": "top_down_subsystem_orbit", "framing": "MS_High_Subsystem", "angle": "top_oblique_52deg", "move": "orbit_subsystem_inspect", "focal_mm": 42, "placement": "upper_layer_focus", "silhouette": "top_cap_ring_view", "pose": "top_sweep", "novel_non_template": True},
+        {"setup": "full_annotated_callout_stack", "framing": "WS_Labelled_Column", "angle": "offset_callout_frame", "move": "turntable_hold", "focal_mm": 26, "placement": "left_stack_right_labels", "silhouette": "callout_leaders_grid", "pose": "hold_callout", "novel_non_template": False},
+    ],
+}
+
+
+def _select_transition_hint(event: Dict[str, Any], cand: Dict[str, Any], is_last: bool, transition_policy: str) -> str:
+    if is_last:
+        return "cut"
+    if transition_policy == "simple":
+        return "cut_on_action"
+    verb = event.get("verb_action", "")
+    axis = event.get("desired_novelty_axis", "")
+    skill = event.get("selected_skill", "zach-d-films")
+
+    if skill == "zach-d-films":
+        if axis in ("environment_and_scale_shift", "internal_cutaway") or verb == "scale_jump":
+            return "zoom_through"
+        if event.get("has_contrast") and cand["setup"] in ("device_cutaway_pcb", "network_tower_relay"):
+            return "match_cut"
+        if event.get("lighting_mood") == "dark_dramatic" and cand["framing"].startswith("WS"):
+            return "whip_pan"
+        return "cut_on_action"
+    if skill == "stick-figure":
+        if event.get("has_contrast"):
+            return "iris_mask"
+        if verb in ("travel_stream", "scale_jump"):
+            return "whip"
+        return "cut_on_action"
+    if skill in ("graph", "map-route", "breakdown"):
+        return "match_zoom"
+    return "cut_on_action"
+
+
+def split_long_visual_beats_by_actions(
+    events: List[Dict[str, Any]],
+    preset: str = "dynamic",
+    max_shot_dur: Optional[float] = None,
+    fps: int = 30,
+) -> List[Dict[str, Any]]:
+    """Split over-long events at word boundaries into genuinely distinct sub-beats cleanly.
+
+    Crucial guarantee: NEVER copies identical full narration text across two adjacent split shots!
+    Each sub-shot carries its own word slice (`narration_span_start/end` & non-duplicated `narration_text`)
+    and a differentiated action/reveal phase.
+    """
+    if max_shot_dur is None:
+        max_shot_dur = 3.6 if preset == "dynamic" else (4.8 if preset == "balanced" else 6.2)
+    min_shot_dur = 0.85 if preset == "dynamic" else (1.15 if preset == "balanced" else 1.8)
+
+    out_units: List[Dict[str, Any]] = []
+    for ev in events:
+        st = float(ev["start_sec"])
+        en = float(ev["end_sec"])
+        dur = en - st
+        text = str(ev.get("exact_narration_phrase") or "").strip()
+        toks = text.split()
+
+        if dur > max_shot_dur and len(toks) >= 8 and ev.get("selected_skill") not in ("minimalistic-graphics",):
+            # Split cleanly around midpoint onto a distinct frame boundary
+            n_parts = 2
+            split_idx = len(toks) // 2
+            mid_raw = st + dur * (split_idx / float(len(toks)))
+            mid_f = round(round(mid_raw * fps) / float(fps), 3)
+            mid_f = max(st + min_shot_dur, min(en - min_shot_dur, mid_f))
+            if (mid_f - st) >= min_shot_dur and (en - mid_f) >= min_shot_dur:
+                span_a = " ".join(toks[:split_idx]).strip()
+                span_b = " ".join(toks[split_idx:]).strip()
+                skill_s = str(ev.get("selected_skill") or "zach-d-films")
+                meta_a = classify_visual_clause(span_a, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 0, None, [], skill_s)
+                meta_b = classify_visual_clause(span_b, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 1, meta_a["scene_family"], [], skill_s)
+
+                u_a = dict(ev)
+                u_a["unit_id"] = f"{ev['event_id']}_a"
+                u_a["start_sec"] = st
+                u_a["end_sec"] = mid_f
+                u_a["duration_sec"] = round(mid_f - st, 3)
+                u_a["narration_text"] = span_a
+                u_a["narration_span_start"] = 0
+                u_a["narration_span_end"] = split_idx
+                if meta_a["relevant_prop"] != "idea_spark":
+                    u_a.update({k: meta_a[k] for k in ("subject", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood")})
+                u_a["visual_objective"] = f"Establish {u_a['subject']} acting on {u_a['relevant_prop']}"
+                u_a["desired_novelty_axis"] = "subject_action_setup"
+
+                u_b = dict(ev)
+                u_b["unit_id"] = f"{ev['event_id']}_b"
+                u_b["start_sec"] = mid_f
+                u_b["end_sec"] = en
+                u_b["duration_sec"] = round(en - mid_f, 3)
+                u_b["narration_text"] = span_b
+                u_b["narration_span_start"] = split_idx
+                u_b["narration_span_end"] = len(toks)
+                if meta_b["relevant_prop"] != "idea_spark":
+                    u_b.update({k: meta_b[k] for k in ("subject", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood")})
+                u_b["visual_objective"] = f"Reveal consequence {u_b['verb_action']} ({u_b['relevant_prop']})"
+                u_b["desired_novelty_axis"] = "internal_reveal_escalation" if meta_b["scene_family"] == u_a["scene_family"] else "environment_and_scale_shift"
+                out_units.extend([u_a, u_b])
+                continue
+
+        u = dict(ev)
+        u["unit_id"] = ev["event_id"]
+        u["narration_text"] = text
+        u["narration_span_start"] = 0
+        u["narration_span_end"] = len(toks)
+        u["visual_objective"] = f"Show {ev['subject']} -> {ev['verb_action']} ({ev['relevant_prop']})"
+        out_units.append(u)
+
+    # Merge tiny trailing fragments (<0.75s) into neighbor safely so frame count is healthy
+    merged: List[Dict[str, Any]] = []
+    for u in out_units:
+        if (u["end_sec"] - u["start_sec"]) < 0.72 and merged:
+            prev = merged[-1]
+            prev["end_sec"] = u["end_sec"]
+            prev["duration_sec"] = round(prev["end_sec"] - prev["start_sec"], 3)
+            prev["narration_text"] = (prev["narration_text"] + " " + u["narration_text"]).strip()
+            prev["event_ids"] = list(dict.fromkeys(prev.get("event_ids", [prev["event_id"]]) + [u["event_id"]]))
+        else:
+            u["event_ids"] = [u["event_id"]]
+            merged.append(u)
+
+    return merged
+
+
+def generate_candidate_shot_set(
+    event: Dict[str, Any],
+    grammar: Optional[List[Dict[str, Any]]],
+    scene_state: Dict[str, Any],
+    continuity_state: Dict[str, Any],
+    seed: int,
+    selected_skill: str = "zach-d-films",
+    unit_idx: int = 0,
+    total_units: int = 1,
+) -> List[Dict[str, Any]]:
+    """Propose diverse staging/camera/lighting/silhouette candidates grounded in the semantic event."""
+    pool = grammar if grammar else ENGINE_CANDIDATE_SPACES[selected_skill]
+    fam = str(event.get("scene_family") or "")
+    verb = str(event.get("verb_action") or "")
+    prop = str(event.get("relevant_prop") or "")
+    is_first = (unit_idx == 0)
+    is_last = (unit_idx == total_units - 1)
+    rng = random.Random(seed + unit_idx * 97)
+
+    candidates: List[Dict[str, Any]] = []
+    for g in pool:
+        c = dict(g)
+        c["background_theme"] = str(event.get("lighting_mood") or "day_editorial")
+        # Differentiate placement/focal options for multi-shot coverage inside same engine
+        fams = c.get("families", ())
+        fam_match = (fam in fams) or (is_last and "payoff" in fams)
+        if not fam_match and selected_skill == "zach-d-films" and prop not in ("roman_arena", "roman_ledger") and "roman" in c["setup"]:
+            continue
+
+        c["semantic_fit"] = 1.0 if fam_match else 0.35
+        if is_first and ("hook" in c["setup"] or "macro" in c["setup"] or "departure" in c["setup"] or "assembled" in c["setup"]):
+            c["semantic_fit"] += 0.35
+        if is_last and ("payoff" in c["setup"] or "arrival" in c["setup"] or "callout" in c["setup"] or "orbital" in c["setup"] or "horizon" in c["setup"]):
+            c["semantic_fit"] += 0.45
+        if verb == "reveal_cutaway" and ("cutaway" in c["setup"] or "core" in c["setup"] or "pcb" in c["setup"] or "separation" in c["setup"]):
+            c["semantic_fit"] += 0.55
+        if verb == "scale_jump" and ("cosmic" in c["setup"] or "scale" in c["setup"] or "bridge" in c["setup"]):
+            c["semantic_fit"] += 0.55
+
+        # Transformed callback permission ONLY when motif re-appears after >=2 shots with changed scale/role
+        seen_props = continuity_state.get("seen_props", {})
+        c["callback_reason"] = None
+        if prop in seen_props and unit_idx - seen_props[prop] >= 2 and (is_last or verb == "resolve_payoff"):
+            c["callback_reason"] = f"Transformed narrative payoff callback to `{prop}` with shifted framing/scale"
+            c["lighting_mood"] = "warm_payoff"
+            c["background_theme"] = "warm_payoff"
+
+        c["prop_count"] = max(1, len(event.get("grounded_props", [prop])))
+        c["jitter"] = round(rng.uniform(0.0, 0.03), 4)
+        candidates.append(c)
+
+    if not candidates:
+        candidates = [dict(g, semantic_fit=0.5, background_theme=str(event.get("lighting_mood") or "day_editorial"), prop_count=1, callback_reason=None, jitter=0.0) for g in pool]
+    return candidates
+
+
+def score_shot_candidates(
+    candidates: List[Dict[str, Any]],
+    event: Dict[str, Any],
+    continuity_state: Dict[str, Any],
+    scene_novelty: str = "standard",
+) -> List[Tuple[float, Dict[str, Any], str]]:
+    """Score candidates: reward semantic clarity & camera motivation; penalize adjacent clones."""
+    history: List[Dict[str, Any]] = continuity_state.get("history", [])[-3:]
+    prev = history[-1] if history else None
+    novelty_mult = 1.45 if scene_novelty == "high" else 1.0
+
+    scored: List[Tuple[float, Dict[str, Any], str]] = []
+    for c in candidates:
+        score = float(c.get("semantic_fit", 0.5)) * 2.2
+        reasons: List[str] = [f"semantic_fit={c.get('semantic_fit', 0.5):.2f}"]
+
+        if c.get("novel_non_template"):
+            score += 0.35 * novelty_mult
+
+        if prev is not None:
+            # Strict anti-repetition penalties against immediate & rolling 3-shot window
+            if c["setup"] == prev.get("setup_type") and not c.get("callback_reason"):
+                score -= 3.5 * novelty_mult
+                reasons.append("penalty:same_adjacent_setup")
+            if (c["framing"], c["angle"], c["move"]) == (
+                prev.get("framing"), prev.get("angle"), prev.get("movement")
+            ):
+                score -= 3.2 * novelty_mult
+                reasons.append("penalty:same_cam_triple")
+            if c.get("pose") == prev.get("pose_tag"):
+                score -= 1.2 * novelty_mult
+            if c.get("background_theme") == prev.get("background_theme"):
+                score -= 0.75 * novelty_mult
+            if c.get("placement") == prev.get("subject_placement"):
+                score -= 0.85 * novelty_mult
+            if c.get("focal_mm") == prev.get("focal_length_mm"):
+                score -= 0.45 * novelty_mult
+            if c.get("silhouette") == prev.get("silhouette_tag"):
+                score -= 1.4 * novelty_mult
+            if c.get("move") != prev.get("movement"):
+                score += 0.55 * novelty_mult
+            if c.get("placement") != prev.get("subject_placement"):
+                score += 0.45 * novelty_mult
+
+        # Rolling window repetition check (last 3 shots)
+        recent_setups = [h.get("setup_type") for h in history]
+        freq = recent_setups.count(c["setup"])
+        if freq > 0 and not c.get("callback_reason"):
+            score -= (1.1 * freq) * novelty_mult
+            reasons.append(f"penalty:recent_freq={freq}")
+
+        if c.get("callback_reason"):
+            score += 0.6
+            reasons.append(f"callback:{c['callback_reason']}")
+
+        score += float(c.get("jitter", 0.0))
+        scored.append((round(score, 4), c, "; ".join(reasons)))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return scored
+
+
+def plan_intra_shot_changes(
+    shot_spec: Dict[str, Any],
+    event: Dict[str, Any],
+    fps: int = 30,
+) -> List[Dict[str, Any]]:
+    """Schedule deterministic inside-shot visual updates (no extra cut) grounded in the event."""
+    st = float(shot_spec["start"])
+    en = float(shot_spec["end"])
+    dur = max(0.25, en - st)
+    changes: List[Dict[str, Any]] = []
+    for act in event.get("intra_shot_activities", []):
+        rel_n = max(0.12, min(0.92, float(act.get("rel_norm", 0.5))))
+        abs_t = round(st + dur * rel_n, 3)
+        changes.append({
+            "time_sec": abs_t,
+            "shot_relative_sec": round(abs_t - st, 3),
+            "frame": int(round(abs_t * fps)),
+            "type": act.get("type", "information_reveal"),
+            "detail": act.get("detail", ""),
+        })
+    return changes
+
+
+def select_sequence_with_diversity_constraints(
+    units: List[Dict[str, Any]],
+    grammar: Optional[List[Dict[str, Any]]],
+    selected_skill: str,
+    seed: int,
+    fps: int = 30,
+    edit_energy: str = "balanced",
+    scene_novelty: str = "standard",
+    transition_policy: str = "motivated",
+    existing_visual_plan: Optional[Dict[str, Any]] = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Select an anti-repetitive sequence of shots respecting rolling 3-shot diversity."""
+    history: List[Dict[str, Any]] = []
+    seen_props: Dict[str, int] = {}
+    manual_shots = (existing_visual_plan or {}).get("shots", []) if isinstance(existing_visual_plan, dict) else []
+    selected_shots: List[Dict[str, Any]] = []
+    total_units = len(units)
+
+    for idx, unit in enumerate(units):
+        cands = generate_candidate_shot_set(
+            event=unit,
+            grammar=grammar,
+            scene_state={"shot_index": idx},
+            continuity_state={"history": history, "seen_props": seen_props},
+            seed=seed,
+            selected_skill=selected_skill,
+            unit_idx=idx,
+            total_units=total_units,
+        )
+        ranked = score_shot_candidates(
+            candidates=cands,
+            event=unit,
+            continuity_state={"history": history, "seen_props": seen_props},
+            scene_novelty=scene_novelty,
+        )
+        best_score, chosen, rationale = ranked[0]
+
+        # Enforce hard non-adjacent clone guard whenever >= 2 distinct candidates exist
+        if history and chosen["setup"] == history[-1]["setup_type"] and not chosen.get("callback_reason"):
+            for sc, cand, rsn in ranked[1:]:
+                if cand["setup"] != history[-1]["setup_type"]:
+                    best_score, chosen, rationale = sc, cand, rsn + " (anti_clone_override)"
+                    break
+
+        # Honor explicit manual shot lock if provided in --visual-plan-in and validated for this skill
+        manual_override = manual_shots[idx] if idx < len(manual_shots) and isinstance(manual_shots[idx], dict) and manual_shots[idx].get("manual") else None
+        setup_name = str(manual_override["setup_type"]) if manual_override and manual_override.get("setup_type") else chosen["setup"]
+        is_last = (idx == total_units - 1)
+        tr_out = (
+            str(manual_override["transition_out"])
+            if manual_override and manual_override.get("transition_out")
+            else _select_transition_hint(unit, chosen, is_last=is_last, transition_policy=transition_policy)
+        )
+
+        shot_entry: Dict[str, Any] = {
+            "shot_id": f"shot_{idx:02d}",
+            "index": idx,
+            "engine": selected_skill,
+            "event_ids": list(unit.get("event_ids", [unit["event_id"]])),
+            "beat_id": unit["beat_id"],
+            "beat_role": unit["beat_role"],
+            "narration_text": unit["narration_text"],
+            "narration_span_start": unit["narration_span_start"],
+            "narration_span_end": unit["narration_span_end"],
+            "start": round(float(unit["start_sec"]), 3),
+            "end": round(float(unit["end_sec"]), 3),
+            "duration": round(float(unit["end_sec"]) - float(unit["start_sec"]), 3),
+            "setup_type": setup_name,
+            "scene_family": unit["scene_family"],
+            "scale_level": unit["scale_level"],
+            "lighting_mood": unit["lighting_mood"],
+            "novel_non_template": bool(chosen.get("novel_non_template", False)),
+            "visual_objective": unit.get("visual_objective", ""),
+            "desired_novelty_axis": unit.get("desired_novelty_axis", ""),
+            "callback_reason": chosen.get("callback_reason"),
+            "manual": bool(manual_override),
+            "camera": {
+                "framing": chosen["framing"],
+                "angle": chosen["angle"],
+                "movement": chosen["move"],
+                "focal_length_mm": chosen["focal_mm"],
+                "parallax_planes": 3 if selected_skill in ("stick-figure", "zach-d-films", "map-route") else 2,
+                "eye_focus_target": unit["relevant_prop"],
+            },
+            "staging": {
+                "action": f"{unit['subject']} {unit['verb_action']} ({unit['relevant_prop']})",
+                "subject": unit["subject"],
+                "verb_action": unit["verb_action"],
+                "visual_metaphor": unit["relevant_prop"],
+                "secondary_prop": unit["grounded_props"][1] if len(unit["grounded_props"]) > 1 else unit["relevant_prop"],
+                "grounded_props": list(unit["grounded_props"]),
+                "scene_family": unit["scene_family"],
+                "scale_level": unit["scale_level"],
+                "subject_placement": chosen["placement"],
+                "silhouette_tag": chosen["silhouette"],
+                "pose_tag": chosen["pose"],
+                "background_theme": chosen["background_theme"],
+                "character_expression": (
+                    "curious_smirk" if idx == 0 else
+                    "surprised_wide" if unit.get("has_contrast") else
+                    "focused_squint" if chosen.get("novel_non_template") else
+                    "confident_grin" if is_last else "attentive_look"
+                ),
+                "organic_motion": [
+                    "anticipation_ease_in",
+                    "arc_trajectory",
+                    "squash_stretch_settle",
+                    "secondary_ambient_drift",
+                ],
+                "forbidden_elements": list(unit.get("forbidden_elements", [])),
+            },
+            "transition_out": tr_out,
+            "rationale": rationale,
+            "candidate_score": best_score,
+        }
+        shot_entry["intra_shot_events"] = plan_intra_shot_changes(shot_entry, unit, fps=fps)
+        selected_shots.append(shot_entry)
+
+        history.append({
+            "setup_type": shot_entry["setup_type"],
+            "framing": chosen["framing"],
+            "angle": chosen["angle"],
+            "movement": chosen["move"],
+            "focal_length_mm": chosen["focal_mm"],
+            "subject_placement": chosen["placement"],
+            "silhouette_tag": chosen["silhouette"],
+            "pose_tag": chosen["pose"],
+            "background_theme": chosen["background_theme"],
+        })
+        for p in unit.get("grounded_props", []):
+            seen_props[p] = idx
+
+    diversity_summary = {
+        "total_shots": len(selected_shots),
+        "unique_setups": len({s["setup_type"] for s in selected_shots}),
+        "unique_scene_families": len({s["scene_family"] for s in selected_shots}),
+        "unique_movements": len({s["camera"]["movement"] for s in selected_shots}),
+        "adjacent_identical_setups": sum(
+            1 for k in range(1, len(selected_shots))
+            if selected_shots[k]["setup_type"] == selected_shots[k - 1]["setup_type"]
+        ),
+        "adjacent_identical_cam_triples": sum(
+            1 for k in range(1, len(selected_shots))
+            if (
+                selected_shots[k]["camera"]["framing"],
+                selected_shots[k]["camera"]["angle"],
+                selected_shots[k]["camera"]["movement"],
+            ) == (
+                selected_shots[k - 1]["camera"]["framing"],
+                selected_shots[k - 1]["camera"]["angle"],
+                selected_shots[k - 1]["camera"]["movement"],
+            )
+        ),
+        "total_intra_shot_events": sum(len(s["intra_shot_events"]) for s in selected_shots),
+    }
+    return selected_shots, diversity_summary
+
+
+def validate_coverage(
+    coverage: Dict[str, Any],
+    visual_events: Dict[str, Any],
+    selected_skill: str,
+    fps: int = 30,
+) -> Dict[str, Any]:
+    """Enforce contiguous frames, zero gaps/overlaps, zero foreign skills, and full event coverage."""
+    if selected_skill not in VALID_SKILLS:
+        raise ValueError(f"Invalid locked skill: {selected_skill!r}")
+    shots = coverage.get("shots") or []
+    if not shots:
+        raise ValueError("Shot coverage produced zero shots.")
+    total_dur = float(visual_events["total_duration_sec"])
+
+    covered_event_ids = set()
+    prev_end = 0.0
+    for idx, s in enumerate(shots):
+        if s.get("engine") != selected_skill:
+            raise ValueError(f"Shot {s.get('shot_id')} leaked foreign engine {s.get('engine')!r}")
+        st = float(s["start"])
+        en = float(s["end"])
+        if idx == 0 and abs(st - 0.0) > 1e-3:
+            raise ValueError(f"Coverage must start at t=0.0, got {st}")
+        if abs(st - prev_end) > 0.02:
+            raise ValueError(f"Coverage gap/overlap before {s.get('shot_id')}: {prev_end} -> {st}")
+        if en <= st + 0.08:
+            raise ValueError(f"Shot {s.get('shot_id')} has non-positive duration: [{st}, {en}]")
+        prev_end = en
+        for eid in s.get("event_ids", []):
+            covered_event_ids.add(eid)
+        # Ensure split shots inside the same beat never duplicate identical full narration strings adjacently
+        if idx > 0 and s["narration_text"] == shots[idx - 1]["narration_text"] and s["beat_id"] == shots[idx - 1]["beat_id"]:
+            raise ValueError(
+                f"Shot {s['shot_id']} duplicates exact narration_text of {shots[idx - 1]['shot_id']}: {s['narration_text']!r}"
+            )
+
+    if abs(prev_end - total_dur) > 0.06:
+        raise ValueError(f"Coverage end {prev_end} != total_duration {total_dur}")
+
+    expected_eids = {ev["event_id"] for ev in visual_events.get("events", [])}
+    missing = sorted(expected_eids - covered_event_ids)
+    if missing:
+        raise ValueError(f"Coverage missed semantic events: {missing}")
+
+    return {"ok": True, "shots_count": len(shots), "covered_events": len(covered_event_ids)}
+
+
+def plan_editorial_coverage(
+    visual_events: Dict[str, Any],
+    parsed_script: Dict[str, Any],
+    selected_skill: str,
+    fps: int = 30,
+    seed: int = 42,
+    preset: str = "dynamic",
+    edit_energy: Optional[str] = None,
+    scene_novelty: str = "standard",
+    transition_policy: str = "motivated",
+    max_static_hold_sec: Optional[float] = None,
+    existing_visual_plan: Optional[Dict[str, Any]] = None,
+    run_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Generate validated variable-length shot coverage (`<run>/shot_coverage.json`)."""
+    eff_energy = edit_energy or preset or "balanced"
+    if selected_skill == "minimalistic-graphics" and edit_energy is None:
+        eff_energy = "calm"
+
+    max_hold = max_static_hold_sec
+    if max_hold is None:
+        max_hold = 3.5 if eff_energy == "dynamic" else (4.8 if eff_energy == "balanced" else 6.5)
+
+    units = split_long_visual_beats_by_actions(
+        list(visual_events.get("events", [])),
+        preset=eff_energy,
+        max_shot_dur=max_hold,
+        fps=fps,
+    )
+    shots, div_summary = select_sequence_with_diversity_constraints(
+        units=units,
+        grammar=ENGINE_CANDIDATE_SPACES[selected_skill],
+        selected_skill=selected_skill,
+        seed=seed,
+        fps=fps,
+        edit_energy=eff_energy,
+        scene_novelty=scene_novelty,
+        transition_policy=transition_policy,
+        existing_visual_plan=existing_visual_plan,
+    )
+
+    coverage: Dict[str, Any] = {
+        "schema_version": "sd-shot-coverage-1",
+        "selected_skill": selected_skill,
+        "origin_skills": [selected_skill],
+        "seed": seed,
+        "fps": fps,
+        "edit_energy": eff_energy,
+        "scene_novelty": scene_novelty,
+        "transition_policy": transition_policy,
+        "max_static_hold_sec": max_hold,
+        "total_duration_sec": visual_events["total_duration_sec"],
+        "diversity_summary": div_summary,
+        "shots": shots,
+    }
+    validate_coverage(coverage, visual_events=visual_events, selected_skill=selected_skill, fps=fps)
+
+    if run_dir is not None:
+        (run_dir / "shot_coverage.json").write_text(
+            json.dumps(coverage, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    return coverage

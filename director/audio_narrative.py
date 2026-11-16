@@ -142,10 +142,39 @@ def extract_sound_events(
         elif "push" in ev["cam_movement"] or "launch" in setup or "drop" in str(ev["props"]):
             _add(0.10, "hook_reveal", "soft_impact", "reveal", -12.5, 0.0, 0.78, 0.58, 3, f"{sid}.camera:{ev['cam_movement']}", depth="mid", uncert=0.04)
 
-    # 2. Engine + Setup Specific Visually Grounded Action Foley
+    # 2. Engine + Setup + Procedural Generator Visually Grounded Action Foley
+    proc_gen = str(shot.get("procedural_generator") or "")
     if eng == "zach-d-films":
         is_roman = ("roman_gladiator" in ev["global_motifs"] or "roman_ledger_50x" in ev["global_motifs"]) and not strict_props
-        if setup == "novel_slowmo_ripple_cutaway":
+        if proc_gen == "zach3d:human_device_stage":
+            # Syncs cleanly to `T_TAP = round(dur * 0.42, 3)` in zach_d_films_adapter!
+            if "phone_screen" in props or not strict_props:
+                _add(dur * 0.42, "screen_tap_send", "glass_tap_ui", "ui", -9.5, 0.08, 0.94, 0.86, 1, f"{sid}.phone_tap_T_TAP", depth="near", uncert=0.015)
+        elif proc_gen == "zach3d:device_cutaway_stage":
+            if "microchip_pcb" in props or "battery_cell" in props or "phone_screen" in props or not strict_props:
+                _add(min(dur * 0.25, 0.24), "chassis_shell_peel", "mechanical_click", "foley", -10.5, -0.08, 0.90, 0.78, 2, f"{sid}.frontGlass_peel", depth="near", uncert=0.02)
+                _add(dur * 0.55, "circuit_signal_arc", "electric_spark_pulse", "foley", -12.0, 0.12, 0.88, 0.72, 2, f"{sid}.pcb_copper_pulses", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:network_relay_stage":
+            if "cell_tower_wave" in props or not strict_props:
+                _add(dur * 0.30, "rf_wavefront_pulse", "electric_spark_pulse", "foley", -11.5, 0.0, 0.88, 0.74, 2, f"{sid}.tower_rfRings", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:subsea_fiber_stage":
+            if "subsea_fiber_cable" in props or "ocean_nature" in props or not strict_props:
+                _add(dur * 0.32, "subsea_water_surge", "subsea_bubble_hum", "foley", -12.5, -0.10, 0.88, 0.70, 2, f"{sid}.subsea_cable_seabed", depth="mid", uncert=0.04)
+                if density != "sparse":
+                    _add(dur * 0.65, "fiber_photon_ping", "brain_spark_chime", "emphasis", -13.5, 0.12, 0.82, 0.60, 3, f"{sid}.fiber_pulses", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:datacenter_aisle_stage":
+            if "datacenter_rack" in props or not strict_props:
+                _add(dur * 0.30, "server_rack_switch", "clock_tick", "foley", -12.5, 0.0, 0.86, 0.65, 2, f"{sid}.datacenter_packets", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:power_turbine_stage":
+            if "power_turbine" in props or "battery_cell" in props or not strict_props:
+                _add(dur * 0.35, "turbine_stator_charge", "electric_spark_pulse", "foley", -11.0, 0.08, 0.90, 0.76, 2, f"{sid}.power_turbine_rotor", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:cosmic_scale_bridge_stage":
+            if "cosmic_origin" in props or "atom_crystal" in props or not strict_props:
+                _add(dur * 0.24, "cosmic_genesis_swell", "cosmic_swell", "reveal", -10.5, 0.0, 0.90, 0.82, 2, f"{sid}.cosmic_star_core", depth="far", uncert=0.03)
+        elif proc_gen == "zach3d:anatomical_cutaway_stage":
+            if "brain_neuron" in props or "heart_organ" in props or not strict_props:
+                _add(dur * 0.35, "organ_synapse_pulse", "soft_impact" if "heart_organ" in props else "brain_spark_chime", "foley", -11.5, 0.0, 0.88, 0.74, 2, f"{sid}.anatomical_cutaway", depth="near", uncert=0.03)
+        elif setup == "novel_slowmo_ripple_cutaway":
             # Exact blade halt / projectile impact time matches adapter TI = dur * 0.46 (roman) or 0.48 (armor)
             ti = dur * (0.46 if is_roman else 0.48)
             _add(max(0.05, ti - 0.34), "slowmo_blade_sweep", "riser_tension", "emphasis", -12.5, 0.12, 0.90, 0.72, 2, f"{sid}.slowmo_blade_descent", depth="near", uncert=0.02)
@@ -171,6 +200,9 @@ def extract_sound_events(
             elif "mercy" in nar or "investment" in nar or "financial sense" in nar:
                 if density == "detailed":
                     _add(min(dur * 0.48, 0.8), "mercy_relief_chime", "brain_spark_chime", "emphasis", -14.0, 0.0, 0.78, 0.55, 3, f"{sid}.romanScrollTablet", depth="far", uncert=0.06)
+        elif props and density != "sparse":
+            if "vault_gear" in props or "clock_timer" in props:
+                _add(dur * 0.35, "studio_gear_click", "mechanical_click", "foley", -13.0, 0.10, 0.82, 0.58, 3, f"{sid}.vault_gears", depth="mid", uncert=0.04)
 
     elif eng == "stick-figure":
         if setup == "novel_mechanism_cutaway":
@@ -246,9 +278,9 @@ def extract_sound_events(
 
     # 4. Motivated Camera Transition SFX (ONLY on genuine visual animated transitions, NOT bare hard cuts!)
     if next_shot is not None:
-        if tr == "whip":
-            _add(max(0.05, dur - 0.14), "whip_pan_transition", "whoosh_pan", "transition", -12.5, -0.25 if shot.get("index", 0) % 2 == 0 else 0.25, 0.90, 0.72, 2, f"{sid}.transition_out:whip", depth="near", uncert=0.02)
-        elif tr in ("iris_mask", "match_zoom"):
+        if tr in ("whip", "whip_pan"):
+            _add(max(0.05, dur - 0.14), f"{tr}_transition", "whoosh_pan", "transition", -12.5, -0.25 if shot.get("index", 0) % 2 == 0 else 0.25, 0.90, 0.72, 2, f"{sid}.transition_out:{tr}", depth="near", uncert=0.02)
+        elif tr in ("iris_mask", "match_zoom", "zoom_through", "match_cut", "object_wipe"):
             _add(max(0.05, dur - 0.12), f"{tr}_transition", "transition_sweep", "transition", -14.0, 0.0, 0.85, 0.62, 2, f"{sid}.transition_out:{tr}", depth="near", uncert=0.02)
         elif tr == "dip_to_black":
             _add(max(0.05, dur - 0.06), "dip_to_black_drop", "heavy_thud", "transition", -10.0, 0.0, 0.92, 0.82, 1, f"{sid}.transition_out:dip_to_black", depth="near", uncert=0.02)

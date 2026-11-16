@@ -261,6 +261,11 @@ def execute_short_director_run(
     force_audio_replan: bool = False,
     prepare_qa_audio_library: bool = False,
     preserve_original_on_remix: bool = False,
+    edit_energy: str = "balanced",
+    scene_novelty: str = "standard",
+    transition_policy: str = "motivated",
+    max_static_hold_sec: Optional[float] = None,
+    visual_plan_in: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Run STEP 0 -> STEP 9 end-to-end (or --audio-only lossless remix) and return `run_manifest`."""
     if audio_only:
@@ -351,7 +356,15 @@ def execute_short_director_run(
             voice_mode=voice_mode,
         )
 
-        # STEP 3: Build per-shot storyboard, multi-angle blocking, art bible & asset inventory
+        # STEP 3: Build semantic visual event graph, novel shot coverage, camera paths, transitions & entity inventory
+        existing_visual_plan: Optional[Dict[str, Any]] = None
+        if visual_plan_in is not None:
+            existing_visual_plan = json.loads(visual_plan_in.read_text(encoding="utf-8"))
+            if existing_visual_plan.get("selected_skill") and existing_visual_plan.get("selected_skill") != selected_skill:
+                raise StyleLockViolationError(
+                    f"--visual-plan-in visual skill {existing_visual_plan.get('selected_skill')!r} != locked {selected_skill!r}"
+                )
+
         storyboard = build_storyboard_and_bible(
             parsed_script=parsed_script,
             style_decisions=style_decisions,
@@ -359,6 +372,11 @@ def execute_short_director_run(
             fps=fps,
             seed=seed,
             target_min_duration=min_duration,
+            edit_energy=edit_energy,
+            scene_novelty=scene_novelty,
+            transition_policy=transition_policy,
+            max_static_hold_sec=max_static_hold_sec,
+            existing_visual_plan=existing_visual_plan,
         )
 
         # NEW STEP 3.5: Plan Narrative Music Score & Grounded SFX BEFORE 4K visual render
@@ -464,6 +482,15 @@ def execute_short_director_run(
             "upstream_commit_sha": pf.upstream_sha,
             "upstream_clean_unmodified": pf.upstream_clean,
             **audio_manifest_fields,
+            "scene_diversity": {
+                "edit_energy": storyboard.get("edit_energy", edit_energy),
+                "scene_novelty": scene_novelty,
+                "transition_policy": transition_policy,
+                "shot_count": len(storyboard.get("shots", [])),
+                "diversity_summary": storyboard.get("diversity_summary", {}),
+                "scene_diversity_status": (qc_report.get("checks", {}).get("scene_diversity_and_retention") or {}).get("status"),
+                "subjective_visual_review": (qc_report.get("checks", {}).get("scene_diversity_and_retention") or {}).get("subjective_visual_review", "NOT_VERIFIED"),
+            },
             "video_contract": {
                 "aspect_ratio": "9:16",
                 "fps": fps,
@@ -475,6 +502,11 @@ def execute_short_director_run(
             },
             "artifacts": {
                 "storyboard_json": str((out_dir / "storyboard.json").resolve()),
+                "visual_events_json": str((out_dir / "visual_events.json").resolve()),
+                "shot_coverage_json": str((out_dir / "shot_coverage.json").resolve()),
+                "camera_paths_json": str((out_dir / "camera_paths.json").resolve()),
+                "transition_edl_json": str((out_dir / "transition_edl.json").resolve()),
+                "scene_diversity_report_json": str((out_dir / "scene_diversity_report.json").resolve()),
                 "style_decisions_json": str((out_dir / "style_decisions.json").resolve()),
                 "art_bible_md": str((out_dir / "art_bible.md").resolve()),
                 "style_lock_audit_json": str((out_dir / "style_lock_audit.json").resolve()),
@@ -520,7 +552,7 @@ def execute_short_director_run(
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Short Director v0.3.0 — Strict Single-Skill Vertical Shorts & Audio Director")
+    parser = argparse.ArgumentParser(description="Short Director v0.4.0 — Strict Single-Skill Continuous Visual & Audio Shorts Director")
     parser.add_argument("prompt", nargs="?", default="", help="Script or topic prompt (optional when --audio-only)")
     parser.add_argument("--skill", default=None, help="Explicitly lock one of the 6 visual skills")
     parser.add_argument("--out-dir", default=None, help="Output directory for this run")
@@ -532,6 +564,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--workers", type=int, default=None, help="Bounded parallel render workers")
     parser.add_argument("--render-4k-mode", default="native", choices=["native", "upscale"], help="Native 4K vs Lanczos upscale")
     parser.add_argument("--min-duration", type=float, default=0.0, help="Minimum short duration in seconds")
+
+    # Continuous Shot & Visual Direction options (`SD-VISUAL-01`)
+    parser.add_argument("--edit-energy", default="balanced", choices=["calm", "balanced", "dynamic"], help="Pacing & visual beat frequency")
+    parser.add_argument("--scene-novelty", default="standard", choices=["standard", "high"], help="Anti-repetition novelty penalty weight")
+    parser.add_argument("--transition-policy", default="motivated", choices=["motivated", "simple"], help="Transition direction mode")
+    parser.add_argument("--max-static-hold-sec", type=float, default=None, help="Maximum duration before forcing beat update or split")
+    parser.add_argument("--visual-plan-in", default=None, help="Optional path to manual shot_coverage/storyboard JSON to respect locked shots")
 
     # Audio Director options (all optional, preserve backward compatibility)
     parser.add_argument("--qa-audio-root", default=None, help="Optional read-only path to QA-Unified-Video-Studio audio library")
@@ -559,6 +598,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     qa_p = Path(args.qa_audio_root).resolve() if args.qa_audio_root else None
     mus_p = Path(args.music_file).resolve() if args.music_file else None
     plan_in_p = Path(args.audio_plan_in).resolve() if args.audio_plan_in else None
+    vis_in_p = Path(args.visual_plan_in).resolve() if args.visual_plan_in else None
 
     try:
         manifest = execute_short_director_run(
@@ -587,6 +627,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             force_audio_replan=args.force_audio_replan,
             prepare_qa_audio_library=args.prepare_qa_audio_library,
             preserve_original_on_remix=args.preserve_original_on_remix,
+            edit_energy=args.edit_energy,
+            scene_novelty=args.scene_novelty,
+            transition_policy=args.transition_policy,
+            max_static_hold_sec=args.max_static_hold_sec,
+            visual_plan_in=vis_in_p,
         )
         print(json.dumps(manifest, indent=2))
         return 0

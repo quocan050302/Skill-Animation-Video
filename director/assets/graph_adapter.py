@@ -210,26 +210,33 @@ window.renderAtTime = function(rawT) {{
   const curVal = p >= 0.999 ? S.final : Math.max(V[0] * (1 - p), (Y0 - pt.y) / (Y0 - Y1) * vmax);
   numEl.textContent = fmt(curVal);
 
-  // Multi-shot editorial camera framing on #viewportG!
+  // Multi-shot editorial camera framing + rendered `match_zoom` seam easing on #viewportG!
   let sIdx = SHOTS.findIndex(s => t >= s.start && t < s.end);
   if (sIdx < 0) sIdx = SHOTS.length - 1;
   const shot = SHOTS[sIdx];
+  const prevShot = sIdx > 0 ? SHOTS[sIdx - 1] : null;
   const setup = shot.setup_type;
   const vg = document.getElementById('viewportG');
   const tang = document.getElementById('tangent');
   const stems = dg.querySelectorAll('line');
+  let zBridge = 1.0;
+  if (shot.transition_out === 'match_zoom' && sIdx < SHOTS.length - 1 && (shot.end - t) < 0.14) {{
+    zBridge = 1.0 + Math.pow(1.0 - (shot.end - t) / 0.14, 2) * 0.14;
+  }} else if (prevShot && prevShot.transition_out === 'match_zoom' && (t - shot.start) < 0.14) {{
+    zBridge = 1.14 - (1 - Math.pow(1 - (t - shot.start) / 0.14, 3)) * 0.14;
+  }}
 
   if (setup === 'early_baseline_zoom') {{
-    const z = 1.32;
+    const z = 1.32 * zBridge;
     const tx = 540 - pt.x * z, ty = 1080 - pt.y * z;
-    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{z}})`);
+    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{z.toFixed(3)}})`);
     tang.setAttribute('opacity', '0');
     stems.forEach(el => el.setAttribute('opacity', '0'));
   }} else if (setup === 'novel_inflection_tangent_delta') {{
     // Novel inflection analysis view: show vertical impulse stems + instantaneous slope tangent!
-    const z = 1.16;
+    const z = 1.16 * zBridge;
     const tx = 540 - pt.x * z, ty = 1040 - pt.y * z;
-    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{z}})`);
+    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{z.toFixed(3)}})`);
     const ptA = lineEl.getPointAtLength(Math.max(0.05, q - 35));
     const ptB = lineEl.getPointAtLength(Math.min(totalLen, q + 35));
     const dx = ptB.x - ptA.x, dy = ptB.y - ptA.y;
@@ -238,8 +245,17 @@ window.renderAtTime = function(rawT) {{
     tang.setAttribute('x2', pt.x + dx / len * 130); tang.setAttribute('y2', pt.y + dy / len * 130);
     tang.setAttribute('opacity', '0.85');
     stems.forEach((el, k) => el.setAttribute('opacity', px(k) <= pt.x ? '0.65' : '0'));
+  }} else if (setup === 'milestone_delta_spotlight') {{
+    // Highlight milestone delta stems & pan smoothly toward peak upper-right horizon
+    const u = clamp((t - shot.start) / Math.max(0.1, shot.end - shot.start), 0, 1);
+    const z = (1.12 + 0.12 * u) * zBridge;
+    const tx = 540 - pt.x * z * 0.92, ty = 1020 - pt.y * z * 0.92;
+    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{z.toFixed(3)}})`);
+    tang.setAttribute('opacity', '0');
+    stems.forEach((el, k) => el.setAttribute('opacity', px(k) <= pt.x ? '0.85' : '0.18'));
   }} else {{
-    vg.setAttribute('transform', 'translate(0,0) scale(1)');
+    const tx = 540 * (1 - zBridge), ty = 1040 * (1 - zBridge);
+    vg.setAttribute('transform', `translate(${{tx.toFixed(1)}},${{ty.toFixed(1)}}) scale(${{zBridge.toFixed(3)}})`);
     tang.setAttribute('opacity', '0');
     stems.forEach((el, k) => el.setAttribute('opacity', p >= 0.98 ? '0.28' : '0'));
   }}

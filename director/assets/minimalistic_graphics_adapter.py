@@ -63,6 +63,11 @@ svg{{position:absolute;left:0;top:0}}
       <path id="pendArc" stroke="#555" stroke-dasharray="6 10" d="M 260 980 Q 540 1180 820 980"/>
       <line id="pendRod" x1="540" y1="540" x2="540" y2="1040"/>
     </g>
+    <g id="motifBalance" fill="none" stroke="#f4f4f4" stroke-width="2.6" opacity="0">
+      <polygon points="540,1040 508,1115 572,1115" stroke="#9e9e9e"/>
+      <line id="balBeam" x1="250" y1="1035" x2="830" y2="1035"/>
+      <circle id="balCounter" cx="290" cy="1005" r="18" fill="none" stroke="#9e9e9e"/>
+    </g>
     <g id="bars" fill="none" stroke="#f4f4f4" stroke-width="2.6"></g>
     <circle id="orbit" r="145" fill="none" stroke="#f4f4f4" stroke-width="2.2" stroke-dasharray="6 10" opacity="0"/>
     <ellipse id="ring" rx="225" ry="48" fill="none" stroke="#9e9e9e" stroke-width="2" opacity="0"/>
@@ -120,16 +125,29 @@ window.renderAtTime = function(rawT) {{
   const ball = document.getElementById('ball');
   const pulse = document.getElementById('pulse');
   const pendG = document.getElementById('motifPendulum');
+  const balG = document.getElementById('motifBalance');
   const orbit = document.getElementById('orbit');
   const ring = document.getElementById('ring');
 
   // Reset defaults
   pendG.setAttribute('opacity', '0');
+  balG.setAttribute('opacity', '0');
   barsG.setAttribute('opacity', '0');
   orbit.setAttribute('opacity', '0');
   ring.setAttribute('opacity', '0');
   pulse.setAttribute('opacity', '0');
   sparkEls.forEach(c => c.setAttribute('opacity', '0'));
+
+  // Rendered `match_zoom` viewport transform across shot seam
+  const prevShot = sIdx > 0 ? SHOTS[sIdx - 1] : null;
+  let zVp = 1.0;
+  if (shot.transition_out === 'match_zoom' && sIdx < SHOTS.length - 1 && (shot.end - t) < 0.14) {{
+    zVp = 1.0 + Math.pow(1.0 - (shot.end - t) / 0.14, 2) * 0.12;
+  }} else if (prevShot && prevShot.transition_out === 'match_zoom' && (t - shot.start) < 0.14) {{
+    zVp = 1.12 - easeOut((t - shot.start) / 0.14) * 0.12;
+  }}
+  document.querySelector('svg').style.transform = `scale(${{zVp.toFixed(4)}})`;
+  document.querySelector('svg').style.transformOrigin = '540px 960px';
 
   if (shot.setup_type === 'hook_solitary_dot_pulse') {{
     const sc = u < 0.25 ? easeOut(u / 0.25) * 1.15 : lerp(1.15, 1.0, clamp((u - 0.25) / 0.3, 0, 1));
@@ -149,6 +167,20 @@ window.renderAtTime = function(rawT) {{
     document.getElementById('pendRod').setAttribute('y2', by.toFixed(1));
     ball.setAttribute('cx', bx.toFixed(1)); ball.setAttribute('cy', by.toFixed(1));
     ball.setAttribute('rx', '31'); ball.setAttribute('ry', '31');
+  }} else if (shot.setup_type === 'kinetic_balance_beam') {{
+    // Novel kinetic equilibrium beam & rolling ball transformation
+    balG.setAttribute('opacity', '1');
+    const tilt = Math.sin(u * Math.PI) * -0.18 + (u > 0.55 ? 0.14 : -0.10);
+    const dx = 285, dy = Math.sin(tilt) * dx;
+    const beam = document.getElementById('balBeam');
+    beam.setAttribute('x1', (540 - dx).toFixed(1)); beam.setAttribute('y1', (1035 - dy).toFixed(1));
+    beam.setAttribute('x2', (540 + dx).toFixed(1)); beam.setAttribute('y2', (1035 + dy).toFixed(1));
+    const bx = lerp(410, 745, easeOut(u));
+    const by = 1035 + ((bx - 540) / dx) * dy - 31;
+    ball.setAttribute('cx', bx.toFixed(1)); ball.setAttribute('cy', by.toFixed(1));
+    ball.setAttribute('rx', '31'); ball.setAttribute('ry', '31');
+    const bc = document.getElementById('balCounter');
+    bc.setAttribute('cx', (540 - 250).toFixed(1)); bc.setAttribute('cy', (1035 - dy - 20).toFixed(1));
   }} else if (shot.setup_type === 'rising_hairline_steps') {{
     barsG.setAttribute('opacity', '1');
     const stepFloat = u * (N - 1);

@@ -242,7 +242,20 @@ window.renderAtTime = function(rawT) {{
 
   let sIdx = SHOTS.findIndex(s => t >= s.start && t < s.end);
   if (sIdx < 0) sIdx = SHOTS.length - 1;
-  const setup = SHOTS[sIdx].setup_type;
+  const curS = SHOTS[sIdx];
+  const prevS = sIdx > 0 ? SHOTS[sIdx - 1] : null;
+  const setup = curS.setup_type;
+  const uShot = clamp((t - curS.start) / Math.max(0.25, curS.end - curS.start), 0, 1);
+
+  // Motivated rendered `match_zoom` FOV/dolly ramp at boundary seams
+  let fovBoost = 0;
+  if (curS.transition_out === 'match_zoom' && sIdx < SHOTS.length - 1 && (curS.end - t) < 0.14) {{
+    fovBoost = -4.5 * Math.pow(1 - (curS.end - t) / 0.14, 2);
+  }} else if (prevS && prevS.transition_out === 'match_zoom' && (t - curS.start) < 0.14) {{
+    fovBoost = 4.0 * (1 - (t - curS.start) / 0.14);
+  }}
+  camera.fov = 30 + fovBoost;
+  camera.updateProjectionMatrix();
 
   // Multi-shot camera angles along the route!
   if (setup === 'departure_street_level') {{
@@ -254,8 +267,11 @@ window.renderAtTime = function(rawT) {{
   }} else if (setup === 'turn_park_corridor') {{
     camera.position.set(hp.x + 18, 24, hp.y + 16);
     camera.lookAt(hp.x, 0, hp.y - 3);
+  }} else if (setup === 'street_canopy_altitude_shift') {{
+    camera.position.set(hp.x - 10 + Math.sin(uShot * 1.4) * 14, 22 + uShot * 22, hp.y + 20);
+    camera.lookAt(hp.x * 0.65, 0, hp.y - 8);
   }} else {{
-    const fin = clamp((t - SHOTS[sIdx].start) / Math.max(0.3, SHOTS[sIdx].end - SHOTS[sIdx].start), 0, 1);
+    const fin = uShot;
     camera.position.set(END.x * (1 - fin * 0.5) + 14, 28 + fin * 28, END.y + 24 + fin * 26);
     camera.lookAt(END.x * 0.5, 0, END.y * 0.65);
   }}

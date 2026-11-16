@@ -1,21 +1,37 @@
-"""STEP 3: Single-Engine Multi-Angle Storyboard, Art Bible & Entity Inventory Builder.
+"""STEP 3: Continuous Visual-Event-Driven Storyboard, Coverage, Camera, Transition & Entity Inventory Builder.
 
-Guarantees:
+Integrates SD-VISUAL-01 stages:
+1) `visual_event_graph.py` -> `<run>/visual_events.json`
+2) `shot_director.py` -> `<run>/shot_coverage.json`
+3) `camera_choreographer.py` -> `<run>/camera_paths.json`
+4) `transition_director.py` -> `<run>/transition_edl.json`
+5) `scene_asset_factory.py` -> scene entity compilation & camera/silhouette bounds check
+
+Strict Guarantees:
+- Zero cyclic boilerplate repetition or duplicate narration splits.
 - Every `shots[i].engine == selected_skill` (zero guest shots, zero secondary inserts).
-- Distinct camera setups across beats (ECU, MS, WS, Cutaway_Diagram, Split_Comparison, Pullback_Payoff).
-- At least 1 novel non-template scene setup explicitly planned and parameterized.
-- Safe-area geometry (`x: 100..980`, `y: 220..1500`) and caption-band clearance enforced.
+- Safe-area geometry (`x: 100..980`, `y: 220..1500`) and caption-band clearance preserved.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .assets.style_params import build_style_params
+from .camera_choreographer import build_camera_plan
+from .scene_asset_factory import (
+    compile_scene_entities,
+    materialize_engine_scene,
+    validate_entity_continuity,
+)
+from .shot_director import plan_editorial_coverage
+from .transition_director import emit_transition_edl
+from .visual_event_graph import extract_semantic_visual_events, write_visual_events_artifact
 
 
+# Preserved per-engine grammar reference for inspectable external callers
 ENGINE_CAMERA_GRAMMAR: Dict[str, List[Dict[str, Any]]] = {
     "stick-figure": [
         {"setup": "hook_dynamic_cu", "framing": "CU", "angle": "eye_level_push", "move": "push_in_handheld", "transition": "whip"},
@@ -23,9 +39,18 @@ ENGINE_CAMERA_GRAMMAR: Dict[str, List[Dict[str, Any]]] = {
         {"setup": "turn_reaction_ecu", "framing": "ECU", "angle": "dutch_tilt_dramatic", "move": "snap_zoom_shake", "transition": "iris_mask"},
         {"setup": "novel_mechanism_cutaway", "framing": "Cutaway_Macro", "angle": "orthographic_cross_section", "move": "focus_glide", "transition": "whip", "novel_non_template": True},
         {"setup": "split_comparison_stage", "framing": "MS_Split", "angle": "frontal_duel", "move": "counter_drift", "transition": "cut_on_action", "novel_non_template": True},
+        {"setup": "scale_ladder_pan", "framing": "MS_to_VWS", "angle": "vertical_pan_climb", "move": "pan_up_scale", "transition": "whip", "novel_non_template": True},
         {"setup": "payoff_sunny_pullback", "framing": "MS_to_WS", "angle": "heroic_eye_level", "move": "pull_back_settle", "transition": "cut"},
     ],
     "zach-d-films": [
+        {"setup": "human_device_macro", "framing": "CU_OverShoulder", "angle": "three_quarter_hand_focus", "move": "macro_push_in", "transition": "zoom_through", "novel_non_template": True},
+        {"setup": "device_cutaway_pcb", "framing": "ECU_Cutaway", "angle": "exploded_oblique_35deg", "move": "peel_orbit_reveal", "transition": "match_cut", "novel_non_template": True},
+        {"setup": "network_tower_relay", "framing": "WS_LowHero", "angle": "upward_tower_tilt", "move": "crane_tilt_follow", "transition": "whip_pan", "novel_non_template": True},
+        {"setup": "subsea_fiber_conduit", "framing": "MS_Tracking", "angle": "underwater_low_glide", "move": "dolly_along_conduit", "transition": "zoom_through", "novel_non_template": True},
+        {"setup": "datacenter_aisle_sweep", "framing": "WS_Corridor", "angle": "one_point_symmetrical", "move": "dolly_forward_aisle", "transition": "cut_on_action", "novel_non_template": True},
+        {"setup": "power_turbine_generator", "framing": "MS_Cutaway", "angle": "elevated_isometric", "move": "arc_around_rotor", "transition": "match_cut", "novel_non_template": True},
+        {"setup": "cosmic_scale_bridge", "framing": "ECU_to_VWS", "angle": "orbital_horizon_roll", "move": "scale_pullback_cosmos", "transition": "zoom_through", "novel_non_template": True},
+        {"setup": "anatomical_cutaway_3d", "framing": "ECU_XRay", "angle": "frontal_medical_orbit", "move": "focus_push_to_organ", "transition": "cut_on_action", "novel_non_template": True},
         {"setup": "hook_3d_action_launch", "framing": "MS", "angle": "three_quarter_hero", "move": "dolly_push_in", "transition": "cut_on_action"},
         {"setup": "belief_studio_demonstration", "framing": "WS", "angle": "low_studio_orbit", "move": "orbit_right", "transition": "dip_to_black"},
         {"setup": "novel_slowmo_ripple_cutaway", "framing": "ECU_Macro", "angle": "projectile_tracking_side", "move": "slowmo_track_impact", "transition": "cut_on_action", "novel_non_template": True},
@@ -36,11 +61,13 @@ ENGINE_CAMERA_GRAMMAR: Dict[str, List[Dict[str, Any]]] = {
         {"setup": "hook_metric_counter_intro", "framing": "Macro_Header", "angle": "flat_editorial", "move": "grid_reveal", "transition": "match_zoom"},
         {"setup": "early_baseline_zoom", "framing": "CU_Curve_Origin", "angle": "flat_editorial", "move": "follow_tip_pan", "transition": "match_zoom"},
         {"setup": "novel_inflection_tangent_delta", "framing": "MS_Inflection_Split", "angle": "flat_editorial", "move": "slope_highlight_sweep", "transition": "match_zoom", "novel_non_template": True},
+        {"setup": "milestone_delta_spotlight", "framing": "MS_Evidence_Callout", "angle": "flat_editorial", "move": "pan_milestone_window", "transition": "match_zoom", "novel_non_template": True},
         {"setup": "payoff_full_horizon_curve", "framing": "WS_Full_Chart", "angle": "flat_editorial", "move": "settle_halo_drop", "transition": "cut"},
     ],
     "minimalistic-graphics": [
         {"setup": "hook_solitary_dot_pulse", "framing": "Center_Void", "angle": "flat_orthographic", "move": "breath_pulse", "transition": "cut_on_action"},
         {"setup": "novel_pendulum_or_labyrinth", "framing": "MS_Geometric", "angle": "flat_orthographic", "move": "arc_oscillation", "transition": "match_zoom", "novel_non_template": True},
+        {"setup": "kinetic_balance_beam", "framing": "WS_Equilibrium", "angle": "flat_orthographic", "move": "fulcrum_tilt_shift", "transition": "match_zoom", "novel_non_template": True},
         {"setup": "rising_hairline_steps", "framing": "WS_Ascending", "angle": "flat_orthographic", "move": "parabolic_hop_climb", "transition": "cut_on_action"},
         {"setup": "payoff_orbital_sparks", "framing": "MS_Apex_Orbit", "angle": "flat_orthographic", "move": "radial_bloom_hold", "transition": "cut"},
     ],
@@ -48,12 +75,14 @@ ENGINE_CAMERA_GRAMMAR: Dict[str, List[Dict[str, Any]]] = {
         {"setup": "departure_street_level", "framing": "CU_Origin_Block", "angle": "low_chase_32deg", "move": "pull_from_start_disc", "transition": "match_zoom"},
         {"setup": "mid_route_bridge_crossing", "framing": "MS_Aerial_Chase", "angle": "aerial_40deg_swing", "move": "ride_behind_route_head", "transition": "match_zoom", "novel_non_template": True},
         {"setup": "turn_park_corridor", "framing": "MS_Corner_Bank", "angle": "banked_aerial_35deg", "move": "corner_arc_track", "transition": "match_zoom"},
+        {"setup": "street_canopy_altitude_shift", "framing": "MS_Wide_Altitude", "angle": "elevated_oblique_50deg", "move": "climb_altitude_sweep", "transition": "match_zoom", "novel_non_template": True},
         {"setup": "arrival_pin_drop_pullback", "framing": "WS_Overview_Card", "angle": "high_overview_28deg", "move": "crane_pullback_reveal", "transition": "cut"},
     ],
     "breakdown": [
         {"setup": "assembled_hero_silhouette", "framing": "MS_Studio_Hero", "angle": "three_quarter_rim", "move": "slow_turntable_intro", "transition": "match_zoom"},
         {"setup": "axial_layer_separation", "framing": "MS_Exploding_Stack", "angle": "elevated_30deg", "move": "dolly_out_with_explosion", "transition": "match_zoom"},
         {"setup": "novel_internal_core_macro", "framing": "ECU_Internal_Core", "angle": "macro_oblique_22deg", "move": "focus_sweep_across_core", "transition": "match_zoom", "novel_non_template": True},
+        {"setup": "top_down_subsystem_orbit", "framing": "MS_High_Subsystem", "angle": "top_oblique_52deg", "move": "orbit_subsystem_inspect", "transition": "match_zoom", "novel_non_template": True},
         {"setup": "full_annotated_callout_stack", "framing": "WS_Labelled_Column", "angle": "offset_callout_frame", "move": "turntable_hold", "transition": "cut"},
     ],
 }
@@ -66,208 +95,113 @@ def build_storyboard_and_bible(
     fps: int = 30,
     seed: int = 42,
     target_min_duration: float = 0.0,
+    edit_energy: str = "balanced",
+    scene_novelty: str = "standard",
+    transition_policy: str = "motivated",
+    max_static_hold_sec: Optional[float] = None,
+    existing_visual_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Produce STEP 3 `storyboard.json`, `art_bible.md`, and visual entity inventory."""
+    """Produce STEP 3 `storyboard.json`, `art_bible.md`, and visual direction artifacts."""
     selected_skill = style_decisions["selected_skill"]
-    beats = parsed_script["beats"]
-    vo_dur = float(parsed_script["voice"]["vo_duration_sec"])
-    motifs = parsed_script["entities_and_facts"]["detected_motifs"]
     style_params = build_style_params(selected_skill, seed=seed)
 
-    grammar_templates = ENGINE_CAMERA_GRAMMAR[selected_skill]
+    # 1. Semantic Visual Event Graph (`visual_events.json`)
+    visual_events = extract_semantic_visual_events(
+        parsed_script=parsed_script,
+        storyboard_context={
+            "selected_skill": selected_skill,
+            "target_min_duration": target_min_duration,
+            "tail_hold_sec": 0.75,
+        },
+        fps=fps,
+        seed=seed,
+        selected_skill=selected_skill,
+    )
+    write_visual_events_artifact(visual_events, run_dir)
 
-    # Ensure at least 4 distinct setups when duration >= 10s or beats >= 4 (split long beats cleanly if needed)
-    raw_segments: List[Dict[str, Any]] = []
-    for b in beats:
-        raw_segments.append({
-            "role": b["role"],
-            "text": b["text"],
-            "start": float(b["start"]),
-            "end": float(b["end"]),
-            "words": b["words"],
-        })
+    # 2. Variable-Length Novel Shot Coverage (`shot_coverage.json`)
+    coverage = plan_editorial_coverage(
+        visual_events=visual_events,
+        parsed_script=parsed_script,
+        selected_skill=selected_skill,
+        fps=fps,
+        seed=seed,
+        preset=edit_energy,
+        edit_energy=edit_energy,
+        scene_novelty=scene_novelty,
+        transition_policy=transition_policy,
+        max_static_hold_sec=max_static_hold_sec,
+        existing_visual_plan=existing_visual_plan,
+        run_dir=run_dir,
+    )
+    raw_shots = coverage["shots"]
 
-    # Make contiguous shot spans from t=0.0 to total_duration (no black gaps between VO breaths!)
-    tail_hold = 0.75
-    total_duration = max(vo_dur + tail_hold, target_min_duration)
-    for idx in range(len(raw_segments)):
-        raw_segments[idx]["start"] = 0.0 if idx == 0 else raw_segments[idx - 1]["end"]
-        if idx < len(raw_segments) - 1:
-            # Cut cleanly halfway into the inter-sentence breath before next sentence starts
-            next_first_word_s = beats[idx + 1]["start"]
-            raw_segments[idx]["end"] = round((beats[idx]["end"] + next_first_word_s) * 0.5, 3)
-        else:
-            raw_segments[idx]["end"] = round(total_duration, 3)
+    # 3. Camera Choreography (`camera_paths.json`) & Transition EDL (`transition_edl.json`)
+    camera_plan = build_camera_plan(
+        shots=raw_shots,
+        selected_skill=selected_skill,
+        fps=fps,
+        seed=seed,
+        event_graph=visual_events,
+        run_dir=run_dir,
+    )
+    transition_edl = emit_transition_edl(
+        shots=raw_shots,
+        camera_plan=camera_plan,
+        selected_skill=selected_skill,
+        fps=fps,
+        mode=transition_policy,
+        run_dir=run_dir,
+    )
 
-    # For multi-paragraph scripts (>8 sentences), merge micro-sentences (<2.05s) into cohesive 2.4–6s editorial shots
-    if len(raw_segments) > 8:
-        merged_segments: List[Dict[str, Any]] = []
-        idx = 0
-        while idx < len(raw_segments):
-            cur = raw_segments[idx]
-            cur_dur = cur["end"] - cur["start"]
-            if cur_dur < 2.05 and idx < len(raw_segments) - 1:
-                nxt = raw_segments[idx + 1]
-                nxt_dur = nxt["end"] - nxt["start"]
-                starts_conj = cur["text"].strip().lower().startswith(("but ", "so ", "and ", "yet "))
-                if idx == 0 or nxt_dur < 2.35 or starts_conj or not merged_segments:
-                    role = (
-                        "payoff"
-                        if idx + 1 == len(raw_segments) - 1
-                        else ("turn" if "turn" in (cur["role"], nxt["role"]) else cur["role"])
-                    )
-                    merged_segments.append({
-                        "role": role,
-                        "text": f"{cur['text']} {nxt['text']}",
-                        "start": cur["start"],
-                        "end": nxt["end"],
-                        "words": cur["words"] + nxt["words"],
-                    })
-                    idx += 2
-                    continue
-                if merged_segments and (merged_segments[-1]["end"] - merged_segments[-1]["start"]) < 4.5:
-                    prev = merged_segments[-1]
-                    if "turn" in cur["role"]:
-                        prev["role"] = "turn"
-                    prev["text"] = f"{prev['text']} {cur['text']}"
-                    prev["end"] = cur["end"]
-                    prev["words"] = prev["words"] + cur["words"]
-                    idx += 1
-                    continue
-            elif cur_dur < 2.05 and idx == len(raw_segments) - 1 and merged_segments:
-                prev = merged_segments[-1]
-                prev["role"] = "payoff"
-                prev["text"] = f"{prev['text']} {cur['text']}"
-                prev["end"] = cur["end"]
-                prev["words"] = prev["words"] + cur["words"]
-                idx += 1
-                continue
-            merged_segments.append(cur)
-            idx += 1
-        raw_segments = merged_segments
-
-    # If fewer than 4 shots exist, subdivide longest shot(s) at word midpoint for multi-angle staging
-    while len(raw_segments) < 4 and total_duration >= 6.0:
-        longest_i = max(range(len(raw_segments)), key=lambda k: raw_segments[k]["end"] - raw_segments[k]["start"])
-        seg = raw_segments[longest_i]
-        mid_t = round((seg["start"] + seg["end"]) * 0.5, 3)
-        w_left = [w for w in seg["words"] if w["s"] < mid_t]
-        w_right = [w for w in seg["words"] if w["s"] >= mid_t]
-        left = {"role": seg["role"], "text": seg["text"], "start": seg["start"], "end": mid_t, "words": w_left}
-        right = {"role": seg["role"] + "_detail", "text": seg["text"], "start": mid_t, "end": seg["end"], "words": w_right}
-        raw_segments = raw_segments[:longest_i] + [left, right] + raw_segments[longest_i + 1 :]
+    # 4. Entity Compilation & Camera Bounds Validation (`scene_asset_factory.py`)
+    entity_inventory = compile_scene_entities(
+        event_graph=visual_events,
+        selected_skill=selected_skill,
+        seed=seed,
+    )
+    cam_by_id = {p["shot_id"]: p for p in camera_plan["paths"]}
 
     shots: List[Dict[str, Any]] = []
     visual_assets: List[Dict[str, Any]] = []
-
-    # Ensure at least one shot uses the novel non-template setup
-    novel_indices = [i for i, g in enumerate(grammar_templates) if g.get("novel_non_template")]
-    forced_novel_slot = max(1, len(raw_segments) - 2)
-    dip_used = False
-
-    is_roman_story = selected_skill == "zach-d-films" and (
-        "roman_gladiator" in motifs or "roman_ledger_50x" in motifs
-    )
-
-    for i, seg in enumerate(raw_segments):
-        low_seg = seg["text"].lower()
-        if i == 0:
-            g = grammar_templates[0]
-        elif i == len(raw_segments) - 1:
-            g = grammar_templates[-1]
-        elif is_roman_story and ("final blow" in low_seg or "doesn't come" in low_seg):
-            g = grammar_templates[2]  # novel_slowmo_ripple_cutaway
-        elif is_roman_story and ("fifty times" in low_seg or "catch" in low_seg):
-            g = grammar_templates[3]  # mechanism_cross_section_3d
-        elif is_roman_story:
-            g = grammar_templates[1]  # bespoke multi-angle Roman shot driven by shot narration/setup
-        elif i == forced_novel_slot and novel_indices:
-            g = grammar_templates[novel_indices[0]]
-        else:
-            mid_pool = grammar_templates[1:-1] or grammar_templates
-            g = mid_pool[(i - 1) % len(mid_pool)]
-
-        primary_motif = motifs[i % len(motifs)]
-        secondary_motif = motifs[(i + 1) % len(motifs)]
-        dur = round(seg["end"] - seg["start"], 3)
-
-        speed_ramp = (
+    for i, s in enumerate(raw_shots):
+        sc = dict(s)
+        cp = cam_by_id.get(sc["shot_id"])
+        mat = materialize_engine_scene(sc, entity_inventory, selected_skill=selected_skill, camera_path=cp)
+        sc["procedural_generator"] = mat["procedural_generator"]
+        sc["camera_path"] = cp
+        sc["speed_ramp"] = (
             {"enabled": True, "slow_window_norm": [0.42, 0.72], "factor": 0.45}
-            if g.get("novel_non_template") or seg["role"] in ("turn", "mechanism")
+            if sc.get("novel_non_template") or ("turn" in sc["beat_role"] or "impact" in sc["staging"]["verb_action"])
             else {"enabled": False, "factor": 1.0}
         )
-
         asset_id = f"asset_{selected_skill.replace('-', '_')}_shot_{i:02d}"
+        sc["asset_refs"] = [asset_id]
+        sc["safe_zone"] = {
+            "x_min": 100, "x_max": 980,
+            "y_min": 220, "y_max": 1500,
+            "caption_band_y": [1250, 1430],
+        }
+        shots.append(sc)
+
         visual_assets.append({
             "asset_id": asset_id,
             "shot_index": i,
             "origin_skill": selected_skill,
             "generator_module": f"director/assets/{selected_skill.replace('-', '_')}_adapter.py",
-            "setup_type": g["setup"],
-            "novel_non_template": bool(g.get("novel_non_template", False)),
-            "motifs": [primary_motif, secondary_motif],
+            "setup_type": sc["setup_type"],
+            "procedural_generator": mat["procedural_generator"],
+            "scene_family": mat["scene_family"],
+            "novel_non_template": bool(sc.get("novel_non_template", False)),
+            "motifs": list(sc["staging"].get("grounded_props", [mat["prop_id"]])),
             "deterministic_seed": seed + i * 101,
         })
 
-        shots.append({
-            "shot_id": f"shot_{i:02d}",
-            "index": i,
-            "engine": selected_skill,
-            "beat_role": seg["role"],
-            "narration_text": seg["text"],
-            "start": round(seg["start"], 3),
-            "end": round(seg["end"], 3),
-            "duration": dur,
-            "setup_type": g["setup"],
-            "novel_non_template": bool(g.get("novel_non_template", False)),
-            "camera": {
-                "framing": g["framing"],
-                "angle": g["angle"],
-                "movement": g["move"],
-                "parallax_planes": 3 if selected_skill in ("stick-figure", "zach-d-films", "map-route") else 2,
-                "eye_focus_target": primary_motif,
-            },
-            "staging": {
-                "action": f"{seg['role']} action staging around {primary_motif}",
-                "visual_metaphor": primary_motif,
-                "secondary_prop": secondary_motif,
-                "character_expression": (
-                    "curious_smirk" if i == 0 else
-                    "surprised_wide" if "turn" in seg["role"] else
-                    "focused_squint" if g.get("novel_non_template") else
-                    "confident_grin" if i == len(raw_segments) - 1 else "attentive_look"
-                ),
-                "organic_motion": [
-                    "anticipation_ease_in",
-                    "arc_trajectory",
-                    "squash_stretch_settle",
-                    "secondary_ambient_drift",
-                ],
-            },
-            "speed_ramp": speed_ramp,
-            "transition_out": (
-                "cut"
-                if i == len(raw_segments) - 1
-                else (
-                    "cut_on_action"
-                    if (g["transition"] == "dip_to_black" and dip_used)
-                    else g["transition"]
-                )
-            ),
-            "asset_refs": [asset_id],
-            "safe_zone": {
-                "x_min": 100,
-                "x_max": 980,
-                "y_min": 220,
-                "y_max": 1500,
-                "caption_band_y": [1250, 1430],
-            },
-        })
-        if shots[-1]["transition_out"] == "dip_to_black":
-            dip_used = True
+    entity_check = validate_entity_continuity(shots, entity_inventory, selected_skill=selected_skill)
+    total_duration = float(visual_events["total_duration_sec"])
 
     storyboard: Dict[str, Any] = {
-        "schema_version": "0.2.0",
+        "schema_version": "0.4.0",
         "selection_mode": style_decisions["selection_mode"],
         "selected_skill": selected_skill,
         "style_lock": style_decisions["style_lock"],
@@ -278,8 +212,22 @@ def build_storyboard_and_bible(
         "preview_resolution": [1080, 1920],
         "final_resolution": [2160, 3840],
         "total_duration_sec": round(total_duration, 3),
+        "edit_energy": coverage["edit_energy"],
+        "scene_novelty": scene_novelty,
+        "transition_policy": transition_policy,
         "style_adapter_params": style_params.to_dict(),
         "entities_and_facts": parsed_script["entities_and_facts"],
+        "visual_events_summary": {
+            "event_count": len(visual_events["events"]),
+            "unique_scene_families": visual_events["unique_scene_families"],
+            "factual_disclosures": visual_events["factual_disclosures"],
+        },
+        "diversity_summary": coverage["diversity_summary"],
+        "entity_continuity": entity_check,
+        "transition_edl_summary": {
+            "transitions_count": transition_edl["transitions_count"],
+            "methods": [t["actual_method"] for t in transition_edl["transitions"]],
+        },
         "visual_assets": visual_assets,
         "shots": shots,
     }
@@ -294,6 +242,7 @@ def build_storyboard_and_bible(
         f"- **Selection Mode**: `{style_decisions['selection_mode']}`",
         f"- **Locked Engine**: `{selected_skill}`",
         "- **Mixing Policy**: `forbidden` (0 guest shots, 0 secondary skill assets, fail-closed)",
+        f"- **Edit Energy / Scene Novelty / Transitions**: `{coverage['edit_energy']}` / `{scene_novelty}` / `{transition_policy}`",
         f"- **Silhouette Language**: `{style_params.silhouette_language}`",
         f"- **Lighting Preset**: `{style_params.lighting_preset}`",
         f"- **Texture & Grain**: `{style_params.texture_treatment}` (grain={style_params.grain_amount}, vignette={style_params.vignette_strength})",
@@ -303,22 +252,21 @@ def build_storyboard_and_bible(
         f"- **Caption Typography**: `{json.dumps(style_params.caption_style)}`",
         "- **Safe Area**: `x in [100, 980]`, `y in [220, 1500]` (1080x1920 logical space; scaled 2x to `2160x3840` for 4K).",
         "",
-        "## 3. Per-Shot Camera & Editorial Blocking",
-        "| Shot | Time (s) | Setup | Framing / Move | Transition | Novel Scene |",
+        "## 3. Continuous Shot Coverage & Scene Novelty Matrix",
+        "| Shot | Time (s) | Scene Family / Generator | Framing / Camera Move | Transition | Intra-Shot Events |",
         "|---|---|---|---|---|---|",
     ]
     for s in shots:
         bible_lines.append(
-            f"| `{s['shot_id']}` | {s['start']:.2f}–{s['end']:.2f} | `{s['setup_type']}` | "
-            f"{s['camera']['framing']} / {s['camera']['movement']} | `{s['transition_out']}` | `{s['novel_non_template']}` |"
+            f"| `{s['shot_id']}` | {s['start']:.2f}–{s['end']:.2f} | `{s['scene_family']}` / `{s['procedural_generator']}` | "
+            f"{s['camera']['framing']} / {s['camera']['movement']} | `{s['transition_out']}` | {len(s.get('intra_shot_events', []))} |"
         )
 
-    bible_lines.extend([
-        "",
-        "## 4. Factual & Licensing Notes",
-    ])
+    bible_lines.extend(["", "## 4. Factual, Conceptual & Licensing Disclosures"])
     for fc in parsed_script["entities_and_facts"]["fact_checks"]:
         bible_lines.append(f"- **{fc.get('rule', fc.get('type', 'check'))}**: `{fc.get('status')}` — {fc.get('note', '')}")
+    for disc in visual_events.get("factual_disclosures", []):
+        bible_lines.append(f"- **Visual Disclosure**: {disc}")
 
     (run_dir / "art_bible.md").write_text("\n".join(bible_lines) + "\n", encoding="utf-8")
     return storyboard

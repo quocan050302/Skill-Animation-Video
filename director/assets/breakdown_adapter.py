@@ -238,8 +238,21 @@ window.renderAtTime = function(rawT) {{
   const t = clamp(rawT, 0, DUR - 1e-4);
   let sIdx = SHOTS.findIndex(s => t >= s.start && t < s.end);
   if (sIdx < 0) sIdx = SHOTS.length - 1;
-  const setup = SHOTS[sIdx].setup_type;
+  const curS = SHOTS[sIdx];
+  const prevS = sIdx > 0 ? SHOTS[sIdx - 1] : null;
+  const setup = curS.setup_type;
+  const uShot = clamp((t - curS.start) / Math.max(0.25, curS.end - curS.start), 0, 1);
   const ex = easeInOut(clamp((t - DUR * 0.14) / (DUR * 0.42), 0, 1));
+
+  // Rendered `match_zoom` seam FOV ramp
+  let fovZoom = 0;
+  if (curS.transition_out === 'match_zoom' && sIdx < SHOTS.length - 1 && (curS.end - t) < 0.14) {{
+    fovZoom = -3.8 * Math.pow(1 - (curS.end - t) / 0.14, 2);
+  }} else if (prevS && prevS.transition_out === 'match_zoom' && (t - curS.start) < 0.14) {{
+    fovZoom = 3.2 * (1 - (t - curS.start) / 0.14);
+  }}
+  camera.fov = 26 + fovZoom;
+  camera.updateProjectionMatrix();
 
   parts.forEach((p, i) => {{
     p.position.y = Y_ASSEM[i] + (Y_EXPLO[i] - Y_ASSEM[i]) * ex;
@@ -252,6 +265,12 @@ window.renderAtTime = function(rawT) {{
     camera.clearViewOffset();
     camera.position.set(4.5, 1.2, 13.5);
     camera.lookAt(0, 0.65, 0);
+    showCallouts = 0;
+  }} else if (setup === 'top_down_subsystem_orbit') {{
+    camera.clearViewOffset();
+    const ang = -0.35 + uShot * 0.85;
+    camera.position.set(Math.sin(ang) * 14.5, 18.0 - uShot * 3.0, Math.cos(ang) * 14.5);
+    camera.lookAt(0, 1.25, 0);
     showCallouts = 0;
   }} else if (setup === 'assembled_hero_silhouette') {{
     camera.clearViewOffset();

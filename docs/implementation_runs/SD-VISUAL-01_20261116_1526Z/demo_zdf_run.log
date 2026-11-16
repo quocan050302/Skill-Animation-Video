@@ -1,0 +1,120 @@
+{
+  "schema_version": "0.4.0",
+  "delivered": true,
+  "overall_qc_status": "PASS",
+  "selection_mode": "explicit",
+  "selected_skill": "zach-d-films",
+  "style_lock": {
+    "enabled": true,
+    "engine": "zach-d-films",
+    "mixing_policy": "forbidden",
+    "fallback_policy": "fail-closed"
+  },
+  "origin_skills": [
+    "zach-d-films"
+  ],
+  "upstream_commit_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "upstream_clean_unmodified": true,
+  "audio_engine_version": "0.4.0",
+  "audio_source_mode": {
+    "music": "auto",
+    "sfx": "auto"
+  },
+  "qa_audio_root_available": false,
+  "qa_audio_root_status": "QA_LIBRARY_UNAVAILABLE",
+  "music_cues_count": 3,
+  "sfx_cues_expected_count": 16,
+  "sfx_cues_rendered_count": 16,
+  "rejected_assets_count": 0,
+  "license_audit_status": "PASS",
+  "manual_edits_preserved": false,
+  "audio_hash": "ac90802849289155b9466709d93821827a848047c40660f0aca80043c9ab534e",
+  "stem_hashes": {
+    "voice": "66147c646a43235ea47e3b8ec1c76e0ef767bb48c7e8b33b73fb0b2acad134e3",
+    "music": "1b2e3c3601b497ace18245a503ad97e6a68df18f79a90dfda80819df2d6ba29f",
+    "sfx": "b26e8ae51ec0f4089b4ccd1f0cfc3b6533d77cfff1ba235a39adb5ee48147449",
+    "ambience": "b9c0c4f0060ea7160eae4716d100279d4dc5fd29407a9612cfec3582f24c2e4a",
+    "mix": "ac90802849289155b9466709d93821827a848047c40660f0aca80043c9ab534e"
+  },
+  "asset_hashes": {},
+  "final_post_encode_integrated_lufs": -14.0,
+  "final_post_encode_true_peak_dbtp": -1.8,
+  "audio_qc_status": "PASS",
+  "audio_qc_reasons": [],
+  "subjective_editorial_listening": "NOT_VERIFIED",
+  "scene_diversity": {
+    "edit_energy": "dynamic",
+    "scene_novelty": "high",
+    "transition_policy": "motivated",
+    "shot_count": 12,
+    "diversity_summary": {
+      "total_shots": 12,
+      "unique_setups": 9,
+      "unique_scene_families": 10,
+      "unique_movements": 9,
+      "adjacent_identical_setups": 0,
+      "adjacent_identical_cam_triples": 0,
+      "total_intra_shot_events": 19
+    },
+    "scene_diversity_status": "PASS",
+    "subjective_visual_review": "NOT_VERIFIED"
+  },
+  "video_contract": {
+    "aspect_ratio": "9:16",
+    "fps": 30,
+    "preview_resolution": [
+      1080,
+      1920
+    ],
+    "final_resolution": [
+      2160,
+      3840
+    ],
+    "native_4k": true,
+    "delivery_4k_declaration": "native_4k",
+    "duration_sec": 27.81
+  },
+  "artifacts": {
+    "storyboard_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/storyboard.json",
+    "visual_events_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/visual_events.json",
+    "shot_coverage_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/shot_coverage.json",
+    "camera_paths_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/camera_paths.json",
+    "transition_edl_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/transition_edl.json",
+    "scene_diversity_report_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/scene_diversity_report.json",
+    "style_decisions_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/style_decisions.json",
+    "art_bible_md": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/art_bible.md",
+    "style_lock_audit_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/style_lock_audit.json",
+    "qc_report_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/qc_report.json",
+    "preview_1080_mp4": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/preview_1080.mp4",
+    "final_4k_mp4": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/final_4k.mp4",
+    "contact_sheet_jpg": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/contact_sheet.jpg",
+    "captions_srt": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/captions.srt",
+    "audio_plan_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/audio_plan.json",
+    "audio_director_notes_md": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/audio_director_notes.md",
+    "music_cue_sheet_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/music_cue_sheet.json",
+    "sfx_cue_sheet_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/sfx_cue_sheet.json",
+    "audio_asset_manifest_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/audio_asset_manifest.json",
+    "audio_mix_report_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/audio_mix_report.json",
+    "audio_qc_report_json": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/audio_qc_report.json",
+    "credits_audio_txt": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/credits_audio.txt",
+    "stems": {
+      "voice_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/voice.wav",
+      "music_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/music.wav",
+      "sfx_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/sfx.wav",
+      "ambience_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/ambience.wav",
+      "master_pre_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/master_pre.wav",
+      "mix_wav": "/Users/macbook/.gemini/antigravity/scratch/short-director/runs/sd_visual_demo_zdf/audio/mix.wav"
+    }
+  },
+  "timing_and_resources": {
+    "total_elapsed_sec": 177.14,
+    "stills_elapsed_sec": 10.88,
+    "scene_render_elapsed_sec": 90.62,
+    "workers_used": 4,
+    "webgl_backend": "metal",
+    "disk_free_gb_at_start": 17.74
+  }
+}
+real 178.87
+user 388.03
+sys 83.91

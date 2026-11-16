@@ -8,14 +8,15 @@ Whenever invoking `/short-director` or operating inside a Short Director run:
    - When no skill is specified (`auto` mode), compare ONLY the six capability descriptions during planning, select and lock ONE `selected_skill` for the entire run, and never blend secondary shots, guest inserts, or fallback engines.
    - On unsupported scenes or errors, extend the locked engine or fail closed with a clear diagnostic — never switch engines silently.
 
-2. **Bespoke Visuals & Organic Motion**:
-   - Do not reuse upstream demo narratives (such as the pirate eye-patch reel or ancient armor bullet demo) as fake output for new prompts. Generate fresh beat-driven geometry, poses, props, camera blocking, and transitions inside the locked engine's visual language.
-   - Ensure every shot `update(t)` / `renderFrame(f)` is pure, time-deterministic, and seeded so parallel workers match serial renders.
+2. **Bespoke Visuals, Scene Novelty & Continuous Motion**:
+   - Do not reuse upstream demo narratives (such as the pirate eye-patch reel or ancient armor bullet demo) or default non-Roman scripts into medieval/Roman gladiator armor. Generate fresh beat-driven geometry, props, cutaway reveals, camera choreography, and motivated transitions strictly inside the locked engine's visual language.
+   - Build semantic `visual_events.json` -> `shot_coverage.json` -> `camera_paths.json` -> `transition_edl.json` before rendering, preventing adjacent duplicate compositions without repeating identical narration across split cuts.
+   - Ensure every shot `update(t)` / `renderAtTime(t)` is pure, time-deterministic, and seeded so parallel workers match serial renders.
 
 3. **Truthful 4K & Technical QA**:
    - Portrait `9:16` (`1080x1920` preview and `2160x3840` final at requested `30` or `60` fps).
    - Declare `native_4k: true` ONLY when rasterized at `2160x3840` before encoding; otherwise explicitly declare `upscaled` with exact source dimensions and scaling filter.
-   - Run style-lock audits (`style_lock_audit.json`) BEFORE rendering and again BEFORE final delivery, followed by `ffprobe` + decoded frame and audio checks (`qc_report.json`). Never report `PASS` for unrun, skipped, or unverified checks.
+   - Run style-lock audits (`style_lock_audit.json`) BEFORE rendering and again BEFORE final delivery, plus post-render perceptual scene diversity & transition QC (`scene_diversity_report.json`) and `ffprobe`/audio QC (`qc_report.json`, `audio/audio_qc_report.json`). Never claim unverified subjective retention/viewing (`NOT_VERIFIED` if no human viewer inspected playback).
 
 4. **Licensing & Factual Integrity**:
    - Never rip third-party footage, copyrighted music, or unverified voice clones. Verify local TTS model language coverage before claiming support (e.g., Kokoro v1.0 does not support Vietnamese; macOS `say` supports Vietnamese only when a `vi_VN` voice such as `Linh` is installed).

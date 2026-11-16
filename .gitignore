@@ -34,6 +34,7 @@ runs/
 *.m4a
 *.srt
 *.log
+!docs/implementation_runs/**/*.log
 *.tmp
 /final_4k.mp4
 /preview_1080.mp4

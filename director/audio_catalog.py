@@ -245,6 +245,10 @@ def discover_native_audio_assets(root: Path) -> List[AudioAsset]:
         ("nat_sfx_ui_pop", "ui_pop_subtle", 0.12, "ui", ["ui", "pop", "card", "callout", "hop_boing"]),
         ("nat_sfx_riser", "riser_tension", 0.75, "tension", ["riser", "buildup", "anticipation"]),
         ("nat_sfx_step_gravel", "step_gravel", 0.22, "foley", ["step", "walk", "footstep", "pendulum"]),
+        ("nat_sfx_glass_tap", "glass_tap_ui", 0.09, "ui", ["tap", "screen", "phone", "send", "button"]),
+        ("nat_sfx_electric_crackle", "electric_spark_pulse", 0.28, "foley", ["chip", "circuit", "tower", "turbine", "rf", "electric"]),
+        ("nat_sfx_subsea_bubble", "subsea_bubble_hum", 0.38, "foley", ["ocean", "subsea", "water", "fiber", "photon"]),
+        ("nat_sfx_cosmic_swell", "cosmic_swell", 0.78, "reveal", ["cosmic", "star", "universe", "nebula", "scale"]),
     ]
 
     for aid, gen, dur, mood, tags in sfx_defs:

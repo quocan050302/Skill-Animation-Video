@@ -16,6 +16,7 @@ from typing import Any, Dict, List
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
+import { torsoShell } from './human.js';
 import { materials } from './materials.js';
 import { rng, woodTexture } from './textures.js';
 
@@ -471,6 +472,464 @@ export function balanceScale50x() {
   g.rightPan = rightArm;
   return shadow(g);
 }
+
+// ---------- SD-VISUAL-01: Non-Roman 3D Multi-Family Scene Builders ----------
+
+function makeScreenTexture(headline = 'READY', btnText = 'SEND', sent = false) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 512;
+  const ctx = c.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, 0, 512);
+  bg.addColorStop(0, '#0f172a');
+  bg.addColorStop(1, '#1e293b');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 256, 512);
+
+  // Header bar
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(16, 28, 224, 52);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '700 20px Cap, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('DIRECT LINK', 128, 60);
+
+  // Chat bubble
+  ctx.fillStyle = sent ? '#0ea5e9' : '#2563eb';
+  ctx.beginPath();
+  ctx.roundRect(24, 150, 208, 92, 22);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 26px Cap, sans-serif';
+  ctx.fillText(headline, 128, 204);
+
+  // Action pill
+  ctx.fillStyle = sent ? '#10b981' : '#38bdf8';
+  ctx.beginPath();
+  ctx.roundRect(44, 340, 168, 68, 34);
+  ctx.fill();
+  ctx.fillStyle = '#07131d';
+  ctx.font = '700 28px Cap, sans-serif';
+  ctx.fillText(sent ? 'SENT ✓' : btnText, 128, 383);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function makeRackTexture(seed = 11) {
+  const r = rng(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#111622';
+  ctx.fillRect(0, 0, 256, 512);
+  for (let row = 0; row < 16; row++) {
+    const y = 14 + row * 30;
+    ctx.fillStyle = '#1e2638';
+    ctx.fillRect(14, y, 228, 22);
+    for (let led = 0; led < 9; led++) {
+      const x = 24 + led * 22;
+      const roll = r();
+      ctx.fillStyle = roll > 0.62 ? '#38bdf8' : (roll > 0.30 ? '#34d399' : '#334155');
+      ctx.fillRect(x, y + 7, 10, 8);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+export function makeModernOutfitCharacter(makeHumanFn, accentHex = 0x2b6cb0) {
+  const h = makeHumanFn('plain');
+  const shirtMat = new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.78, metalness: 0.05 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.55 });
+  // Smooth torsoShell jacket/shirt sleeves over base mesh (+0.016..0.018 offset avoids z-fighting; zero armor!)
+  const chestG = torsoShell(0.18, 0.54, 0.018);
+  chestG.translate(0, -0.2, 0);
+  const chestShirt = new THREE.Mesh(chestG, shirtMat);
+  chestShirt.castShadow = true;
+  chestShirt.receiveShadow = true;
+  h.j.chest.add(chestShirt);
+
+  const spineShirt = new THREE.Mesh(torsoShell(-0.14, 0.20, 0.016), shirtMat);
+  spineShirt.castShadow = true;
+  spineShirt.receiveShadow = true;
+  h.j.spine.add(spineShirt);
+
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 8, 24), accentMat);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.set(0, 0.34, 0.01);
+  collar.castShadow = true;
+  h.j.chest.add(collar);
+  return h;
+}
+
+export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
+  const M = materials();
+  const g = new THREE.Group();
+  const chassisMat = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.25, clearcoat: 0.6 });
+  const frameMat = new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, metalness: 0.92, roughness: 0.20 });
+  const pcbMat = new THREE.MeshStandardMaterial({ color: 0x0f5132, roughness: 0.45, metalness: 0.25 });
+  const chipMat = new THREE.MeshPhysicalMaterial({ color: 0x111827, metalness: 0.4, roughness: 0.2, clearcoat: 0.8 });
+  const traceMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.55, metalness: 0.9, roughness: 0.2 });
+
+  // Back frame & interior PCB assembly (visible during cutaway reveal)
+  const backShell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.56, 0.016), chassisMat);
+  backShell.position.z = -0.018;
+  g.add(backShell);
+
+  const internals = new THREE.Group();
+  g.add(internals);
+
+  const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.50, 0.008), pcbMat);
+  pcb.position.z = -0.004;
+  internals.add(pcb);
+
+  // Lithium battery cell
+  const batt = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.25, 0.014), M.steelDark);
+  batt.position.set(-0.025, -0.08, 0.006);
+  const battBadge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.004), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.45 }));
+  battBadge.position.set(-0.025, -0.06, 0.014);
+  internals.add(batt, battBadge);
+
+  // SoC chip + gold copper traces
+  const soc = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.095, 0.012), chipMat);
+  soc.position.set(0.03, 0.11, 0.007);
+  internals.add(soc);
+
+  const pulses = [];
+  for (let i = 0; i < 6; i++) {
+    const tr = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.18, 0.004), traceMat);
+    tr.position.set(-0.04 + i * 0.022, 0.13, 0.003);
+    internals.add(tr);
+    const pkt = new THREE.Mesh(new THREE.SphereGeometry(0.011, 14, 10), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 1.5 }));
+    pkt.position.set(-0.04 + i * 0.022, 0.05, 0.012);
+    internals.add(pkt);
+    pulses.push(pkt);
+  }
+
+  // Front glass OLED assembly (detaches forward cleanly on cutaway!)
+  const frontGlass = new THREE.Group();
+  g.add(frontGlass);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.285, 0.565, 0.014), frameMat);
+  const scrMat = new THREE.MeshStandardMaterial({
+    map: makeScreenTexture(sent ? 'DELIVERED' : 'HELLO WORLD', 'SEND', sent),
+    emissive: sent ? 0x0ea5e9 : 0x1d4ed8,
+    emissiveIntensity: 0.45,
+    roughness: 0.15,
+  });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.255, 0.515), scrMat);
+  screen.position.z = 0.008;
+  frontGlass.position.z = 0.014;
+  frontGlass.add(bezel, screen);
+
+  // Sending ring ripple on screen tap point
+  const tapRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.055, 0.006, 12, 36),
+    new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 1.4, transparent: true, opacity: 0.0 })
+  );
+  tapRing.position.set(0, -0.11, 0.028);
+  frontGlass.add(tapRing);
+
+  g.scale.setScalar(scale);
+  g.frontGlass = frontGlass;
+  g.internals = internals;
+  g.pulses = pulses;
+  g.tapRing = tapRing;
+  g.screenMat = scrMat;
+  return shadow(g);
+}
+
+export function makeRadioTowerRig() {
+  const M = materials();
+  const g = new THREE.Group();
+  const hilltop = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.55, 0.42, 36), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
+  hilltop.position.y = 0.21;
+  g.add(hilltop);
+
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.16, 1.95, 6), M.steelBright);
+  mast.position.y = 1.38;
+  g.add(mast);
+
+  for (let k = 0; k < 4; k++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14 - k * 0.022, 0.012, 8, 6), M.steelDark);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.72 + k * 0.38;
+    g.add(ring);
+  }
+  const beaconMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xff2222, emissiveIntensity: 1.8 });
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.048, 20, 14), beaconMat);
+  beacon.position.y = 2.38;
+  g.add(beacon);
+
+  // Expanding RF emission wavefront toruses
+  const rfRings = [];
+  for (let i = 0; i < 4; i++) {
+    const rm = new THREE.Mesh(
+      new THREE.TorusGeometry(0.25, 0.012, 12, 48),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 1.3, transparent: true, opacity: 0.8 })
+    );
+    rm.position.y = 2.38;
+    rm.rotation.x = Math.PI / 3;
+    g.add(rm);
+    rfRings.push(rm);
+  }
+  g.rfRings = rfRings;
+  g.beacon = beacon;
+  return shadow(g);
+}
+
+export function makeSubseaCableRig(seed = 23) {
+  const M = materials();
+  const g = new THREE.Group();
+  // Procedural rippled seabed terrain
+  const bedGeo = new THREE.PlaneGeometry(8.5, 6.5, 42, 32);
+  bedGeo.rotateX(-Math.PI / 2);
+  const pos = bedGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    pos.setY(i, 0.06 * Math.sin(x * 1.4 + seed) + 0.05 * Math.cos(z * 1.8));
+  }
+  bedGeo.computeVertexNormals();
+  const seabed = new THREE.Mesh(bedGeo, new THREE.MeshStandardMaterial({ color: 0x164e63, roughness: 0.92, metalness: 0.05 }));
+  g.add(seabed);
+
+  // Cutaway armored fiber-optic trunk laying diagonally across seabed
+  const cable = new THREE.Group();
+  cable.position.set(0, 0.34, 0);
+  cable.rotation.y = -0.38;
+  g.add(cable);
+
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45, metalness: 0.1 });
+  const jacket = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 1.5, 32), jacketMat);
+  jacket.rotation.z = Math.PI / 2;
+  jacket.position.x = -1.25;
+  cable.add(jacket);
+
+  const armor = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.112, 2.2, 24), M.steelBright);
+  armor.rotation.z = Math.PI / 2;
+  armor.position.x = -0.45;
+  cable.add(armor);
+
+  // Exposed luminous optical glass core running through cutaway window
+  const glassCore = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.068, 0.068, 3.6, 28),
+    new THREE.MeshPhysicalMaterial({ color: 0x67e8f9, emissive: 0x06b6d4, emissiveIntensity: 0.7, transparent: true, opacity: 0.85, roughness: 0.1 })
+  );
+  glassCore.rotation.z = Math.PI / 2;
+  cable.add(glassCore);
+
+  const pulses = [];
+  for (let i = 0; i < 6; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(0.088, 20, 14),
+      new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0x38bdf8, emissiveIntensity: 1.9 })
+    );
+    cable.add(p);
+    pulses.push(p);
+  }
+  g.cable = cable;
+  g.pulses = pulses;
+  return shadow(g);
+}
+
+export function makeDatacenterRackBank(seed = 41) {
+  const M = materials();
+  const g = new THREE.Group();
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 8.0), new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.3, metalness: 0.5 }));
+  floor.rotation.x = -Math.PI / 2;
+  g.add(floor);
+
+  const rackFace = new THREE.MeshStandardMaterial({ map: makeRackTexture(seed), emissive: 0x0ea5e9, emissiveIntensity: 0.28, roughness: 0.4 });
+  const chassis = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.75, roughness: 0.35 });
+
+  for (let row = 0; row < 4; row++) {
+    for (const side of [-1, 1]) {
+      const rack = new THREE.Group();
+      rack.position.set(side * 0.72, 1.0, 0.8 - row * 1.15);
+      const boxM = new THREE.Mesh(new THREE.BoxGeometry(0.56, 2.0, 0.86), chassis);
+      const front = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 1.88), rackFace);
+      front.position.x = -side * 0.282;
+      front.rotation.y = -side * Math.PI / 2;
+      rack.add(boxM, front);
+      g.add(rack);
+    }
+  }
+  // Overhead fiber trunk & fast light packets
+  const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 4.8), M.copper);
+  trunk.position.set(0, 2.12, -0.8);
+  g.add(trunk);
+
+  const packets = [];
+  for (let i = 0; i < 6; i++) {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x34d399, emissiveIntensity: 1.7 }));
+    sp.position.set(0, 2.05, 1.0 - i * 0.7);
+    g.add(sp);
+    packets.push(sp);
+  }
+  g.packets = packets;
+  return shadow(g);
+}
+
+export function makePowerTurbineRig() {
+  const M = materials();
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 1.2), M.steelDark);
+  plinth.position.y = 0.14;
+  g.add(plinth);
+
+  const housing = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.09, 16, 48, Math.PI * 1.45), M.copper);
+  housing.position.set(0, 1.15, 0);
+  housing.rotation.z = -0.35;
+  g.add(housing);
+
+  const rotor = new THREE.Group();
+  rotor.position.set(0, 1.15, 0);
+  g.add(rotor);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.34, 24), M.steelBright);
+  hub.rotation.x = Math.PI / 2;
+  rotor.add(hub);
+  for (let k = 0; k < 8; k++) {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.42, 0.025), M.steel);
+    const a = (k / 8) * Math.PI * 2;
+    blade.position.set(Math.cos(a) * 0.30, Math.sin(a) * 0.30, 0);
+    blade.rotation.z = a + 0.35;
+    blade.rotation.y = 0.35;
+    rotor.add(blade);
+  }
+  // Glowing charge core / magnetic field arcs
+  const coilGlow = new THREE.Mesh(
+    new THREE.TorusGeometry(0.68, 0.022, 12, 48),
+    new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 1.4 })
+  );
+  coilGlow.position.set(0, 1.15, 0);
+  g.add(coilGlow);
+
+  g.rotor = rotor;
+  g.coilGlow = coilGlow;
+  return shadow(g);
+}
+
+export function makeCosmicGenesisRig(seed = 88) {
+  const r = rng(seed);
+  const g = new THREE.Group();
+  const starMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 1.9, roughness: 0.2 });
+  const star = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 4), starMat);
+  g.add(star);
+
+  const ring1 = new THREE.Mesh(
+    new THREE.TorusGeometry(0.75, 0.026, 14, 72),
+    new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.85, roughness: 0.3 })
+  );
+  ring1.rotation.x = 1.15;
+  const ring2 = new THREE.Mesh(
+    new THREE.TorusGeometry(1.12, 0.018, 12, 72),
+    new THREE.MeshStandardMaterial({ color: 0xfb923c, emissive: 0xea580c, emissiveIntensity: 0.75 })
+  );
+  ring2.rotation.set(0.75, 0.5, 0.3);
+  g.add(ring1, ring2);
+
+  // Crystallized elemental orbs (copper & silicon planetary seeds)
+  const orbiters = [];
+  for (let i = 0; i < 10; i++) {
+    const rad = 0.55 + (i % 4) * 0.24;
+    const m = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.055 + r() * 0.03, 1),
+      new THREE.MeshStandardMaterial({ color: i % 2 ? 0xd9733f : 0x7dd3fc, emissive: i % 2 ? 0x9a3412 : 0x0369a1, emissiveIntensity: 0.5, metalness: 0.75, roughness: 0.25 })
+    );
+    m.userData.rad = rad;
+    m.userData.phase = i * 0.85;
+    g.add(m);
+    orbiters.push(m);
+  }
+  // Distant stars
+  for (let i = 0; i < 40; i++) {
+    const theta = r() * Math.PI * 2, phi = Math.acos(2 * r() - 1);
+    const d = 5.5 + r() * 6.0;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 6), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
+    s.position.set(d * Math.sin(phi) * Math.cos(theta), d * Math.cos(phi), d * Math.sin(phi) * Math.sin(theta));
+    g.add(s);
+  }
+  g.star = star;
+  g.ring1 = ring1;
+  g.ring2 = ring2;
+  g.orbiters = orbiters;
+  return g;
+}
+
+export function makeAnatomicalCutawayRig(isBrain = true) {
+  const g = new THREE.Group();
+  const shellMat = new THREE.MeshPhysicalMaterial({
+    color: 0x93c5fd, transparent: true, opacity: 0.34, roughness: 0.15, metalness: 0.05, clearcoat: 0.8, side: THREE.DoubleSide
+  });
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.42, 36, 28, 0, Math.PI * 1.45), shellMat);
+  shell.position.y = 1.25;
+  g.add(shell);
+
+  const organMat = new THREE.MeshStandardMaterial({
+    color: isBrain ? 0xf472b6 : 0xe11d48,
+    emissive: isBrain ? 0x9d174d : 0x881337,
+    emissiveIntensity: 0.45,
+    roughness: 0.42,
+  });
+  const lobes = [];
+  if (isBrain) {
+    for (const side of [-1, 1]) {
+      const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.20, 28, 22), organMat);
+      lobe.scale.set(0.82, 1.0, 1.25);
+      lobe.position.set(side * 0.11, 1.26, 0.02);
+      g.add(lobe);
+      lobes.push(lobe);
+    }
+  } else {
+    const heart = new THREE.Mesh(new THREE.SphereGeometry(0.24, 32, 24), organMat);
+    heart.scale.set(0.85, 1.22, 0.85);
+    heart.position.set(0, 1.22, 0.02);
+    g.add(heart);
+    lobes.push(heart);
+  }
+  const sparkNodes = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const nd = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfacc15, emissiveIntensity: 1.6 }));
+    nd.position.set(Math.cos(a) * 0.16, 1.26 + Math.sin(a) * 0.12, 0.14);
+    g.add(nd);
+    sparkNodes.push(nd);
+  }
+  g.shell = shell;
+  g.lobes = lobes;
+  g.sparkNodes = sparkNodes;
+  return shadow(g);
+}
+
+export function makeVaultGearStage() {
+  const M = materials();
+  const RM = romanMaterials();
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.62, 0.24, 36), M.steelDark);
+  base.position.y = 0.12;
+  g.add(base);
+  const gears = [];
+  for (let idx = 0; idx < 3; idx++) {
+    const gear = new THREE.Group();
+    const r = 0.26 - idx * 0.05;
+    const rimM = new THREE.Mesh(new THREE.TorusGeometry(r, 0.032, 10, 28), idx % 2 ? RM.bronze : M.steelBright);
+    gear.add(rimM);
+    for (let t = 0; t < 10; t++) {
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.045), idx % 2 ? RM.bronze : M.steelBright);
+      const a = (t / 10) * Math.PI * 2;
+      tooth.position.set(Math.cos(a) * (r + 0.04), Math.sin(a) * (r + 0.04), 0);
+      tooth.rotation.z = a;
+      gear.add(tooth);
+    }
+    gear.position.set((idx - 1) * 0.28, 0.88 + idx * 0.24, (idx - 1) * 0.06);
+    g.add(gear);
+    gears.push(gear);
+  }
+  g.gears = gears;
+  return shadow(g);
+}
 """
 
 
@@ -505,11 +964,21 @@ const SKY_FRAG = `
     gl_FragColor = vec4(c,1.0);
     #include <colorspace_fragment>
   }`;
-function skyMaterial() {
+const SKY_THEMES = {
+  day: { top: 0x2b78d6, mid: 0x5b9fea, horizon: 0x92c3f2, floorC: 0xa9cdf1, sun: 2.35, hemi: 0.78 },
+  dusk: { top: 0x161b3a, mid: 0x3b2e5a, horizon: 0xc26d4a, floorC: 0x3a2d36, sun: 1.85, hemi: 0.55 },
+  ocean_deep: { top: 0x041c2c, mid: 0x0a3d5c, horizon: 0x156585, floorC: 0x092433, sun: 1.60, hemi: 0.65 },
+  datacenter_dark: { top: 0x060b16, mid: 0x0f172a, horizon: 0x1e293b, floorC: 0x090f1a, sun: 1.75, hemi: 0.58 },
+  cosmic: { top: 0x02040a, mid: 0x090d22, horizon: 0x1b1536, floorC: 0x050712, sun: 1.90, hemi: 0.48 },
+  lab_studio: { top: 0x1e3a5f, mid: 0x355c7d, horizon: 0x6c8ead, floorC: 0x2b3e50, sun: 2.25, hemi: 0.80 },
+};
+
+function skyMaterial(theme = 'day') {
+  const cfg = SKY_THEMES[theme] || SKY_THEMES.day;
   return new THREE.ShaderMaterial({
     uniforms: {
-      top: { value: new THREE.Color(0x2b78d6) }, mid: { value: new THREE.Color(0x5b9fea) },
-      horizon: { value: new THREE.Color(0x92c3f2) }, floorC: { value: new THREE.Color(0xa9cdf1) },
+      top: { value: new THREE.Color(cfg.top) }, mid: { value: new THREE.Color(cfg.mid) },
+      horizon: { value: new THREE.Color(cfg.horizon) }, floorC: { value: new THREE.Color(cfg.floorC) },
     },
     vertexShader: `varying vec3 vDir; void main(){ vDir = (modelMatrix*vec4(position,1.)).xyz - cameraPosition; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); gl_Position.z = gl_Position.w; }`,
     fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false, toneMapped: false,
@@ -519,7 +988,7 @@ function skyMaterial() {
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envScene = new THREE.Scene();
 {
-  const s = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), skyMaterial());
+  const s = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), skyMaterial('day'));
   s.material.toneMapped = true; envScene.add(s);
   const panel = (w, h, pos, inten) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(inten, inten, inten), side: THREE.DoubleSide }));
@@ -530,17 +999,20 @@ const envScene = new THREE.Scene();
 }
 const envTex = pmrem.fromScene(envScene, 0.02).texture;
 
-export function makeStage({ shadowSize = 3, sunDir = [-3, 6, 4], sun = 2.35 } = {}) {
+export function makeStage({ shadowSize = 3, sunDir = [-3, 6, 4], sun = null, skyTheme = 'day', showShadowFloor = true } = {}) {
+  const th = SKY_THEMES[skyTheme] || SKY_THEMES.day;
   const scene = new THREE.Scene();
   scene.environment = envTex;
-  scene.environmentIntensity = 1.0;
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), skyMaterial());
+  scene.environmentIntensity = skyTheme === 'cosmic' ? 0.65 : 1.0;
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), skyMaterial(skyTheme));
   sky.frustumCulled = false; sky.renderOrder = -10;
   scene.add(sky); scene.userData.sky = sky;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ color: 0x1a3a66, opacity: 0.30 }));
-  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-  scene.add(new THREE.HemisphereLight(0xcfe4ff, 0x7f93ad, 0.78));
-  const key = new THREE.DirectionalLight(0xfff3e6, sun);
+  if (showShadowFloor) {
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ color: 0x0c1b33, opacity: 0.30 }));
+    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  }
+  scene.add(new THREE.HemisphereLight(0xcfe4ff, 0x4b5c73, th.hemi));
+  const key = new THREE.DirectionalLight(0xfff3e6, sun ?? th.sun);
   key.position.set(...sunDir); key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
   const c = key.shadow.camera; c.left = c.bottom = -shadowSize; c.right = c.top = shadowSize; c.near = 0.5; c.far = 30;
@@ -555,13 +1027,43 @@ const composer = new EffectComposer(renderer, rt);
 const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
 const bloom = new UnrealBloomPass(new THREE.Vector2(W * SCALE, H * SCALE), 0.22, 0.4, 1.5);
 const grade = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.25 } },
+  uniforms: {
+    tDiffuse: { value: null },
+    uVig: { value: 0.25 },
+    uZoom: { value: 0.0 },
+    uWhip: { value: 0.0 },
+    uWipe: { value: 0.0 },
+    uFlash: { value: 0.0 },
+  },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; varying vec2 vUv;
-    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; uniform float uZoom; uniform float uWhip; uniform float uWipe; uniform float uFlash; varying vec2 vUv;
+    void main(){
+      vec2 uv = vUv;
+      vec2 cvec = uv - 0.5;
+      if (uZoom > 0.001) {
+        vec4 acc = vec4(0.0);
+        for (int i = 0; i < 4; i++) {
+          float s = 1.0 - uZoom * 0.14 * (float(i) / 3.0);
+          acc += texture2D(tDiffuse, clamp(0.5 + cvec * s, 0.001, 0.999));
+        }
+        gl_FragColor = acc * 0.25;
+      } else if (abs(uWhip) > 0.001) {
+        vec4 acc = vec4(0.0);
+        for (int i = -2; i <= 2; i++) {
+          acc += texture2D(tDiffuse, clamp(uv + vec2(uWhip * 0.032 * float(i), 0.0), 0.001, 0.999));
+        }
+        gl_FragColor = acc * 0.20;
+      } else {
+        gl_FragColor = texture2D(tDiffuse, uv);
+      }
+      if (uWipe > 0.001) {
+        float bar = smoothstep(uWipe - 0.04, uWipe, uv.x) * (1.0 - smoothstep(uWipe, uWipe + 0.04, uv.x));
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.07, 0.11, 0.18), bar * 0.85);
+      }
       vec2 q = vUv - 0.5; q.x *= 0.5625;
-      c.rgb *= 1.0 - uVig * smoothstep(0.18, 0.62, length(q));
-      gl_FragColor = c; }`,
+      gl_FragColor.rgb *= 1.0 - uVig * smoothstep(0.18, 0.62, length(q));
+      gl_FragColor.rgb += vec3(uFlash * 0.18);
+    }`,
 });
 composer.addPass(renderPass);
 composer.addPass(bloom);
@@ -584,15 +1086,59 @@ window.renderAtTime = (rawT) => {
   let idx = SHOTS.findIndex(s => t >= s.start && t < s.end);
   if (idx < 0) idx = SHOTS.length - 1;
   const def = SHOTS[idx];
+  const prevDef = idx > 0 ? SHOTS[idx - 1] : null;
   const shot = getShot(idx);
   const lt = Math.max(0, t - def.start);
+  const dur = Math.max(0.2, def.end - def.start);
   const r = shot.update(lt, t) || {};
   const cam = shot.camera;
+
+  // Deterministic transition execution on camera + optical shader grade (verified on pixels!)
+  let tZoom = 0.0, tWhip = 0.0, tWipe = 0.0, tFlash = 0.0;
+  const outTr = def.tr || 'cut';
+  const inTr = prevDef ? (prevDef.tr || 'cut') : 'cut';
+  const rem = def.end - t;
+
+  if (idx < SHOTS.length - 1 && outTr === 'zoom_through' && rem < 0.16) {
+    const p = 1.0 - rem / 0.16;
+    cam.fov = Math.max(14, (cam.fov || 34) * (1.0 - 0.34 * p * p));
+    tZoom = p * 0.9;
+  } else if (inTr === 'zoom_through' && lt < 0.16) {
+    const p = 1.0 - lt / 0.16;
+    cam.fov = Math.max(14, (cam.fov || 34) * (1.0 + 0.28 * p * p));
+    tZoom = p * 0.75;
+  }
+
+  if (idx < SHOTS.length - 1 && outTr === 'whip_pan' && rem < 0.12) {
+    const p = 1.0 - rem / 0.12;
+    cam.rotation.y += p * p * 0.42;
+    tWhip = p * 1.0;
+  } else if (inTr === 'whip_pan' && lt < 0.12) {
+    const p = 1.0 - lt / 0.12;
+    cam.rotation.y -= p * p * 0.42;
+    tWhip = -p * 1.0;
+  }
+
+  if ((idx < SHOTS.length - 1 && outTr === 'match_cut' && rem < 0.10) || (inTr === 'match_cut' && lt < 0.10)) {
+    const dist = (idx < SHOTS.length - 1 && rem < 0.10) ? (1.0 - rem / 0.10) : (1.0 - lt / 0.10);
+    tFlash = dist * 0.55;
+  }
+
+  if (idx < SHOTS.length - 1 && outTr === 'object_wipe' && rem < 0.14) {
+    tWipe = 0.5 * (1.0 - rem / 0.14) + 0.02;
+  } else if (inTr === 'object_wipe' && lt < 0.14) {
+    tWipe = 0.5 + 0.5 * (lt / 0.14);
+  }
+
   cam.aspect = W / H; cam.updateProjectionMatrix();
   shot.scene.userData.sky.position.copy(cam.position);
   renderPass.scene = shot.scene;
   renderPass.camera = cam;
   bloom.strength = (r.bloom ?? 0.30) * 0.52;
+  grade.uniforms.uZoom.value = tZoom;
+  grade.uniforms.uWhip.value = tWhip;
+  grade.uniforms.uWipe.value = tWipe;
+  grade.uniforms.uFlash.value = tFlash;
   renderer.toneMappingExposure = r.exposure ?? 1.03;
   composer.render();
 
@@ -1116,83 +1662,269 @@ function shot_{i}({{ makeStage }}) {{
 }}"""
 
 
-def _generic_armor_shot_code(i: int, s: Dict[str, Any], total_shots: int) -> str:
+def _cam_helper_js(cam_path: Dict[str, Any] | None, fallback_pos: List[float], fallback_look: List[float], fallback_fov: int) -> str:
+    kfs = (cam_path or {}).get("keyframes") or [
+        {"t_norm": 0.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0},
+        {"t_norm": 1.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0},
+    ]
+    return json.dumps(kfs)
+
+
+def _build_non_roman_scene_shot_code(i: int, s: Dict[str, Any], total_shots: int, seed: int = 42) -> str:
     start, end = s["start"], s["end"]
     dur = max(0.2, round(end - start, 3))
-    outfits = ["vest", "chainmail", "plate", "archer"]
-    outfit = outfits[i % len(outfits)]
-    setup = s["setup_type"]
+    gen = str(s.get("procedural_generator") or "")
+    prop = str((s.get("staging") or {}).get("visual_metaphor") or "idea_spark")
+    is_callback = bool(s.get("callback_reason"))
+    cam_path = s.get("camera_path")
+    kfs_json = _cam_helper_js(cam_path, [0.4, 1.38, 2.0], [0.0, 1.18, 0.0], 34)
+    shirt_palette = [0x2563eb, 0x0d9488, 0x4f46e5, 0xd97706, 0x0284c7]
+    shirt_hex = shirt_palette[i % len(shirt_palette)]
 
-    if setup == "novel_slowmo_ripple_cutaway":
-        TI = round(dur * 0.48, 3)
+    if gen == "zach3d:human_device_stage" or (prop == "phone_screen" and gen != "zach3d:device_cutaway_stage"):
+        sent_flag = "true" if (is_callback or i == total_shots - 1) else "false"
+        theme = "lab_studio" if sent_flag == "true" else "day"
         return f"""
 function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 2.2 }});
-  const man = makeHuman('{outfit}'); man.root.rotation.y = -0.35; scene.add(man.root);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.32, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
-  disc.position.set(0, 1.32, 0.18); scene.add(disc);
-  const rp = rippleOverlay(disc);
-  const sp = sparks(90, {{ speed: 0.32, spread: 1.5, gravity: -0.5, life: 0.85, size: 0.008, dir: V(0, 0.2, 1), seed: {i + 3}, color: [1, 0.35, 0.15] }});
-  sp.position.set(0, 1.32, 0.19); scene.add(sp);
-  const orb = energyCore(0xff4d4d); scene.add(orb);
-  const c = cam(32);
-  const TI = {TI};
+  const scene = makeStage({{ shadowSize: 2.6, skyTheme: '{theme}' }});
+  const man = makeModernOutfitCharacter(makeHuman, {shirt_hex});
+  man.root.position.set(-0.24, 0, 0); man.root.rotation.y = 0.28; scene.add(man.root);
+  const phone = makeSmartphoneRig({{ sent: {sent_flag}, scale: 0.78 }});
+  phone.position.set(0.26, 1.36, 0.28); phone.rotation.set(-0.16, -0.34, 0.05);
+  scene.add(phone);
+  const sp = sparks(45, {{ speed: 0.45, spread: 1.4, gravity: -0.2, life: 0.7, size: 0.008, dir: V(0, 0.2, 1), seed: {seed + i}, color: [0.22, 0.74, 0.97] }});
+  sp.position.set(0.26, 1.30, 0.32); scene.add(sp);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 35);
+  const T_TAP = {round(dur * 0.42, 3)};
   return {{
     scene, camera: c,
     update(lt) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const hitT = lt - TI;
-      const recoil = hitT > 0 ? Math.exp(-hitT * 3.5) * Math.sin(hitT * 14) * 0.18 : 0;
-      man.setPose({{ ...STAND, chest: [-recoil, 0, 0], head: [-recoil * 0.8, 0, 0], lSh: [0.2, 0, 0.35], rSh: [0.2, 0, -0.35] }});
-      man.setMouth(hitT > 0 && hitT < 0.7 ? 0.65 : 0.05);
-      orb.position.set(0, 1.32, hitT < 0 ? lerp(1.25, 0.22, clamp(lt / TI, 0, 1)) : 0.22 + hitT * 0.08);
-      orb.scale.setScalar(hitT < 0 ? 0.45 : Math.max(0.01, 0.45 * (1 - hitT * 1.8)));
-      orb.r1.rotation.y = lt * 4.0; orb.r2.rotation.z = lt * 3.2;
-      const ru = rp.material.uniforms;
-      ru.uCenter.value.set(0, 0, 0);
-      ru.uAmp.value = hitT > 0 ? Math.min(1.0, hitT * 5.0) * (1.0 - 0.3 * smooth(range(hitT, 0.8, 2.0))) : 0.0;
-      ru.uRadius.value = hitT > 0 ? 0.03 + easeOut(range(hitT, 0, 1.1)) * 0.26 : 0.0;
-      ru.uRings.value = 180.0; ru.uSpot.value = 0.04; ru.uSpotAmp.value = 1.0; ru.uTime.value = lt;
-      sp.update(hitT);
-      const shk = hitT > 0 && hitT < 0.4 ? shake(lt * 8, 2.2, {i}) : shake(lt, 0.4, {i});
-      place(c, [lerp(0.65, 0.38, easeInOut(u)) + shk[0], 1.42 + shk[1], lerp(1.55, 1.15, easeInOut(u))], [0, 1.30, 0.12]);
-      return {{ bloom: hitT > 0 && hitT < 0.3 ? 0.65 : 0.35 }};
+      const tapU = smooth(range(lt, T_TAP - 0.14, T_TAP + 0.06));
+      const postTap = lt - T_TAP;
+      man.setPose({{
+        ...STAND,
+        chest: [0.06 * tapU, 0.20, 0],
+        head: [0.08 + 0.04 * tapU, 0.16, -0.04],
+        lSh: [-0.82, 0.25, 0.22], lEl: [-0.95, 0, 0],
+        rSh: [-0.88 - 0.18 * tapU, -0.18, -0.18], rEl: [-0.92 + 0.14 * Math.sin(tapU * Math.PI), 0, 0],
+      }});
+      man.setMouth({0.35 if sent_flag == 'true' else 0.14} + 0.15 * Math.abs(Math.sin(lt * 5.0)));
+      phone.rotation.y = -0.34 + Math.sin(lt * 1.4) * 0.04;
+      if (postTap > 0) {{
+        const ringU = clamp(postTap / 0.55, 0, 1);
+        phone.tapRing.scale.setScalar(0.5 + easeOut(ringU) * 3.2);
+        phone.tapRing.material.opacity = (1.0 - ringU) * 0.95;
+      }} else {{
+        phone.tapRing.material.opacity = 0.0;
+      }}
+      sp.update(postTap);
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [lerp(0.55, 0.24, u), lerp(1.50, 1.40, u), lerp(2.78, 2.28, easeInOut(u))], [0.02, 1.20, 0.12], poseCam.roll * 0.4);
+      return {{ bloom: postTap > 0 && postTap < 0.35 ? 0.62 : 0.30 }};
     }}
   }};
 }}"""
 
-    if setup == "mechanism_cross_section_3d":
+    if gen == "zach3d:device_cutaway_stage" or prop in ("microchip_pcb", "battery_cell"):
         return f"""
 function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 2.5 }});
-  const ped = forcePedestal(); scene.add(ped);
-  const stack = cutawaySlabStack(); stack.position.set(0, 1.05, 0); scene.add(stack);
-  const core = energyCore(0x3fa9f5); core.position.set(0, 1.42, 0); scene.add(core);
-  const c = cam(34);
+  const scene = makeStage({{ shadowSize: 2.2, skyTheme: 'datacenter_dark' }});
+  const phone = makeSmartphoneRig({{ sent: false, scale: 1.40 }});
+  phone.position.set(0, 1.24, 0);
+  scene.add(phone);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 32);
   return {{
     scene, camera: c,
     update(lt) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const sep = easeInOut(clamp(u * 1.3, 0, 1));
-      stack.layers.forEach((m, k) => {{
-        m.position.y = (k - 1) * (0.09 + sep * 0.22);
-        m.rotation.y = lt * 0.55 + k * 0.2;
+      const peel = easeInOut(clamp(u * 1.55, 0, 1));
+      phone.frontGlass.position.set(-0.22 * peel, 0.06 * peel, 0.014 + 0.22 * peel);
+      phone.frontGlass.rotation.y = -0.38 * peel;
+      phone.rotation.y = lerp(-0.35, 0.42, easeInOut(u));
+      phone.pulses.forEach((p, k) => {{
+        const cyc = ((lt * 1.9 + k * 0.18) % 1.0);
+        p.position.y = lerp(-0.14, 0.21, cyc);
+        p.scale.setScalar(0.85 + 0.45 * Math.sin(cyc * Math.PI));
       }});
-      core.position.y = 1.12 + sep * 0.42 + Math.sin(lt * 3) * 0.02;
-      core.r1.rotation.x = lt * 2.2; core.r2.rotation.y = lt * 2.9;
-      place(c, [Math.sin(u * 0.7 + 0.4) * 1.45, lerp(1.65, 1.45, u), Math.cos(u * 0.7 + 0.4) * 1.45], [0, 1.25, 0]);
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [Math.sin(u * 0.8 - 0.3) * 1.32, lerp(1.48, 1.32, u), lerp(2.15, 1.68, easeInOut(u))], [0.0, 1.22, 0.02], poseCam.roll * 0.3);
+      return {{ bloom: 0.48 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:network_relay_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.5, skyTheme: 'dusk' }});
+  const tower = makeRadioTowerRig();
+  scene.add(tower);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      tower.beacon.material.emissiveIntensity = 1.1 + Math.abs(Math.sin(lt * 5.0)) * 1.4;
+      tower.rfRings.forEach((rm, k) => {{
+        const prog = ((lt * 0.85 + k * 0.25) % 1.0);
+        rm.scale.setScalar(0.5 + prog * 4.4);
+        rm.material.opacity = (1.0 - prog) * 0.88;
+      }});
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [lerp(-1.25, 0.85, easeInOut(u)), lerp(1.25, 2.55, u), lerp(2.85, 2.25, u)], [0.0, lerp(1.65, 2.30, u), 0.0]);
+      return {{ bloom: 0.44 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:subsea_fiber_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.5, skyTheme: 'ocean_deep', showShadowFloor: false }});
+  const rig = makeSubseaCableRig({seed + i});
+  scene.add(rig);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      rig.pulses.forEach((p, k) => {{
+        const s = ((lt * 1.35 + k * 0.167) % 1.0);
+        p.position.set(lerp(-1.65, 1.70, s), 0.0, 0.0);
+      }});
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [lerp(-1.65, 1.45, easeInOut(u)), lerp(1.42, 0.98, u), lerp(2.95, 2.30, u)], [0.0, 0.36, 0.0], poseCam.roll * 0.25);
+      return {{ bloom: 0.56 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:datacenter_aisle_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, skyTheme: 'datacenter_dark', showShadowFloor: false }});
+  const dc = makeDatacenterRackBank({seed + i * 7});
+  scene.add(dc);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 38);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      dc.packets.forEach((sp, k) => {{
+        const cyc = ((lt * 1.6 + k * 0.16) % 1.0);
+        sp.position.z = lerp(1.4, -3.2, cyc);
+        sp.position.x = Math.sin(lt * 3 + k) * 0.08;
+      }});
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [Math.sin(u * 1.2) * 0.16, lerp(1.32, 1.55, u), lerp(2.85, 0.45, easeInOut(u))], [0.0, 1.18, -2.5]);
+      return {{ bloom: 0.50 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:power_turbine_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.0, skyTheme: 'lab_studio' }});
+  const tb = makePowerTurbineRig();
+  scene.add(tb);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      tb.rotor.rotation.z = -lt * (4.5 + u * 6.5);
+      tb.coilGlow.material.emissiveIntensity = 1.0 + 0.65 * Math.abs(Math.sin(lt * 7.5));
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [Math.sin(u * 0.85 - 0.4) * 1.85, lerp(1.55, 1.25, u), Math.cos(u * 0.85 - 0.4) * 1.85], [0.0, 1.12, 0.0]);
+      return {{ bloom: 0.48 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:cosmic_scale_bridge_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, skyTheme: 'cosmic', showShadowFloor: false }});
+  const cosmos = makeCosmicGenesisRig({seed + i});
+  cosmos.position.set(0, 1.25, 0);
+  scene.add(cosmos);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 38);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      cosmos.star.rotation.y = lt * 0.55;
+      cosmos.star.scale.setScalar(1.0 + Math.sin(lt * 3.5) * 0.06);
+      cosmos.ring1.rotation.z = lt * 0.45;
+      cosmos.ring2.rotation.y = -lt * 0.35;
+      cosmos.orbiters.forEach((m, k) => {{
+        const a = m.userData.phase + lt * (0.9 + (k % 3) * 0.35);
+        m.position.set(Math.cos(a) * m.userData.rad, Math.sin(a * 0.6) * 0.14, Math.sin(a) * m.userData.rad);
+        m.rotation.x = lt * 1.8; m.rotation.y = lt * 1.4;
+      }});
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [lerp(-0.55, 0.75, easeInOut(u)), lerp(1.32, 1.95, u), lerp(2.15, 3.65, easeInOut(u))], [0.0, 1.25, 0.0], poseCam.roll * 0.25);
+      return {{ bloom: 0.68 }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:anatomical_cutaway_stage":
+        is_brain = "true" if ("brain" in prop or "neuron" in prop) else "false"
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.4, skyTheme: 'datacenter_dark' }});
+  const rig = makeAnatomicalCutawayRig({is_brain});
+  scene.add(rig);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 32);
+  return {{
+    scene, camera: c,
+    update(lt) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const pulse = 1.0 + 0.065 * Math.sin(lt * 5.2);
+      rig.lobes.forEach(l => l.scale.set(0.85 * pulse, 1.05 * pulse, 1.0 * pulse));
+      rig.sparkNodes.forEach((nd, k) => {{
+        nd.material.emissiveIntensity = 0.8 + 1.2 * Math.max(0, Math.sin(lt * 6.0 + k * 1.1));
+      }});
+      rig.rotation.y = lerp(-0.45, 0.35, easeInOut(u));
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, [lerp(0.55, 0.15, easeInOut(u)), 1.32, lerp(1.55, 1.10, easeInOut(u))], [0.0, 1.25, 0.0]);
       return {{ bloom: 0.45 }};
     }}
   }};
 }}"""
 
+    # Default General Non-Roman Studio Demonstrator: stylized modern character + grounded prop (ZERO armor!)
     return f"""
 function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 2.8 }});
-  const man = makeHuman('{outfit}'); man.root.position.set(-0.22, 0, 0); man.root.rotation.y = 0.32; scene.add(man.root);
+  const scene = makeStage({{ shadowSize: 2.8, skyTheme: 'lab_studio' }});
+  const man = makeModernOutfitCharacter(makeHuman, {shirt_hex});
+  man.root.position.set(-0.24, 0, 0); man.root.rotation.y = 0.32; scene.add(man.root);
   const ped = forcePedestal(); ped.position.set(0.32, 0, 0.08); scene.add(ped);
-  const core = energyCore({0xffb703 if i == total_shots - 1 else 0x4cc9f0}); core.position.set(0.32, 1.22, 0.08); core.scale.setScalar(0.68); scene.add(core);
-  const c = cam(35);
+  const gearStage = makeVaultGearStage();
+  gearStage.scale.setScalar(0.52); gearStage.position.set(0.32, 0.98, 0.08); scene.add(gearStage);
+  const core = energyCore({0xf59e0b if i == total_shots - 1 else 0x38bdf8});
+  core.position.set(0.32, 1.44, 0.08); core.scale.setScalar(0.56); scene.add(core);
+  const KFS = {kfs_json};
+  const c = cam(KFS[0].fov || 34);
   return {{
     scene, camera: c,
     update(lt) {{
@@ -1206,10 +1938,11 @@ function shot_{i}({{ makeStage }}) {{
         rEl: [-0.45, 0, 0]
       }});
       man.setMouth(0.18 + 0.22 * Math.abs(Math.sin(lt * 6.5)));
+      gearStage.gears.forEach((gr, k) => {{ gr.rotation.z = lt * (k % 2 ? -1.4 : 1.4); }});
       core.r1.rotation.y = lt * 2.4; core.r2.rotation.x = lt * 1.9;
-      core.position.y = 1.22 + Math.sin(lt * 3.1) * 0.03;
-      const s = shake(lt, 0.45, {i});
-      place(c, [lerp({-0.55 if i % 2 == 0 else 0.65}, 0.08, easeInOut(u)) + s[0], lerp(1.52, 1.38, u) + s[1], lerp(2.35, 1.85, easeInOut(u))], [0.05, 1.26, 0.04]);
+      const poseCam = evalCamPath(KFS, u);
+      c.fov = poseCam.fov;
+      place(c, poseCam.pos, poseCam.look, poseCam.roll);
       return {{ bloom: 0.34 }};
     }}
   }};
@@ -1219,6 +1952,7 @@ function shot_{i}({{ makeStage }}) {{
 def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]) -> str:
     shots = storyboard["shots"]
     total_dur = storyboard["total_duration_sec"]
+    seed = int(storyboard.get("seed", 42))
     captions = _build_captions_list(words)
     motifs = set(storyboard.get("entities_and_facts", {}).get("detected_motifs", []))
     is_roman = bool({"roman_gladiator", "roman_ledger_50x"} & motifs)
@@ -1233,21 +1967,31 @@ def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]
     list_entries: List[str] = []
 
     for i, s in enumerate(shots):
+        tr_out = str(s.get("transition_out") or "cut")
         if is_roman:
             fn_blocks.append(_roman_shot_code(i, s, len(shots)))
         else:
-            fn_blocks.append(_generic_armor_shot_code(i, s, len(shots)))
-        list_entries.append(f"  {{ start: {s['start']}, end: {s['end']}, build: shot_{i} }},")
+            fn_blocks.append(_build_non_roman_scene_shot_code(i, s, len(shots), seed=seed))
+        list_entries.append(f"  {{ start: {s['start']}, end: {s['end']}, tr: {json.dumps(tr_out)}, build: shot_{i} }},")
+
+    novel_imports = (
+        """  forcePedestal, energyCore, cutawaySlabStack,
+  addGladiatorBracers, romanPlinth, trainingPalus,
+  arenaStage, romanHelmet, romanScutum, denariusStack,
+  romanScrollTablet, togaSash, balanceScale50x"""
+        if is_roman
+        else """  forcePedestal, energyCore, cutawaySlabStack,
+  makeModernOutfitCharacter, makeSmartphoneRig, makeRadioTowerRig,
+  makeSubseaCableRig, makeDatacenterRackBank, makePowerTurbineRig,
+  makeCosmicGenesisRig, makeAnatomicalCutawayRig, makeVaultGearStage"""
+    )
 
     header = f"""import * as THREE from 'three';
 import {{ makeHuman }} from './human.js';
 import {{ sword, sparks, rippleOverlay }} from './props.js';
 import {{ clamp, lerp, smooth, easeOut, easeIn, easeInOut, range, V, cam, place, shake, ikArm }} from './anim.js';
 import {{
-  forcePedestal, energyCore, cutawaySlabStack,
-  addGladiatorBracers, romanPlinth, trainingPalus,
-  arenaStage, romanHelmet, romanScutum, denariusStack,
-  romanScrollTablet, togaSash, balanceScale50x
+{novel_imports}
 }} from './novel_props.js';
 
 export const DURATION = {total_dur};
@@ -1258,6 +2002,25 @@ const STAND = {{
   lSh: [0.05, 0, 0.16], rSh: [0.05, 0, -0.16], lEl: [-0.25, 0, 0], rEl: [-0.25, 0, 0],
   lHip: [0, 0, 0.07], rHip: [0, 0, -0.07], lAn: [0, 0, -0.07], rAn: [0, 0, 0.07],
 }};
+
+function evalCamPath(kfs, u) {{
+  if (!kfs || !kfs.length) return {{ pos: [0.3, 1.38, 2.0], look: [0, 1.18, 0], fov: 34, roll: 0 }};
+  const uc = clamp(u, 0, 1);
+  for (let i = 0; i < kfs.length - 1; i++) {{
+    const a = kfs[i], b = kfs[i + 1];
+    if (uc <= b.t_norm + 1e-6) {{
+      const segU = easeInOut(clamp((uc - a.t_norm) / Math.max(1e-4, b.t_norm - a.t_norm), 0, 1));
+      return {{
+        pos: [lerp(a.pos[0], b.pos[0], segU), lerp(a.pos[1], b.pos[1], segU), lerp(a.pos[2], b.pos[2], segU)],
+        look: [lerp(a.look[0], b.look[0], segU), lerp(a.look[1], b.look[1], segU), lerp(a.look[2], b.look[2], segU)],
+        fov: lerp(a.fov || 34, b.fov || 34, segU),
+        roll: lerp(a.roll || 0, b.roll || 0, segU),
+      }};
+    }}
+  }}
+  const last = kfs[kfs.length - 1];
+  return {{ pos: last.pos, look: last.look, fov: last.fov || 34, roll: last.roll || 0 }};
+}}
 """
     return header + "\n".join(fn_blocks) + "\nexport const SHOTS = [\n" + "\n".join(list_entries) + "\n];\n"
 

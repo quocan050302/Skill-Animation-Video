@@ -1,8 +1,8 @@
 # Skill-Animation-Video
 
-## Short Director (`v0.3.0`) — Antigravity Plugin
+## Short Director (`v0.4.0`) — Antigravity Plugin
 
-Production-hardened vertical shorts (`9:16`, `1080x1920` preview + `2160x3840` 4K delivery at `30`/`60` fps) built for Google Antigravity with a **machine-enforceable, fail-closed single-skill lock** across the six existing animation engines plus narrative music & licensed SFX direction (`SD-AUDIO-01`).
+Production-hardened vertical shorts (`9:16`, `1080x1920` preview + `2160x3840` 4K delivery at `30`/`60` fps) built for Google Antigravity with a **machine-enforceable, fail-closed single-skill lock**, **semantic visual event & continuous shot direction (`SD-VISUAL-01`)**, and **narrative music & licensed SFX direction (`SD-AUDIO-01`)**.
 
 ## Supported Engines (Strict Single-Skill Lock)
 
@@ -56,7 +56,15 @@ python3 -m director.run \
   "Your fresh script or question here"
 ```
 
-## Narrative Music & SFX Director (`v0.3.0` Changelog)
+## Continuous Shot Direction & Scene Novelty (`v0.4.0` Changelog)
+- **Semantic Visual Event Graph (`visual_event_graph.py`)**: Extracts subjects, verbs, props, causality, scale shifts, and word-anchored event windows (`visual_events.json`) directly from narration + verified audio timing.
+- **Anti-Repetition Coverage Planner (`shot_director.py`)**: Replaces cyclic shot templates and duplicated split text with candidate generation, rolling 3-shot diversity scoring, justified transformed callbacks, intra-shot transformation schedules, and non-overlapping narration spans (`shot_coverage.json`).
+- **Camera Choreography & Transition EDL (`camera_choreographer.py`, `transition_director.py`)**: Deterministic seeded trajectories (`camera_paths.json`) and rendered transitions (`zoom_through`, `whip_pan`, `match_cut`, `object_wipe`, `iris_mask`, `match_zoom`) recorded with frame-level verification (`transition_edl.json`).
+- **Multi-Family 3D & Single-Skill Asset Factory (`scene_asset_factory.py`, `zach_d_films_adapter.py`)**: Non-Roman scripts generate domain-matched Three.js procedural scenes (human + smartphone tap, glass-peel PCB cutaway, RF tower, subsea fiber cable, data center aisle, power turbine, cosmic star-forge, anatomical cutaway) instead of falling back to armored characters; all other 5 skills receive honest engine-native upgrades.
+- **Scene Diversity & Continuity QA (`scene_diversity_qa.py`)**: Caption-masked pHash/SSIM adjacency deduplication, live intra-shot motion checks, and seam verification written to `scene_diversity_report.json`.
+- **New Editorial Controls**: `--edit-energy calm|balanced|dynamic`, `--scene-novelty standard|high`, `--transition-policy motivated|simple`, `--max-static-hold-sec`, `--visual-plan-in`.
+
+## Narrative Music & SFX Director (`v0.3.0` Retained)
 - **Visual-Grounded Audio Direction** (`audio_narrative.py`, `music_director.py`, `sfx_director.py`): Aligns cohesive thematic music arcs and frame-accurate Foley/SFX directly to shot setups, grounded objects, and transitions rather than generic per-cut pops/whooshes.
 - **Optional Read-Only `QA-Unified-Video-Studio` Integration** (`audio_catalog.py`): Supports `--qa-audio-root <path>` or `SHORT_DIRECTOR_QA_ROOT` with SHA-256 verification, `ffprobe` decodability checks, path-traversal guards, commercial rights gating, and automatic `audio/credits_audio.txt` attribution (falling back cleanly to procedural synthesis with `QA_LIBRARY_UNAVAILABLE` when absent).
 - **Audio Switches & Lossless `--audio-only` Remix**: `--music-mode auto|procedural|qa-library|file|off`, `--sfx-mode auto|procedural|qa-library|off`, `--sfx-density sparse|balanced|detailed`, `--music-gain-db`, `--sfx-gain-db`, `--music-intensity`, `--audio-plan-in`, `--audio-only` (preserves video packets losslessly via `-c:v copy`), and `--voice-mode auto|off`.
@@ -66,8 +74,9 @@ python3 -m director.run \
 
 Every completed run writes verified artifacts to `<out-dir>/`:
 - `style_decisions.json` — Immutable `selection_mode`, `selected_skill`, `style_lock`, and upstream commit provenance
+- `visual_events.json`, `shot_coverage.json`, `camera_paths.json`, `transition_edl.json` — Semantic event graph, anti-repetition shot coverage, camera keyframe traces, and frame-verified transition EDL
 - `storyboard.json` & `art_bible.md` — Per-shot camera blocking, setups, transitions, style parameters, and `visual_assets` inventory
-- `style_lock_audit.json` — Recursive AST/HTML/JS source & `sys.addaudithook` runtime audit proving zero foreign-skill files or imports
+- `scene_diversity_report.json` & `style_lock_audit.json` — Caption-masked SSIM/dHash diversity QA plus recursive source & `sys.addaudithook` single-skill provenance audit
 - `audio/` — `audio_plan.json`, `audio_director_notes.md`, `music_cue_sheet.json`, `sfx_cue_sheet.json`, `audio_asset_manifest.json`, `audio_mix_report.json`, `audio_qc_report.json`, `credits_audio.txt`, and 48 kHz stereo stems (`voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`)
 - `stills/` & `contact_sheet.jpg` — First, busiest, and end frames of every shot plus 9:16 safe-area sheet
 - `preview_1080.mp4` — `1080x1920` H.264 + single-pass `-14 LUFS` AAC stereo preview

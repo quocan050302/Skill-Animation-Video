@@ -166,6 +166,21 @@ function drawPropMotif(ctx, motif, x, y, s, t, progress = 0.5) {
       fillStroke(ctx, side < 0 ? '#ffb703' : '#4cc9f0', 5);
     }
     ctx.restore();
+  } else if (motif === 'phone_screen') {
+    rrect(ctx, -54, -98, 108, 196, 18); fillStroke(ctx, '#2b2d42', 7);
+    rrect(ctx, -44, -84, 88, 164, 10); fillStroke(ctx, '#1e3a8a', 4);
+    rrect(ctx, -32, -46, 64, 34, 9); fillStroke(ctx, '#38bdf8', 3);
+    rrect(ctx, -26, 26, 52, 26, 13); fillStroke(ctx, '#10b981', 3);
+    circle(ctx, 0, 39, 8 + Math.sin(progress * Math.PI) * 14);
+    ctx.strokeStyle = 'rgba(56,189,248,0.75)'; ctx.lineWidth = 4; ctx.stroke();
+  } else if (motif === 'microchip_pcb' || motif === 'vault_gear') {
+    rrect(ctx, -84, -84, 168, 168, 20); fillStroke(ctx, '#166534', 6);
+    for (let k = -2; k <= 2; k++) {
+      line(ctx, -102, k * 24, -84, k * 24, 5, '#ffb703');
+      line(ctx, 84, k * 24, 102, k * 24, 5, '#ffb703');
+    }
+    rrect(ctx, -38, -38, 76, 76, 10); fillStroke(ctx, '#111827', 5);
+    sparkle(ctx, 0, 0, 14 + Math.abs(Math.sin(t * 5)) * 12, 0.9);
   } else {
     // Brain / idea spark / wave motif
     ctx.beginPath();
@@ -303,6 +318,39 @@ function drawSplitComparisonStage(ctx, lt, dur, t, shotSpec, pal) {
   sweat(ctx, 885, 810 + ((lt * 55) % 45), 26, 0.85);
   drawPropMotif(ctx, 'battery', 795, 490, 0.95, t, 0.18);
 }
+
+// NOVEL NON-TEMPLATE SCENE 3: Vertical Scale-Ladder Pan Climb
+function drawScaleLadderStage(ctx, lt, dur, t, shotSpec, pal) {
+  const u = clamp(lt / Math.max(0.1, dur), 0, 1);
+  const cam = { x: 540, y: lerp(1120, 740, easeInOut(u)), z: lerp(1.06, 0.94, u), r: 0 };
+  drawStudioBackdrop(ctx, t, cam, pal, 'night');
+  applyCam(ctx, cam, 1);
+
+  const nodes = [
+    [320, 1080, shotSpec.primaryMotif || 'clock'],
+    [760, 780, shotSpec.secondaryMotif || 'battery'],
+    [540, 470, 'scale'],
+  ];
+  // Connecting curved hand-drawn path between macro & micro/cosmic levels
+  ctx.beginPath();
+  ctx.moveTo(nodes[0][0], nodes[0][1]);
+  ctx.quadraticCurveTo(680, 960, nodes[1][0], nodes[1][1]);
+  ctx.quadraticCurveTo(380, 620, nodes[2][0], nodes[2][1]);
+  ctx.lineWidth = 8; ctx.setLineDash([14, 12]); ctx.strokeStyle = '#ffd166'; ctx.stroke();
+  ctx.setLineDash([]);
+
+  nodes.forEach(([nx, ny, nm], idx) => {
+    const sc = idx <= Math.floor(u * 3) ? 0.95 : 0.65;
+    drawPropMotif(ctx, nm, nx, ny, sc, t, u);
+  });
+  drawStick(ctx, {
+    x: 240, y: 1215, s: 510,
+    cols: PAL.blue, hat: 'none',
+    arms: { L: [0.4, -0.2], R: [2.5, -0.35] },
+    legs: POSE.hips.legs,
+    face: { eyes: 'wide', look: [0.5, -0.6], mouth: 'grin', browUp: 0.7 }
+  });
+}
 """
 
 
@@ -332,6 +380,8 @@ def _build_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]) -> 
             body = f"drawNovelMechanismCutaway(ctx, lt, {dur}, t, {spec_json}, STYLE_PAL);"
         elif setup == "split_comparison_stage":
             body = f"drawSplitComparisonStage(ctx, lt, {dur}, t, {spec_json}, STYLE_PAL);"
+        elif setup == "scale_ladder_pan":
+            body = f"drawScaleLadderStage(ctx, lt, {dur}, t, {spec_json}, STYLE_PAL);"
         elif i == 0:
             # Hook CU: immediate motion on frame 1! Character leans in, raises prop along parabolic arc
             body = f"""
@@ -567,7 +617,7 @@ window.renderAtTime = function(rawT) {
   out.fillStyle = '#000';
   out.fillRect(0, 0, PW, PH);
 
-  // Motivated transitions: whip pan OR animated iris circle mask!
+  // Motivated transitions: iris_mask, object_wipe, match_zoom plunge, or whip pan!
   if (prev && prev.tr === 'iris_mask' && t < s.start + 0.34) {
     const u = easeOut((t - s.start) / 0.34);
     renderShotTo(pctx, i - 1, s.start - 0.005);
@@ -577,6 +627,31 @@ window.renderAtTime = function(rawT) {
     out.beginPath();
     out.arc(PW * 0.5, PH * 0.48, u * Math.hypot(PW, PH) * 0.65, 0, TAU);
     out.clip();
+    out.drawImage(buf, 0, 0);
+    out.restore();
+  } else if (prev && prev.tr === 'object_wipe' && t < s.start + 0.24) {
+    const u = easeInOut((t - s.start) / 0.24);
+    renderShotTo(pctx, i - 1, s.start - 0.005);
+    renderShotTo(bctx, i, t);
+    out.drawImage(bufPrev, 0, 0);
+    const wx = PW * u;
+    out.save();
+    out.beginPath();
+    out.rect(0, 0, wx, PH);
+    out.clip();
+    out.drawImage(buf, 0, 0);
+    out.restore();
+    out.fillStyle = '#201a23';
+    out.fillRect(wx - 12 * RENDER_SCALE, 0, 24 * RENDER_SCALE, PH);
+  } else if ((s.tr === 'match_zoom' && i < SHOTS.length - 1 && t > s.end - 0.12) || (prev && prev.tr === 'match_zoom' && t < s.start + 0.12)) {
+    const outZ = (s.tr === 'match_zoom' && i < SHOTS.length - 1 && t > s.end - 0.12);
+    const zScale = outZ ? (1.0 + easeIn((t - (s.end - 0.12)) / 0.12) * 0.22) : (1.18 - easeOut((t - s.start) / 0.12) * 0.18);
+    renderShotTo(bctx, i, t);
+    out.save();
+    out.setTransform(1, 0, 0, 1, 0, 0);
+    out.translate(PW * 0.5, PH * 0.5);
+    out.scale(zScale, zScale);
+    out.translate(-PW * 0.5, -PH * 0.5);
     out.drawImage(buf, 0, 0);
     out.restore();
   } else {

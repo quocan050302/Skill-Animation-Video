@@ -510,7 +510,31 @@ def run_final_quality_gate(
     else:
         checks["audio_levels_and_ducking"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
-    # 6. Factual & Licensing check summary
+    # 6. Scene Diversity, Perceptual SSIM/pHash & Transition Continuity QA (`SD-VISUAL-01`)
+    if final_4k_mp4.exists():
+        from .scene_diversity_qa import run_scene_diversity_qa
+        edl_p = run_dir / "transition_edl.json"
+        cam_p = run_dir / "camera_paths.json"
+        edl_doc = json.loads(edl_p.read_text(encoding="utf-8")) if edl_p.exists() else None
+        cam_doc = json.loads(cam_p.read_text(encoding="utf-8")) if cam_p.exists() else None
+        div_qa = run_scene_diversity_qa(
+            run_dir=run_dir,
+            video_mp4=final_4k_mp4,
+            storyboard=storyboard,
+            style_lock_status=post_audit["status"],
+            transition_edl=edl_doc,
+            camera_plan=cam_doc,
+        )
+        checks["scene_diversity_and_retention"] = {
+            "status": div_qa["overall_status"],
+            "subjective_visual_review": div_qa.get("subjective_visual_review", "NOT_VERIFIED"),
+            "scene_diversity_report": str((run_dir / "scene_diversity_report.json").resolve()),
+            "checks_summary": {k: v["status"] for k, v in (div_qa.get("checks") or {}).items()},
+        }
+    else:
+        checks["scene_diversity_and_retention"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
+
+    # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])
     has_warn = any("WARN" in str(fc.get("status", "")) for fc in fact_checks)
     checks["factual_and_licensing_integrity"] = {
@@ -523,7 +547,7 @@ def run_final_quality_gate(
     overall = "FAIL" if ("FAIL" in statuses or "NOT_VERIFIED" in statuses) else ("WARN" if "WARN" in statuses else "PASS")
 
     qc_report = {
-        "schema_version": "0.3.0",
+        "schema_version": "0.4.0",
         "overall_status": overall,
         "selected_skill": style_decisions["selected_skill"],
         "selection_mode": style_decisions["selection_mode"],

@@ -1,4 +1,40 @@
-# Short Director `v0.3.0` (`SD-AUDIO-01`) — Implementation, QA & Resource Report
+# Short Director `v0.4.0` (`SD-VISUAL-01`) — Implementation, QA & Resource Report
+
+## -1. `SD-VISUAL-01` (`v0.4.0`) Continuous Shot Direction, Scene Novelty & Retention Editing Upgrade
+
+### What Was Added & Upgraded (`director/`)
+1. **Narration-Driven Semantic Visual Event Graph (`director/visual_event_graph.py`)**:
+   - Extracts per-clause visual events (`extract_semantic_visual_events`, `classify_visual_clause`) binding subjects, action verbs, domain props/metaphors (non-Roman tech/network/ocean/power/cosmos motifs prioritized cleanly alongside historical sets), causal transitions (e.g. `traces back to` split boundaries), scale levels (`human`, `macro_device`, `micro_circuit`, `infrastructure`, `city_grid`, `cosmic`), and word-aligned audio windows (`bind_events_to_voice_words`) into `visual_events.json`.
+2. **Anti-Repetition Coverage & Intra-Shot Motion Planner (`director/shot_director.py`)**:
+   - Replaces static/cyclic storyboard templates and duplicated split narration with candidate shot generation, 3-shot rolling diversity scoring (`select_sequence_with_diversity_constraints`), variable-length beats (`--edit-energy`, `--max-static-hold-sec`), non-overlapping split narration spans (`split_long_visual_beats_by_actions`), transformed callback justification, and continuous intra-shot transformation timelines (`plan_intra_shot_changes`, `shot_coverage.json`).
+3. **Seeded Camera Choreography & Frame-Verified Transition EDL (`director/camera_choreographer.py`, `director/transition_director.py`)**:
+   - Emits deterministic camera trajectories (`camera_paths.json`) and motivated transitions (`transition_edl.json` with `executed_in_renderer: true` and engine-native fallbacks for `zoom_through`, `whip_pan`, `match_cut`, `object_wipe`, `iris_mask`, `match_zoom`).
+4. **Multi-Family 3D & Engine-Honest Procedural Asset Factory (`director/scene_asset_factory.py` & `director/assets/*_adapter.py`)**:
+   - `zach-d-films`: Replaces non-Roman fallback armor with bespoke procedural Three.js stages (`makeModernOutfitCharacter` with offset `torsoShell` to eliminate z-fighting, `makeSmartphoneRig`, `makeRadioTowerRig`, `makeSubseaCableRig`, `makeDatacenterRackBank`, `makePowerTurbineRig`, `makeCosmicGenesisRig`, `makeAnatomicalCutawayRig`, `makeVaultGearStage`), `SKY_THEMES`, and GLSL post-processing transition uniforms (`uZoom`, `uWhip`, `uWipe`, `uFlash`) while keeping upstream `vendor/claude-animation-skills` 100% unmodified and Roman prompts routed exclusively through `_roman_shot_code`.
+   - Other 5 skills (`stick-figure`, `minimalistic-graphics`, `graph`, `map-route`, `breakdown`): Extended strictly inside each engine's native rendering grammar (zero cross-engine asset sharing or guessing).
+5. **Event-Synced Audio Anchors (`director/audio_dsp.py`, `audio_catalog.py`, `audio_narrative.py`, `sfx_director.py`)**:
+   - Added deterministic procedural SFX synthesis (`_glass_tap`, `_electric_crackle`, `_subsea_bubble`, `_cosmic_swell`) synchronized directly to shot visual-event windows (`T_TAP`, etc.) and transition beats while preserving all `v0.3.0` license gates, `-14 LUFS` / `-1.5 dBTP` mastering, and `--audio-only` lossless packet preservation.
+6. **Caption-Masked Diversity & Transition Continuity QA (`director/scene_diversity_qa.py`, `director/quality_gate.py`)**:
+   - Samples decoded start/mid/end frames outside bottom caption bands, audits adjacent SSIM / dHash Hamming distance (`adjacent_repetition_guard`), intra-shot motion (`intra_shot_motion`), seam deltas (`transition_continuity`), and single-skill lock (`visual_skill_lock`) into `scene_diversity_report.json` (`subjective_visual_review: "NOT_VERIFIED"`).
+
+### `SD-VISUAL-01` Observed Verification Summary (`v0.4.0`)
+- **Full `unittest` Suite (`python3 -m unittest discover -s tests -v`)**: **`36/36` tests `PASS` in `385.851s` (`Command exited with code 0`)** logged at `docs/implementation_runs/SD-VISUAL-01_20261116_1526Z/final_unittest.log` (covering all `10` test modules, adding `test_visual_event_and_coverage.py` `[7]` and `test_visual_scene_factory_and_diversity.py` `[2]` on top of all `27` baseline tests).
+- **Measurable Baseline vs `v0.4.0` Demo Comparison** (directly observed run artifacts — no synthetic engagement/platform metrics claimed):
+
+| Metric | Baseline `zach-d-films` (`runs/roman_gladiator_zdf`, `v0.2.0`) | `SD-VISUAL-01` `zach-d-films` (`runs/sd_visual_demo_zdf`, `v0.4.0`) |
+|---|---|---|
+| Duration (`ffprobe` / timeline) | `40.541s` | `27.80s` (`27.81s` timeline) |
+| Shots / Unique `setup_type` | `13` shots / `5` unique setups | `12` shots / `9` unique setups (`10` `scene_family` keys) |
+| Adjacent Identical Setups / Camera Triples | `6` / `6` | **`0` / `0`** |
+| Intra-Shot Visual Events / Total Visual Beats | `0` / `13` (max static hold `5.87s`) | **`19` / `31`** (`1.33s–3.27s` shots) |
+| Rendered Transitions | dip-to-black fades (`0` EDL) | **`11`** (`cut_on_action`, GLSL `zoom_through`) |
+| 4K Output / Loudness / Audio QC | `native_4k` (`2160x3840`), `qc=WARN` | `native_4k` (`2160x3840`), `-14.0 LUFS / -1.8 dBTP`, `overall=PASS`, `scene_diversity=PASS`, `audio_qc=PASS` |
+| Run Elapsed / Disk Footprint | `255.79s` / `239M` | `177.14s` (`90.62s` render, 4 workers Metal) / `158M` |
+| Subjective Human Review | `NOT_VERIFIED` | `NOT_VERIFIED` (honest automated disclosure) |
+
+---
+
+# Short Director `v0.3.0` (`SD-AUDIO-01`) — Implementation, QA & Resource History
 
 ## 0. `SD-AUDIO-01` (`v0.3.0`) Audio Direction, Music Score & Licensed SFX Upgrade
 

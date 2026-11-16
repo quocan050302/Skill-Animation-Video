@@ -1,4 +1,4 @@
-"""Short Director v0.3.0 — Strict Single-Skill Vertical Shorts & Audio Director Pipeline."""
+"""Short Director v0.4.0 — Strict Single-Skill Continuous Visual & Audio Shorts Director."""
 
 VALID_SKILLS = (
     "zach-d-films",
@@ -9,4 +9,4 @@ VALID_SKILLS = (
     "graph",
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

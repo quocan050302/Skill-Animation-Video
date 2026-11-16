@@ -21,6 +21,9 @@ from .audio_dsp import (
     _blade_ring,
     _chime,
     _coin_cascade,
+    _cosmic_swell,
+    _electric_crackle,
+    _glass_tap,
     _lp,
     _mechanical_click,
     _pin_drop,
@@ -30,6 +33,7 @@ from .audio_dsp import (
     _sand_thud,
     _shield_clang,
     _step_gravel,
+    _subsea_bubble,
     _sword_draw,
     _thud,
     _tick,
@@ -85,6 +89,14 @@ def select_procedural_sfx(
         return _riser(rng, dur=0.68)
     if gen == "step_gravel":
         return _step_gravel(rng)
+    if gen == "glass_tap_ui":
+        return _glass_tap(rng)
+    if gen == "electric_spark_pulse":
+        return _electric_crackle(rng, 0.28)
+    if gen == "subsea_bubble_hum":
+        return _subsea_bubble(rng, 0.38)
+    if gen == "cosmic_swell":
+        return _cosmic_swell(rng, 0.78)
     return _pop(520.0) * 0.6
 
 

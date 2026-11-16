@@ -3,7 +3,7 @@ name: short-director
 description: Directs and renders fully edited 9:16 vertical animated shorts (1080x1920 preview + 2160x3840 4K final, 30/60fps) with strict fail-closed single-skill style locking across six animation engines (stick-figure, zach-d-films, minimalistic-graphics, map-route, breakdown, graph), bespoke procedural visuals, word-aligned captions, sound design, music ducking, and technical QC. Use when the user invokes /short-director or asks to produce an animated vertical reel or short.
 ---
 
-# `/short-director` — Strict Single-Skill Vertical Shorts Director (v0.3.0)
+# `/short-director` — Strict Single-Skill Continuous Visual & Audio Director (v0.4.0)
 
 You are the Creative Director, Motion Design Engineer, Sound Designer, Compositor, Film Editor, and QA Lead for `/short-director`.
 
@@ -61,6 +61,12 @@ Optional flags:
 - `--voice-mode auto|off` (default `auto`; `off` intentionally disables VO and marks `voice.expected: false`)
 - `--render-4k-mode native|upscale` (`native` rasterizes true `2160x3840` vector/WebGL frames; `upscale` renders `1080x1920` and scales via Lanczos while recording `"native_4k": false` in `run_manifest.json`)
 - `--workers <N>` (capped conservatively by `preflight.py` based on CPU cores and free disk quota)
+- **Continuous Shot Direction & Novelty options (`SD-VISUAL-01`)**:
+  - `--edit-energy calm|balanced|dynamic` (default `balanced`; `dynamic` splits long causal beats into action-paced visual updates while honoring cohesive moving shots)
+  - `--scene-novelty standard|high` (increases anti-repetition penalty weight across setup/camera/silhouette rolling history)
+  - `--transition-policy motivated|simple` (`motivated` uses engine-rendered `zoom_through`/`whip_pan`/`match_cut`/`iris_mask`/`match_zoom` recorded in `transition_edl.json`)
+  - `--max-static-hold-sec <float>` (forces intra-shot activity or beat updates cleanly)
+  - `--visual-plan-in PATH` (respects locked `manual: true` shots in user-supplied coverage/storyboard JSON)
 - **Audio Director flags** (all optional; audio plans deterministically from script + storyboard by default):
   - `--qa-audio-root <abs-path>` (optional read-only mount to local `QA-Unified-Video-Studio`; otherwise falls back safely with `QA_LIBRARY_UNAVAILABLE`)
   - `--music-mode auto|procedural|qa-library|file|off` (`--music-file PATH` + `--music-rights-confirmed` or sidecar `.license.json` for `file`)
@@ -74,5 +80,5 @@ Optional flags:
 ### Mandatory Quality & Verification Steps After CLI Run
 1. **Verify `style_lock_audit.json`**: Confirm `"status": "PASS"`, `"violations": []`, and zero foreign skill files/imports in `inspected_files` and `runtime_opened_skill_files`.
 2. **Inspect Visual Stills & Contact Sheet**: Open `<out-dir>/contact_sheet.jpg` and key PNGs in `<out-dir>/stills/` using `read_file` to visually inspect framing, safe-zone compliance (`x: 100..980, y: 220..1500`), caption legibility, and cut transitions.
-3. **Verify `qc_report.json`, `audio/audio_qc_report.json` & `ffprobe`**: Confirm `preview_1080.mp4` (`1080x1920`) and `final_4k.mp4` (`2160x3840`) exist on disk, pass `ffprobe` stream checks, pass decoded motion/cut checks, and pass post-encode `ebur128` loudness (`-14 LUFS`), true-peak (`<= -1.5 dBTP`), SFX onset, intelligibility, and `audio/credits_audio.txt` checks.
-4. **Truthful Delivery**: Report exact file links for `final_4k.mp4`, `preview_1080.mp4`, `storyboard.json`, `style_decisions.json`, `art_bible.md`, `style_lock_audit.json`, `qc_report.json`, `audio/audio_plan.json`, `audio/music_cue_sheet.json`, `audio/sfx_cue_sheet.json`, `audio/audio_asset_manifest.json`, `audio/audio_mix_report.json`, `audio/audio_qc_report.json`, `audio/credits_audio.txt`, and `run_manifest.json`, explicitly stating whether `final_4k.mp4` is **native 2160x3840** or **upscaled** and noting any factual hedging or platform constraints (including subjective listening = `NOT_VERIFIED`). Never fabricate paths or report unrun checks as `PASS`.
+3. **Verify `qc_report.json`, `scene_diversity_report.json`, `audio/audio_qc_report.json` & `ffprobe`**: Confirm `preview_1080.mp4` (`1080x1920`) and `final_4k.mp4` (`2160x3840`) exist on disk, pass `ffprobe` stream checks, pass caption-masked SSIM/dHash adjacent anti-repetition & transition continuity checks, and pass post-encode `ebur128` loudness (`-14 LUFS`), true-peak (`<= -1.5 dBTP`), SFX onset, intelligibility, and `audio/credits_audio.txt` checks.
+4. **Truthful Delivery**: Report exact file links for `final_4k.mp4`, `preview_1080.mp4`, `visual_events.json`, `shot_coverage.json`, `camera_paths.json`, `transition_edl.json`, `scene_diversity_report.json`, `storyboard.json`, `style_decisions.json`, `art_bible.md`, `style_lock_audit.json`, `qc_report.json`, `audio/audio_plan.json`, `audio/music_cue_sheet.json`, `audio/sfx_cue_sheet.json`, `audio/audio_asset_manifest.json`, `audio/audio_mix_report.json`, `audio/audio_qc_report.json`, `audio/credits_audio.txt`, and `run_manifest.json`, explicitly stating whether `final_4k.mp4` is **native 2160x3840** or **upscaled** and noting any honest `NOT_VERIFIED` checks (subjective viewing/listening). Never fabricate paths or report unrun checks as `PASS`.

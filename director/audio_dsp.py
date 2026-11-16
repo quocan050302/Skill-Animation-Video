@@ -235,3 +235,58 @@ def _soft_pad_chord(midi_notes: List[int], dur: float) -> np.ndarray:
     fade_in = np.minimum(1.0, t / min(0.28, dur * 0.45))
     fade_out = np.minimum(1.0, np.maximum(0.0, dur - t) / min(0.32, dur * 0.45))
     return acc * fade_in * fade_out * 0.35
+
+
+def _glass_tap(rng: np.random.Generator) -> np.ndarray:
+    n = int(0.09 * SR)
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0012)
+    tone = np.sin(2.0 * np.pi * 1580.0 * t) * np.exp(-t * 68.0) * 0.50
+    ping = np.sin(2.0 * np.pi * 2940.0 * t) * np.exp(-t * 95.0) * 0.32
+    click = _bp(rng.standard_normal(n), 2200.0, 6200.0) * np.exp(-t * 150.0) * 0.25
+    return (tone + ping + click) * atk
+
+
+def _electric_crackle(rng: np.random.Generator, dur: float = 0.28) -> np.ndarray:
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    bursts = np.zeros(n, dtype=np.float64)
+    for k in range(5):
+        pos = int((0.02 + k * 0.045) * SR)
+        if pos >= n - 40:
+            break
+        ln = min(int(0.018 * SR), n - pos)
+        sub_t = np.arange(ln) / SR
+        bursts[pos : pos + ln] += (
+            _bp(rng.standard_normal(ln), 3200.0, 8200.0) * np.exp(-sub_t * 140.0) * (0.75 + 0.25 * (k % 2))
+        )
+    buzz = np.sin(2.0 * np.pi * 120.0 * t) * np.exp(-t * 7.5) * 0.14
+    env = np.minimum(1.0, t / 0.003) * np.minimum(1.0, np.maximum(0.0, dur - t) / 0.03)
+    return (bursts + buzz) * env
+
+
+def _subsea_bubble(rng: np.random.Generator, dur: float = 0.38) -> np.ndarray:
+    n = max(32, int(dur * SR))
+    out = np.zeros(n, dtype=np.float64)
+    for k, off in enumerate((0.0, 0.09, 0.19)):
+        pos = int(off * SR)
+        ln = min(int(0.11 * SR), n - pos)
+        if ln <= 16:
+            break
+        st = np.arange(ln) / SR
+        f0 = 320.0 + k * 140.0
+        freq = f0 * (1.0 + 1.45 * (st / max(0.05, ln / SR)))
+        sig = np.sin(2.0 * np.pi * np.cumsum(freq) / SR) * np.exp(-st * 26.0) * np.minimum(1.0, st / 0.003)
+        out[pos : pos + ln] += sig * 0.42
+    rumble = _bp(rng.standard_normal(n), 75.0, 260.0) * np.exp(-_t(n) * 4.5) * 0.22
+    return out + rumble
+
+
+def _cosmic_swell(rng: np.random.Generator, dur: float = 0.78) -> np.ndarray:
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    f = 62.0 + 48.0 * (t / dur)
+    sub = np.sin(2.0 * np.pi * np.cumsum(f) / SR) * 0.38 + np.sin(2.0 * np.pi * np.cumsum(f * 1.5) / SR) * 0.18
+    shimmer = _bp(rng.standard_normal(n), 800.0, 2400.0) * 0.16
+    env = np.sin(np.pi * np.minimum(1.0, t / dur)) ** 1.3
+    return (sub + shimmer) * env
