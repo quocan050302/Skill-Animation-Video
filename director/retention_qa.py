@@ -23,6 +23,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import soundfile as sf
 
+from .visual_storytelling_qa import build_ab_alignment
+
 
 SCHEMA_VERSION = "sd-retention-qa-1"
 
@@ -115,6 +117,7 @@ def audit_overlay_render(
     video_mp4: Path,
     editorial_timeline: Dict[str, Any],
     compare_baseline_mp4: Optional[Path] = None,
+    raw_traces: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Verify overlay pixels render cleanly in safe band & captions don't collide."""
     overlays = list(editorial_timeline.get("overlays") or [])
@@ -138,12 +141,54 @@ def audit_overlay_render(
             continue
 
         x0, y0, x1, y1 = [float(v) for v in ov["placement_box"]]
+        tr_match = None
+        if raw_traces:
+            tr_rec = min(raw_traces, key=lambda r: abs(float(r.get("time", 0.0)) - t_mid))
+            if abs(float(tr_rec.get("time", -99.0)) - t_mid) <= 0.35:
+                ov_list = (((tr_rec.get("telemetry") or {}).get("overlay") or {}).get("overlays")) or []
+                tr_match = next((x for x in ov_list if x.get("overlay_id") == ov.get("overlay_id")), None)
+                if tr_match and isinstance(tr_match.get("label_bbox"), list) and len(tr_match["label_bbox"]) == 4:
+                    x0, y0, x1, y1 = [float(v) for v in tr_match["label_bbox"]]
+                if tr_match is None and ov.get("type") not in ("focus_ring", "tracked_arrow"):
+                    issues.append(f"Overlay {ov.get('overlay_id')} claims active at {t_mid:.2f}s but missing from telemetry")
+
+        if tr_match and tr_match.get("visible"):
+            if tr_match.get("dom_rendered") is False or float(tr_match.get("alpha", 1.0)) <= 0.05:
+                issues.append(
+                    f"Overlay {ov.get('overlay_id')} claims visible=True at {t_mid:.2f}s but dom_rendered={tr_match.get('dom_rendered')}, alpha={tr_match.get('alpha')}"
+                )
+            anc_px = tr_match.get("anchor_px")
+            if anc_px and ov.get("type") in ("focus_ring", "tracked_arrow"):
+                cx = 0.5 * (x0 + x1)
+                cy = 0.5 * (y0 + y1)
+                if ((anc_px[0] - cx) ** 2 + (anc_px[1] - cy) ** 2) ** 0.5 > 1650.0:
+                    issues.append(f"Overlay {ov.get('overlay_id')} anchor misaligned outside canvas at {t_mid:.2f}s")
+
         px0 = max(0, min(268, int(round(x0 * sx))))
         px1 = max(px0 + 2, min(270, int(round(x1 * sx))))
         py0 = max(0, min(478, int(round(y0 * sy))))
         py1 = max(py0 + 2, min(480, int(round(y1 * sy))))
         patch = rgb[py0:py1, px0:px1].astype(np.float32)
         grad = float(np.mean(np.abs(np.diff(patch, axis=1)))) if patch.shape[1] > 2 else 0.0
+        grad_y = float(np.mean(np.abs(np.diff(patch, axis=0)))) if patch.shape[0] > 2 else 0.0
+        std_roi = float(np.std(patch.mean(axis=2)))
+        is_vis_claimed = (tr_match is None) or bool(tr_match.get("visible", True))
+        if is_vis_claimed and std_roi < 3.5 and max(grad, grad_y) < 1.2:
+            issues.append(
+                f"Invisible/flat overlay ROI for {ov.get('overlay_id')} at {t_mid:.2f}s (std={std_roi:.2f}, grad={grad:.2f})"
+            )
+        if compare_baseline_mp4 is not None and compare_baseline_mp4.exists() and is_vis_claimed:
+            try:
+                rgb_base = _decode_video_frame(compare_baseline_mp4, t_mid, 270, 480)
+                patch_base = rgb_base[py0:py1, px0:px1].astype(np.float32)
+                roi_mad = float(np.mean(np.abs(patch - patch_base)))
+                pct_changed = float(np.mean(np.mean(np.abs(patch - patch_base), axis=2) > 8.0))
+                if roi_mad < 2.2 or pct_changed < 0.03:
+                    issues.append(
+                        f"ON/OFF diff proof failed for {ov.get('overlay_id')} at {t_mid:.2f}s (roi_mad={roi_mad:.2f}, pct={pct_changed:.3f})"
+                    )
+            except Exception as exc:
+                issues.append(f"Baseline decode fail at {t_mid:.2f}s: {exc}")
 
         rec: Dict[str, Any] = {
             "overlay_id": ov["overlay_id"],
@@ -318,11 +363,15 @@ def compare_ab_versions(
     rep_b = json.loads(rep_b_p.read_text(encoding="utf-8")) if rep_b_p.exists() else {}
 
     diff_frames: List[Dict[str, Any]] = []
+    ab_alignment = build_ab_alignment(run_a, run_b, out_dir, sample_times=sample_times)
+    if ab_alignment["alignment_status"] == "FAIL":
+        raise ValueError(f"A/B comparison rejected due to script/event mismatch: {ab_alignment['issues']}")
     if mp4_a.exists() and mp4_b.exists():
-        times = sample_times or [1.5, 4.5, 8.5, 13.5, 19.5, 25.5]
-        for t in times:
+        for _pair in ab_alignment["pairs"]:
+            t = float(_pair["t_b"])
+            ta = float(_pair["t_a"])
             try:
-                fa = _decode_video_frame(mp4_a, t, 270, 480)
+                fa = _decode_video_frame(mp4_a, ta, 270, 480)
                 fb = _decode_video_frame(mp4_b, t, 270, 480)
                 mad = float(np.mean(np.abs(fa.astype(np.float32) - fb.astype(np.float32))))
                 cap_mad = float(np.mean(np.abs(fa[340:380, 25:245].astype(np.float32) - fb[340:380, 25:245].astype(np.float32))))
@@ -390,7 +439,12 @@ def run_retention_editorial_qa(
 
     c_prosody = audit_prosody_delivery(run_dir, parsed_script=parsed_script)
     c_words = audit_word_alignment(run_dir)
-    c_overlay_px = audit_overlay_render(video_mp4, editorial_timeline, compare_baseline_mp4=compare_baseline_mp4)
+    c_overlay_px = audit_overlay_render(
+        video_mp4,
+        editorial_timeline,
+        compare_baseline_mp4=compare_baseline_mp4,
+        raw_traces=raw_traces,
+    )
     c_tracking = audit_annotation_tracking(raw_traces, editorial_timeline)
     c_sfx_sync = audit_sfx_editorial_sync(run_dir, editorial_timeline, sfx_cs)
     c_fatigue = audit_editorial_fatigue(editorial_timeline)

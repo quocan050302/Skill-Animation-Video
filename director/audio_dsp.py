@@ -432,3 +432,89 @@ def _airflow_hiss(rng: np.random.Generator, dur: float = 0.48) -> np.ndarray:
     air = _bp(rng.standard_normal(n), 420.0, 2350.0) * 0.42
     whistle = 0.10 * np.sin(2.0 * np.pi * (740.0 + 120.0 * np.sin(np.pi * u)) * t)
     return (air + whistle) * env
+
+
+def _tank_structural_groan(rng: np.random.Generator, dur: float = 0.58) -> np.ndarray:
+    """Low riveted steel vessel strain groan under hydrostatic load."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.04)
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.10)
+    f_sweep = 52.0 + 14.0 * np.sin(np.pi * np.minimum(1.0, t / dur))
+    body = np.sin(2.0 * np.pi * np.cumsum(f_sweep) / SR) * 0.48
+    creak = _bp(rng.standard_normal(n), 180.0, 620.0) * (0.28 + 0.18 * np.sin(2.0 * np.pi * 11.0 * t))
+    return _lp((body + creak) * atk * rel, 1400.0)
+
+
+def _rivet_tension_ping(rng: np.random.Generator, dur: float = 0.16) -> np.ndarray:
+    """Sharp metallic shear pop as an overloaded steel rivet snaps."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0008)
+    snap = _bp(rng.standard_normal(n), 1600.0, 4800.0) * np.exp(-t * 110.0) * 0.45
+    ping = np.sin(2.0 * np.pi * (1420.0 + rng.uniform(-60.0, 60.0)) * t) * np.exp(-t * 36.0) * 0.52
+    return (snap + ping) * atk
+
+
+def _tank_rupture_impact(rng: np.random.Generator, dur: float = 0.46) -> np.ndarray:
+    """Heavy steel plate seam rupture burst with damped structural thud and viscous surge onset."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.002)
+    freq = 64.0 * np.exp(-t * 4.5) + 28.0
+    boom = np.sin(2.0 * np.pi * np.cumsum(freq) / SR) * np.exp(-t * 7.2) * 0.72
+    tear = _bp(rng.standard_normal(n), 280.0, 1850.0) * np.exp(-t * 16.0) * 0.46
+    surge = _lp(rng.standard_normal(n), 520.0) * np.minimum(1.0, t / 0.08) * np.exp(-t * 4.5) * 0.38
+    return (boom + tear + surge) * atk
+
+
+def _molasses_wave_rush(rng: np.random.Generator, dur: float = 0.72) -> np.ndarray:
+    """Heavy, low-frequency viscous fluid gravity-current rumble (voice-friendly headroom)."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    u = np.minimum(1.0, t / dur)
+    env = (np.sin(np.pi * u) ** 1.1) * np.exp(-t * 0.8)
+    rumble = _bp(rng.standard_normal(n), 85.0, 560.0) * 0.62
+    swirl = 0.14 * np.sin(2.0 * np.pi * (78.0 + 24.0 * np.sin(np.pi * u)) * t)
+    return _lp((rumble + swirl) * env, 920.0)
+
+
+def _street_obstacle_impact(rng: np.random.Generator, dur: float = 0.34) -> np.ndarray:
+    """Heavy timber/structure collision crunch when molasses surge strikes frames and wagons."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0015)
+    thud = np.sin(2.0 * np.pi * 74.0 * t) * np.exp(-t * 14.0) * 0.62
+    splinter = _bp(rng.standard_normal(n), 380.0, 2100.0) * np.exp(-t * 28.0) * 0.48
+    return (thud + splinter) * atk
+
+
+def _footsteps_retreat(rng: np.random.Generator, dur: float = 0.52) -> np.ndarray:
+    """Three hurrying boot footsteps across 1919 wet cobblestones."""
+    n = max(64, int(dur * SR))
+    out = np.zeros(n, dtype=np.float64)
+    for k, on_s in enumerate((0.02, 0.18, 0.34)):
+        step_dur = 0.11
+        sn = int(step_dur * SR)
+        st = _t(sn)
+        step_wav = (
+            _bp(rng.standard_normal(sn), 240.0 + k * 45.0, 1400.0) * np.exp(-st * 48.0) * 0.52
+            + np.sin(2.0 * np.pi * (96.0 + k * 8.0) * st) * np.exp(-st * 36.0) * 0.38
+        )
+        i0 = int(on_s * SR)
+        i1 = min(n, i0 + sn)
+        if i1 > i0:
+            out[i0:i1] += step_wav[: i1 - i0]
+    return out
+
+
+def _rail_creak(rng: np.random.Generator, dur: float = 0.44) -> np.ndarray:
+    """Riveted iron viaduct column bend/groan."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.015)
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.08)
+    iron = _bp(rng.standard_normal(n), 280.0, 980.0) * 0.42
+    beam = np.sin(2.0 * np.pi * (165.0 - 18.0 * t) * t) * np.exp(-t * 3.8) * 0.36
+    return _lp((iron + beam) * atk * rel, 1650.0)
+

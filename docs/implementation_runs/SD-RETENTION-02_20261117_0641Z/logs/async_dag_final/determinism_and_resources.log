@@ -1,0 +1,15 @@
+TASK: determinism_and_resources
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_determinism_and_resources -v
+STATUS: PASS (exit=0, elapsed=48.45s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_disk_quota_guard_and_worker_cap (tests.test_determinism_and_resources.TestDeterminismAndResourceSafety.test_disk_quota_guard_and_worker_cap) ... ok
+test_seeded_frame_hashes_and_serial_vs_concurrent_parity (tests.test_determinism_and_resources.TestDeterminismAndResourceSafety.test_seeded_frame_hashes_and_serial_vs_concurrent_parity) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 46.725s
+
+OK
+

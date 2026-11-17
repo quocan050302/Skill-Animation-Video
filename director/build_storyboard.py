@@ -30,6 +30,14 @@ from .scene_asset_factory import (
 from .shot_director import plan_editorial_coverage
 from .transition_director import emit_transition_edl
 from .visual_event_graph import extract_semantic_visual_events, write_visual_events_artifact
+from .visual_storytelling_director import (
+    NarrativeCausalityError,
+    _classify_narrative_action_unit,
+    plan_story_action_graph,
+    plan_world_state_transitions,
+    score_story_diversity,
+    validate_narrative_causality,
+)
 
 
 # Preserved per-engine grammar reference for inspectable external callers
@@ -104,6 +112,7 @@ def build_storyboard_and_bible(
     caption_mode: str = "kinetic",
     callout_mode: str = "smart",
     verified_numbers: Optional[List[Dict[str, Any]]] = None,
+    historical_claims: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Produce STEP 3 `storyboard.json`, `art_bible.md`, and visual direction artifacts."""
     selected_skill = style_decisions["selected_skill"]
@@ -122,6 +131,27 @@ def build_storyboard_and_bible(
         selected_skill=selected_skill,
     )
     write_visual_events_artifact(visual_events, run_dir)
+
+    # 1B. Story-Driven Visual Action Graph (`story_action_graph.json`)
+    story_action_graph = plan_story_action_graph(
+        parsed_script=parsed_script,
+        visual_graph=visual_events,
+        facts=parsed_script.get("entities_and_facts"),
+        historical_claims=historical_claims,
+        seed=seed,
+    )
+    (run_dir / "story_action_graph.json").write_text(
+        json.dumps(story_action_graph, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    nev_by_source = {
+        str(e.get("source_event_id")): e
+        for e in story_action_graph.get("narrative_events", [])
+        if e.get("source_event_id")
+    }
+    full_script_low_sag = " ".join(str(s) for s in (parsed_script.get("sentences") or [])).lower()
+    used_nevs: set[str] = set()
+    refined_nevs: List[Dict[str, Any]] = []
 
     # 2. Variable-Length Novel Shot Coverage (`shot_coverage.json`)
     coverage = plan_editorial_coverage(
@@ -184,6 +214,64 @@ def build_storyboard_and_bible(
         sc["representation"] = mat.get("representation", "stylized_schematic")
         sc["focal_anchor"] = mat.get("focal_anchor")
         sc["camera_path"] = cp
+        matched_nev = None
+        for eid in sc.get("event_ids", []):
+            if str(eid) in nev_by_source:
+                matched_nev = nev_by_source[str(eid)]
+                break
+        if matched_nev is None and i < len(story_action_graph.get("narrative_events", [])):
+            matched_nev = story_action_graph["narrative_events"][i]
+        if matched_nev:
+            nev_id = str(matched_nev.get("narrative_event_id"))
+            needs_sub = (
+                (nev_id in used_nevs)
+                or (sc.get("scene_family") != matched_nev.get("required_stage_family"))
+                or (str(sc.get("narration_text") or "").strip() != str(matched_nev.get("narration_text") or "").strip())
+            )
+            if needs_sub:
+                sub_ev = {
+                    "exact_narration_phrase": sc.get("narration_text", ""),
+                    "scene_family": sc.get("scene_family"),
+                    "relevant_prop": sc.get("staging", {}).get("visual_metaphor"),
+                    "beat_role": sc.get("beat_role", "mechanism"),
+                    "verb_action": sc.get("staging", {}).get("verb_action"),
+                    "grounded_props": sc.get("staging", {}).get("grounded_props", []),
+                }
+                sub_spec = _classify_narrative_action_unit(sub_ev, i, len(raw_shots), full_script_low_sag)
+                sub_nev_id = f"nev_{i:03d}"
+                matched_nev = {
+                    **matched_nev,
+                    "narrative_event_id": sub_nev_id,
+                    "source_event_id": (sc.get("event_ids") or [None])[0],
+                    "narration_text": sc.get("narration_text", ""),
+                    "location_id": sub_spec["location_id"],
+                    "entity_ids": sub_spec["entity_ids"],
+                    "physical_action": sub_spec["physical_action"],
+                    "world_state_before": sub_spec["world_state_before"],
+                    "world_state_after": sub_spec["world_state_after"],
+                    "new_visual_evidence": sub_spec["new_visual_evidence"],
+                    "required_stage_family": sub_spec["required_stage_family"],
+                    "primary_asset": sub_spec["primary_asset"],
+                    "start_sec": sc["start"],
+                    "end_sec": sc["end"],
+                    "duration_sec": sc["duration"],
+                }
+            used_nevs.add(str(matched_nev.get("narrative_event_id")))
+            refined_nevs.append(matched_nev)
+            sc["narrative_event_id"] = matched_nev.get("narrative_event_id")
+            sc["location_id"] = matched_nev.get("location_id")
+            sc["physical_action"] = matched_nev.get("physical_action")
+            sc["world_state_before"] = list(matched_nev.get("world_state_before") or [])
+            sc["world_state_after"] = list(matched_nev.get("world_state_after") or [])
+            sc["factual_claim_id"] = matched_nev.get("factual_claim_id")
+            sc["reveal_after_word_id"] = matched_nev.get("reveal_after_word_id")
+            sc["reveal_after_sec"] = matched_nev.get("reveal_after_sec")
+            sc["spoiler_tokens"] = list(matched_nev.get("spoiler_tokens") or [])
+            sc["period_year"] = matched_nev.get("period_year")
+            if sc.get("staging", {}).get("verb_action") == "travel_stream" and matched_nev.get("physical_action") == "wave_speed_chase_escalation":
+                sc["staging"]["verb_action"] = "escalate_tick"
+                sc["staging"]["action"] = f"{sc['staging'].get('subject')} escalate_tick ({sc['staging'].get('visual_metaphor')})"
+                sc["staging"]["pose_tag"] = "wave_speed_chase_escalation"
         sc["speed_ramp"] = (
             {"enabled": True, "slow_window_norm": [0.42, 0.72], "factor": 0.45}
             if sc.get("novel_non_template") or ("turn" in sc["beat_role"] or "impact" in sc["staging"]["verb_action"])
@@ -212,7 +300,25 @@ def build_storyboard_and_bible(
             "deterministic_seed": seed + i * 101,
         })
 
+    if len(refined_nevs) == len(shots):
+        story_action_graph["narrative_events"] = refined_nevs
+        story_action_graph["world_state_transitions"] = plan_world_state_transitions(refined_nevs)
+        story_action_graph["unique_actions_count"] = len({e["physical_action"] for e in refined_nevs})
+        story_action_graph["unique_locations_count"] = len({e["location_id"] for e in refined_nevs})
+        (run_dir / "story_action_graph.json").write_text(
+            json.dumps(story_action_graph, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     entity_check = validate_entity_continuity(shots, entity_inventory, selected_skill=selected_skill)
+    story_diversity = score_story_diversity(shots, story_action_graph)
+    causality_check = validate_narrative_causality(
+        story_action_graph,
+        {"shots": shots},
+        historical_claims=historical_claims,
+    )
+    if causality_check["status"] == "FAIL":
+        raise NarrativeCausalityError("; ".join(causality_check["violations"]))
     total_duration = float(visual_events["total_duration_sec"])
 
     effective_callout_mode = callout_mode if selected_skill == "zach-d-films" else "off"
@@ -244,6 +350,9 @@ def build_storyboard_and_bible(
             "factual_disclosures": visual_events["factual_disclosures"],
         },
         "diversity_summary": coverage["diversity_summary"],
+        "story_diversity_summary": story_diversity,
+        "causality_check": causality_check,
+        "story_action_graph": story_action_graph,
         "entity_continuity": entity_check,
         "transition_edl_summary": {
             "transitions_count": transition_edl["transitions_count"],

@@ -159,7 +159,35 @@ def extract_sound_events(
             or "roman" in setup
             or (("roman_gladiator" in ev["global_motifs"] or "roman_ledger_50x" in ev["global_motifs"]) and not ev["domain"] and not strict_props)
         )
-        if proc_gen == "zach3d:airplane_window_hole_stage":
+        if proc_gen == "zach3d:boston_street_hook_stage":
+            _add(min(dur * 0.42, 0.72), "cobblestone_street_steps", "footsteps_retreat", "foley", -15.5, -0.10, 0.85, 0.62, 2, f"{sid}.boston_1919_street", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:boston_molasses_reveal_stage":
+            _add(min(dur * 0.34, 0.45), "molasses_front_reveal", "molasses_wave_rush", "reveal", -13.0, 0.0, 0.88, 0.74, 2, f"{sid}.boston_molasses_reveal", depth="mid", uncert=0.025)
+        elif proc_gen == "zach3d:boston_tank_leak_stage":
+            _add(min(dur * 0.32, 0.42), "riveted_tank_groan", "tank_structural_groan", "foley", -12.5, -0.06, 0.90, 0.78, 2, f"{sid}.boston_seam_strain", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:boston_tank_rupture_stage":
+            hit_rel = float(ca.get("hit_time_rel_sec", dur * 0.46)) if isinstance(ca, dict) else dur * 0.46
+            if hit_rel > 0.24:
+                _add(round(hit_rel - 0.16, 3), "rivet_shear_pop", "rivet_tension_ping", "foley", -10.5, 0.08, 0.94, 0.86, 1, f"{sid}.rivet_shear", depth="near", uncert=0.015)
+            _add(hit_rel, "molasses_tank_rupture_blast", "tank_rupture_impact", "impact", -8.0, 0.0, 0.98, 0.95, 1, f"{sid}.tank_rupture.hit={hit_rel:.3f}", depth="near", uncert=0.015)
+        elif proc_gen == "zach3d:boston_wave_street_stage":
+            _add(min(dur * 0.26, 0.38), "commercial_street_wave_surge", "molasses_wave_rush", "foley", -12.0, 0.0, 0.90, 0.78, 2, f"{sid}.boston_wave_surge", depth="mid", uncert=0.025)
+            if density != "sparse" and dur >= 1.8:
+                _add(round(min(dur - 0.55, dur * 0.56), 3), "crowd_retreat_footsteps", "footsteps_retreat", "foley", -14.0, 0.14, 0.86, 0.68, 2, f"{sid}.boston_crowd_retreat", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:boston_elevated_rail_impact_stage":
+            hit_rel = float(ca.get("hit_time_rel_sec", dur * 0.44)) if isinstance(ca, dict) else dur * 0.44
+            _add(hit_rel, "elevated_rail_street_impact", "street_obstacle_impact", "impact", -8.5, 0.04, 0.96, 0.90, 1, f"{sid}.rail_column_impact.hit={hit_rel:.3f}", depth="near", uncert=0.015)
+            if density != "sparse" and hit_rel + 0.16 < dur - 0.20:
+                _add(round(hit_rel + 0.14, 3), "viaduct_iron_creak", "rail_creak", "foley", -12.5, -0.08, 0.86, 0.72, 2, f"{sid}.trestle_deflection", depth="mid", uncert=0.025)
+        elif proc_gen == "zach3d:boston_rescue_aftermath_stage":
+            # Respectful, subdued human-cost framing: no loud foley or jarring UI stings
+            pass
+        elif proc_gen == "zach3d:boston_engineering_cutaway_stage":
+            _add(min(dur * 0.30, 0.36), "lap_joint_cutaway_creak", "rail_creak", "foley", -14.5, 0.0, 0.86, 0.66, 2, f"{sid}.lap_joint_cutaway", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:boston_harbor_payoff_stage":
+            if density == "detailed":
+                _add(min(dur * 0.32, 0.45), "harbor_aftermath_resolve", "reveal_soft", "reveal", -15.5, 0.0, 0.80, 0.55, 3, f"{sid}.boston_overview", depth="far", uncert=0.04)
+        elif proc_gen == "zach3d:airplane_window_hole_stage":
             if "exploded" in setup or "layers" in nar or "three" in nar:
                 _add(min(dur * 0.25, 0.30), "window_layers_separate", "reveal_soft", "reveal", -12.0, 0.0, 0.92, 0.80, 2, f"{sid}.3pane_explode", depth="near", uncert=0.025)
             elif "failsafe" in setup or "fails" in nar or "backup" in nar:
@@ -645,9 +673,12 @@ def build_audio_narrative_plan(
                     "verified_counter": ("callout_verified_counter", "ui_pop_soft", -15.5),
                     "beat_card": ("callout_beat_card", "reveal_soft", -14.0),
                 }
-                ev_name, intent_name, g_db = intent_map.get(otype, ("callout_overlay", "ui_pop_soft", -15.0))
                 sid_ov = str(ov.get("shot_id") or "shot_00")
                 sh_match = next((s for s in shots if s.get("shot_id") == sid_ov), None)
+                # Keep human-cost / aftermath scenes respectful (no bright UI pops/swishes)
+                if sh_match and str(sh_match.get("procedural_generator") or "") == "zach3d:boston_rescue_aftermath_stage":
+                    continue
+                ev_name, intent_name, g_db = intent_map.get(otype, ("callout_overlay", "ui_pop_soft", -15.0))
                 rel_t = round(max(0.0, t_ov - float(sh_match["start"])) if sh_match else t_ov, 3)
                 all_events.append({
                     "time_sec": round(t_ov, 3),
@@ -676,23 +707,35 @@ def build_audio_narrative_plan(
             phrases_tl = list((parsed_script.get("voice") or {}).get("phrases") or [])
         twist_ducks: List[Dict[str, Any]] = []
         for pi, ph in enumerate(phrases_tl):
-            if ph.get("intent") == "twist_question" and pi > 0:
+            ph_intent = str(ph.get("intent") or "")
+            if ph_intent in ("twist_question", "rupture_burst", "sudden_reveal") and pi > 0:
                 prev_end = float(phrases_tl[pi - 1].get("end", 0.0))
                 cur_start = float(ph.get("start", prev_end))
-                if cur_start - prev_end >= 0.14:
+                if cur_start - prev_end >= 0.12:
                     twist_ducks.append({
                         "start_sec": round(max(0.0, prev_end - 0.02), 3),
-                        "end_sec": round(cur_start + 0.05, 3),
-                        "duck_db": -12.0,
-                        "reason": f"twist_contrast_gap:{ph.get('phrase_id')}",
+                        "end_sec": round(cur_start + 0.06, 3),
+                        "duck_db": -12.5,
+                        "reason": f"anticipation_duck:{ph_intent}:{ph.get('phrase_id')}",
                     })
-                    break
+            elif ph_intent == "human_cost":
+                twist_ducks.append({
+                    "start_sec": round(float(ph.get("start", 0.0)), 3),
+                    "end_sec": round(float(ph.get("end", 0.0)) + 0.12, 3),
+                    "duck_db": -9.5,
+                    "reason": f"solemn_human_cost_thinning:{ph.get('phrase_id')}",
+                })
         if twist_ducks:
-            music_plan["twist_duck_windows"] = twist_ducks
+            music_plan["twist_duck_windows"] = twist_ducks[:3]
 
     # Scene-appropriate ambience
-    is_outdoor = any(k in joined_nar.lower() for k in ("rome", "arena", "sand", "bridge", "river", "walk", "outside"))
-    amb_kind = "minimal_quiet" if selected_skill == "minimalistic-graphics" else ("arena_wind_ambience" if is_outdoor else "studio_room_ambience")
+    nar_all_low = joined_nar.lower()
+    is_boston_1919 = ("boston" in nar_all_low and "molasses" in nar_all_low)
+    is_outdoor = any(k in nar_all_low for k in ("rome", "arena", "sand", "bridge", "river", "walk", "outside"))
+    amb_kind = (
+        "minimal_quiet" if selected_skill == "minimalistic-graphics"
+        else ("period_street_ambience" if is_boston_1919 else ("arena_wind_ambience" if is_outdoor else "studio_room_ambience"))
+    )
 
     generated_plan: Dict[str, Any] = {
         "schema_version": "sd-audio-1",

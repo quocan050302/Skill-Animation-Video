@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .visual_storytelling_director import validate_reveal_order
+
 
 SCHEMA_VERSION = "sd-editorial-timeline-1"
 
@@ -29,6 +31,8 @@ FLOW_TECH_WORDS = {
     "bleed", "breather", "equalizes", "pressure", "outer", "middle", "inner",
     "backup", "fail-safe", "moisture", "condensation", "fogging", "layers", "layer",
     "tiny", "hole", "cabin", "three", "clear", "safe", "slowly",
+    "molasses", "flood", "2.3", "million", "gallons", "35", "miles", "leaking",
+    "way", "rivet", "smashed", "twenty-one", "21", "150", "injured", "construction",
 }
 
 
@@ -159,7 +163,121 @@ def extract_editorial_focus_events(
             continue
 
         # Build concise domain-specific callouts aligned strictly to visible 3D mechanisms
-        if gen == "zach3d:airplane_window_hole_stage" or "bleed" in low or "airplane window" in low or "hole" in low:
+        rev_floor = float(shot.get("reveal_after_sec") or 0.0)
+        anchor_t = round(max(anchor_t, rev_floor), 3)
+        if gen.startswith("zach3d:boston_"):
+            def _word_t(toks: Tuple[str, ...], fallback: float) -> float:
+                for sw in shot_words:
+                    cw = re.sub(r"[^\w\.\-]", "", str(sw["w"]).lower())
+                    if any(cw == t or (len(t) >= 4 and t in cw) for t in toks):
+                        return round(max(st + 0.08, rev_floor, float(sw["s"])), 3)
+                return round(max(st + 0.12, rev_floor, fallback), 3)
+
+            if gen == "zach3d:boston_street_hook_stage":
+                # Non-spoiler geographical grounding only (never reveals "molasses" early!)
+                t_on = _word_t(("boston", "1919"), st + 0.35)
+                if en - t_on >= 0.85:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                        "anchor_id": "street_hero_look",
+                        "label": "NORTH END, BOSTON",
+                        "sublabel": "January 15, 1919",
+                        "start": t_on, "end": round(min(en - 0.15, t_on + 2.2), 3),
+                        "preferred_side": "left", "accent_color": "#fbbf24", "priority": 1, "verified": True,
+                    })
+            elif gen == "zach3d:boston_molasses_reveal_stage":
+                t_on = _word_t(("molasses",), anchor_t)
+                if en - t_on >= 0.70:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "focus_ring",
+                        "anchor_id": "molasses_reveal_crest",
+                        "label": "RAW MOLASSES SURGE",
+                        "sublabel": "Dense industrial sweetener",
+                        "start": t_on, "end": round(min(en - 0.12, t_on + 2.1), 3),
+                        "preferred_side": "right", "accent_color": "#f59e0b", "priority": 1, "verified": True,
+                    })
+            elif gen == "zach3d:boston_tank_leak_stage":
+                t_on = _word_t(("leaking", "years"), anchor_t)
+                if en - t_on >= 0.75:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                        "anchor_id": "tank_seam_drip",
+                        "label": "CHRONIC SEAM LEAKS",
+                        "sublabel": "Documented prior to failure",
+                        "start": t_on, "end": round(min(en - 0.12, t_on + 2.25), 3),
+                        "preferred_side": "left", "accent_color": "#f59e0b", "priority": 1, "verified": True,
+                    })
+            elif gen == "zach3d:boston_tank_rupture_stage":
+                t_on = _word_t(("way", "afternoon", "gave", "walls"), anchor_t)
+                if en - t_on >= 0.60:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "focus_ring",
+                        "anchor_id": "tank_rivet_seam",
+                        "label": "RIVETED STEEL SEAM",
+                        "sublabel": "Plates sheared outward",
+                        "start": t_on, "end": round(min(en - 0.12, t_on + 2.20), 3),
+                        "preferred_side": "right", "accent_color": "#f87171", "priority": 1, "verified": True,
+                    })
+            elif gen == "zach3d:boston_wave_street_stage":
+                if "35" in low or "faster" in low or "race" in low:
+                    t_on = _word_t(("35", "faster", "horse"), anchor_t)
+                    if en - t_on >= 0.60:
+                        candidates.append({
+                            "shot_index": si, "shot_id": shot_id, "type": "focus_ring",
+                            "anchor_id": "wave_front_crest",
+                            "label": "~35 MPH EST.",
+                            "sublabel": "Reported peak initial surge",
+                            "start": t_on, "end": round(min(en - 0.12, t_on + 2.25), 3),
+                            "preferred_side": "right", "accent_color": "#f87171", "priority": 1, "verified": True,
+                            "fact_source": "Historical eyewitness/engineering speed estimate (~35 mph)",
+                        })
+                else:
+                    t_on = _word_t(("2.3", "million", "gallons"), anchor_t)
+                    if en - t_on >= 0.60:
+                        candidates.append({
+                            "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                            "anchor_id": "wave_front_crest",
+                            "label": "~2.3M GALLONS",
+                            "sublabel": "Released across North End",
+                            "start": t_on, "end": round(min(en - 0.12, t_on + 2.30), 3),
+                            "preferred_side": "left", "accent_color": "#fbbf24", "priority": 1, "verified": True,
+                            "fact_source": "Boston.gov / BPL ~2.3 million gallon tank volume estimate",
+                        })
+            elif gen == "zach3d:boston_elevated_rail_impact_stage":
+                t_on = _word_t(("smashed", "buildings", "trapped"), anchor_t)
+                if en - t_on >= 0.75:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                        "anchor_id": "elevated_rail_column",
+                        "label": "STRUCTURAL IMPACT",
+                        "sublabel": "Trestle & timber buildings",
+                        "start": t_on, "end": round(min(en - 0.12, t_on + 2.15), 3),
+                        "preferred_side": "right", "accent_color": "#f87171", "priority": 1, "verified": True,
+                    })
+            elif gen == "zach3d:boston_rescue_aftermath_stage":
+                t_on = _word_t(("twenty-one", "21", "died", "injured", "150"), anchor_t)
+                if en - t_on >= 0.75:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                        "anchor_id": "rescue_aftermath_center",
+                        "label": "21 LIVES LOST",
+                        "sublabel": "About 150 people injured",
+                        "start": t_on, "end": round(min(en - 0.14, t_on + 2.35), 3),
+                        "preferred_side": "left", "accent_color": "#e2e8f0", "priority": 1, "verified": True,
+                        "fact_source": "Boston.gov & BPL official toll: 21 killed, ~150 injured",
+                    })
+            elif gen == "zach3d:boston_engineering_cutaway_stage":
+                t_on = _word_t(("construction", "engineers", "steel"), anchor_t)
+                if en - t_on >= 0.75:
+                    candidates.append({
+                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                        "anchor_id": "lap_joint_defect",
+                        "label": "THIN STEEL & RIVETS",
+                        "sublabel": "Post-1919 code overhaul",
+                        "start": t_on, "end": round(min(en - 0.14, t_on + 2.25), 3),
+                        "preferred_side": "right", "accent_color": "#38bdf8", "priority": 1, "verified": True,
+                    })
+        elif gen == "zach3d:airplane_window_hole_stage" or "bleed" in low or "airplane window" in low or "hole" in low:
             if "fails" in low or "backup" in low or "fail-safe" in low or "wait" in low:
                 candidates.append({
                     "shot_index": si,
@@ -214,9 +332,9 @@ def extract_editorial_focus_events(
                     "prefix": "",
                     "suffix": " PANES",
                     "label": "3-PANE ASSEMBLY",
-                    "start": round(st + 0.20, 3),
-                    "end": round(min(en - 0.15, st + 2.30), 3),
-                    "placement_box": [118, 255, 458, 355],
+                    "start": round(max(st + 0.20, anchor_t), 3),
+                    "end": round(min(en - 0.15, st + 2.40), 3),
+                    "placement_box": [112, 255, 518, 363],
                     "accent_color": "#fbbf24",
                     "priority": 2,
                     "verified": True,
@@ -238,13 +356,14 @@ def extract_editorial_focus_events(
                     "verified": True,
                 })
             elif si == 0:
+                is_bleed_spoken = "bleed" in low or "breather" in low
                 candidates.append({
                     "shot_index": si,
                     "shot_id": shot_id,
                     "type": "focus_ring",
                     "anchor_id": "middle_bleed_hole",
-                    "label": "BLEED HOLE",
-                    "sublabel": "Intentional breather port",
+                    "label": "BLEED HOLE" if is_bleed_spoken else "WINDOW OPENING",
+                    "sublabel": "Intentional breather port" if is_bleed_spoken else "Tiny port near base",
                     "start": anchor_t,
                     "end": ov_end,
                     "preferred_side": "right",
@@ -337,13 +456,13 @@ def plan_3d_callouts(
         # Determine non-overlapping safe screen box
         pbox = cand.get("placement_box")
         if not pbox:
-            # Place tracked label boxes cleanly in upper-safe band away from caption band [1335..1500]
+            # Place legible mobile-scaled callouts cleanly inside safe zone above caption band
             slot = len(accepted) % 2
-            y0 = 320 + slot * 145
+            y0 = 308 + slot * 150
             if cand.get("preferred_side") == "left":
-                pbox = [116, y0, 486, y0 + 96]
+                pbox = [112, y0, 518, y0 + 108]
             else:
-                pbox = [594, y0, 964, y0 + 96]
+                pbox = [562, y0, 968, y0 + 108]
 
         bx0, by0, bx1, by1 = [float(v) for v in pbox]
         # Guarantee safe area + caption band avoidance
@@ -529,6 +648,13 @@ def build_editorial_timeline(
     val = validate_overlay_plan(timeline)
     timeline["validation"] = val
 
+    # Enforce chronological reveal-order lock whenever story_action_graph is present
+    action_graph = storyboard.get("story_action_graph")
+    if isinstance(action_graph, dict):
+        rev_audit = validate_reveal_order(action_graph, timeline, words=words)
+        if rev_audit["status"] == "FAIL":
+            raise OverlaySafetyError("; ".join(rev_audit["violations"]))
+
     coverage = {
         "schema_version": "sd-overlay-coverage-1",
         "selected_skill": selected_skill,
@@ -593,9 +719,17 @@ export class EditorialOverlayController {
     const chunks = tl.caption_chunks || [];
     const capMode = String(tl.caption_mode || 'kinetic');
 
-    // 1. Render kinetic or plain captions deterministically
+    // 1. Render kinetic or plain captions deterministically with non-crowded flex layout
     const activeChunk = chunks.find(c => t >= c.start && t <= c.end) || null;
-    let capTel = { text: '', active_word: '', chunk_id: null, mode: capMode };
+    let capTel = { text: '', active_word: '', chunk_id: null, mode: capMode, caption_layout: null };
+    if (this.capEl) {
+      this.capEl.style.display = 'flex';
+      this.capEl.style.flexWrap = 'wrap';
+      this.capEl.style.justifyContent = 'center';
+      this.capEl.style.alignItems = 'baseline';
+      this.capEl.style.columnGap = '0.40em';
+      this.capEl.style.rowGap = '0.20em';
+    }
     if (activeChunk && this.capEl) {
       if (capMode === 'plain') {
         this.capEl.textContent = activeChunk.text || '';
@@ -605,7 +739,8 @@ export class EditorialOverlayController {
         this.capEl.innerHTML = '';
         const ws = activeChunk.words || [];
         let activeW = '';
-        ws.forEach((wObj, idx) => {
+        const spanEls = [];
+        ws.forEach((wObj) => {
           const span = document.createElement('span');
           span.textContent = String(wObj.w || '');
           const isCur = t >= wObj.s && t <= (wObj.e + 0.04);
@@ -613,7 +748,7 @@ export class EditorialOverlayController {
           let scale = 1.0;
           if (isCur) {
             const p = clamp((t - wObj.s) / Math.max(0.06, wObj.e - wObj.s), 0, 1);
-            scale = 1.0 + 0.13 * Math.sin(Math.min(1, p * 2.0) * Math.PI * 0.5);
+            scale = 1.0 + 0.05 * Math.sin(Math.min(1, p * 2.0) * Math.PI * 0.5);
             activeW = wObj.w || '';
           }
           const isEmp = Boolean(wObj.is_emphasis);
@@ -624,7 +759,8 @@ export class EditorialOverlayController {
           span.style.transform = `scale(${scale.toFixed(3)})`;
           span.style.transformOrigin = 'center bottom';
           span.style.color = color;
-          span.style.margin = '0 9px';
+          span.style.margin = '0 2px';
+          span.style.padding = '0 4px';
           if (isEmp && isCur) {
             span.style.textDecoration = 'underline';
             span.style.textDecorationColor = wObj.accent_color || '#fbbf24';
@@ -632,10 +768,36 @@ export class EditorialOverlayController {
             span.style.textDecorationThickness = '4px';
           }
           this.capEl.appendChild(span);
+          spanEls.push(span);
         });
+        // Real DOM getBoundingClientRect telemetry proving zero adjacent word collisions
+        const rects = spanEls.map(elNode => elNode.getBoundingClientRect());
+        let minGap = 999.0;
+        let overlaps = 0;
+        const rowYs = [];
+        for (let rIdx = 0; rIdx < rects.length; rIdx++) {
+          const rA = rects[rIdx];
+          if (!rowYs.some(ry => Math.abs(ry - rA.top) < 12)) rowYs.push(rA.top);
+          if (rIdx + 1 < rects.length) {
+            const rB = rects[rIdx + 1];
+            if (Math.abs(rA.top - rB.top) < Math.max(10, rA.height * 0.45)) {
+              const gap = rB.left - rA.right;
+              minGap = Math.min(minGap, gap);
+              if (gap < 1.5) overlaps += 1;
+            }
+          }
+        }
+        const capRect = this.capEl.getBoundingClientRect();
         capTel.text = activeChunk.text || '';
         capTel.active_word = activeW;
         capTel.chunk_id = activeChunk.chunk_id;
+        capTel.caption_layout = {
+          word_count: spanEls.length,
+          min_word_gap_px: minGap < 990 ? Number(minGap.toFixed(2)) : null,
+          word_overlap_count: overlaps,
+          row_count: rowYs.length,
+          in_safe_area: capRect.left >= 80 && capRect.right <= 1000 && capRect.bottom <= 1540,
+        };
       }
     } else if (this.capEl) {
       this.capEl.textContent = '';
@@ -715,15 +877,15 @@ export class EditorialOverlayController {
 
         if (ov.type === 'focus_ring' && anchorPx) {
           const [ax, ay] = anchorPx;
-          const rOuter = 54 + (1 - enter) * 26;
+          const rOuter = 58 + (1 - enter) * 26;
           g.appendChild(el('circle', {
             cx: ax, cy: ay, r: (rOuter * 0.72).toFixed(1),
-            fill: 'none', stroke: accent, 'stroke-width': '5',
+            fill: 'none', stroke: accent, 'stroke-width': '5.5',
             'stroke-dasharray': `${(2 * Math.PI * rOuter * 0.72 * enter).toFixed(1)} 400`,
           }));
           g.appendChild(el('circle', {
             cx: ax, cy: ay, r: (rOuter * 1.02).toFixed(1),
-            fill: 'none', stroke: '#ffffff', 'stroke-width': '2', opacity: '0.68',
+            fill: 'none', stroke: '#ffffff', 'stroke-width': '2.5', opacity: '0.72',
           }));
         }
 
@@ -736,24 +898,24 @@ export class EditorialOverlayController {
           const len = Math.max(1, Math.hypot(dx, dy));
           const ux = dx / len;
           const uy = dy / len;
-          const tx = ax - ux * 42;
-          const ty = ay - uy * 42;
+          const tx = ax - ux * 44;
+          const ty = ay - uy * 44;
           const mx = (sx + tx) * 0.5;
           const pathD = `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${sy.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}`;
           g.appendChild(el('path', {
-            d: pathD, fill: 'none', stroke: accent, 'stroke-width': '4.5',
-            'stroke-linecap': 'round', opacity: '0.95',
+            d: pathD, fill: 'none', stroke: accent, 'stroke-width': '5',
+            'stroke-linecap': 'round', opacity: '0.96',
           }));
-          g.appendChild(el('circle', { cx: tx.toFixed(1), cy: ty.toFixed(1), r: '6', fill: accent }));
+          g.appendChild(el('circle', { cx: tx.toFixed(1), cy: ty.toFixed(1), r: '6.5', fill: accent }));
         }
 
         if (ov.label) {
           g.appendChild(el('rect', {
-            x: bx0, y: by0, width: bw, height: bh, rx: 14,
-            fill: 'rgba(10, 16, 28, 0.84)', stroke: accent, 'stroke-width': '2.5',
+            x: bx0, y: by0, width: bw, height: bh, rx: 16,
+            fill: 'rgba(10, 16, 28, 0.88)', stroke: accent, 'stroke-width': '3',
           }));
           const bar = el('rect', {
-            x: bx0 + 10, y: by0 + 14, width: 6, height: Math.max(18, bh - 28), rx: 3, fill: accent,
+            x: bx0 + 11, y: by0 + 14, width: 6.5, height: Math.max(20, bh - 28), rx: 3.5, fill: accent,
           });
           g.appendChild(bar);
 
@@ -761,16 +923,16 @@ export class EditorialOverlayController {
             ? `${ov.prefix || ''}${Math.round(Number(ov.target_value) * enter)}${ov.suffix || ''}`
             : ov.label;
           const tEl = el('text', {
-            x: bx0 + 28, y: by0 + (ov.sublabel ? 41 : bh * 0.58),
-            fill: '#f8fafc', 'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '28',
+            x: bx0 + 30, y: by0 + (ov.sublabel ? 45 : bh * 0.58),
+            fill: '#f8fafc', 'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '32',
           });
           tEl.textContent = titleText;
           g.appendChild(tEl);
 
           if (ov.sublabel) {
             const sEl = el('text', {
-              x: bx0 + 28, y: by0 + 73,
-              fill: '#cbd5e1', 'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '20',
+              x: bx0 + 30, y: by0 + 82,
+              fill: '#e2e8f0', 'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '22',
             });
             sEl.textContent = ov.sublabel;
             g.appendChild(sEl);
@@ -779,11 +941,16 @@ export class EditorialOverlayController {
 
         this.svg.appendChild(g);
         const inSafe = bx0 >= SAFE.x0 && bx1 <= SAFE.x1 && by0 >= SAFE.y0 && by1 <= SAFE.capY0;
+        const gRect = g.getBoundingClientRect ? g.getBoundingClientRect() : null;
+        const domRendered = Boolean(this.svg.contains(g) && g.childElementCount > 0 && (!gRect || (gRect.width > 1 && gRect.height > 1)));
         ovTel.push({
           overlay_id: ov.overlay_id,
           type: ov.type,
           anchor_id: ov.anchor_id,
+          label: ov.label || '',
           visible: true,
+          dom_rendered: domRendered,
+          alpha: Number(alpha.toFixed(3)),
           hidden_reason: null,
           anchor_px: anchorPx,
           label_bbox: [Number(bx0.toFixed(1)), Number(by0.toFixed(1)), Number(bx1.toFixed(1)), Number(by1.toFixed(1))],

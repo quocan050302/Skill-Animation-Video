@@ -261,6 +261,16 @@ def discover_native_audio_assets(root: Path) -> List[AudioAsset]:
         ("nat_sfx_reveal_soft", "reveal_soft", 0.34, "reveal", ["reveal_soft", "exploded_panes", "layer_reveal", "callout_reveal"]),
         ("nat_sfx_low_sting", "low_sting", 0.32, "impact", ["low_sting", "twist_alert", "outer_failure", "contrast_sting"]),
         ("nat_sfx_airflow_hiss", "airflow_hiss", 0.48, "foley", ["airflow_hiss", "bleed_hole", "pressure_vent", "moisture_vent"]),
+        ("nat_sfx_tank_groan", "tank_structural_groan", 0.58, "foley", ["tank_structural_groan", "tank_groan", "seam_leak", "steel_strain"]),
+        ("nat_sfx_rivet_ping", "rivet_tension_ping", 0.16, "foley", ["rivet_tension_ping", "rivet", "shear_snap"]),
+        ("nat_sfx_tank_rupture", "tank_rupture_impact", 0.46, "impact", ["tank_rupture_impact", "tank_rupture", "wall_burst"]),
+        ("nat_sfx_molasses_rush", "molasses_wave_rush", 0.72, "foley", ["molasses_wave_rush", "molasses", "viscous_wave"]),
+        ("nat_sfx_street_impact", "street_obstacle_impact", 0.34, "impact", ["street_obstacle_impact", "building_smash", "wagon_crash"]),
+        ("nat_sfx_footsteps_retreat", "footsteps_retreat", 0.52, "foley", ["footsteps_retreat", "cobblestone_run", "retreat"]),
+        ("nat_sfx_rail_creak", "rail_creak", 0.44, "foley", ["rail_creak", "elevated_rail", "trestle_bend"]),
+        ("nat_sfx_reveal_pop", "reveal_pop", 0.08, "ui", ["reveal_pop", "callout_reveal"]),
+        ("nat_sfx_focus_ring_draw", "tracked_focus_ring_draw", 0.16, "ui", ["tracked_focus_ring_draw"]),
+        ("nat_sfx_counter_soft", "counter_emphasis_soft", 0.32, "ui", ["counter_emphasis_soft"]),
     ]
 
     for aid, gen, dur, mood, tags in sfx_defs:
@@ -289,6 +299,8 @@ def discover_native_audio_assets(root: Path) -> List[AudioAsset]:
     amb_defs = [
         ("nat_amb_studio", "studio_room_ambience", "neutral", ["studio", "room", "indoors"]),
         ("nat_amb_arena", "arena_wind_ambience", "dramatic", ["arena", "outdoor", "wind", "rome", "city"]),
+        ("nat_amb_boston_street", "period_street_ambience", "neutral", ["boston", "1919", "north end", "cobblestone", "historical"]),
+        ("nat_amb_boston_rescue", "rescue_ambience", "calm", ["rescue", "aftermath", "evening", "quiet"]),
     ]
     for aid, gen, mood, tags in amb_defs:
         assets.append(

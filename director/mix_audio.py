@@ -207,7 +207,11 @@ def _synthesize_ambience_bed(
         # Subtle textured open-air arena rumble (filtered warm noise with gentle slow breeze modulation)
         base = _bp(rng.standard_normal(n_total), 90.0, 620.0, sr=sr)
         mod = 0.58 + 0.42 * np.sin(2.0 * np.pi * 0.16 * t_all + 0.3)
-    elif gen == "minimal_quiet":
+    elif gen == "period_street_ambience":
+        # Historical 1919 Boston harbor air & quiet distant street tone (zero modern engines/sirens)
+        base = _bp(rng.standard_normal(n_total), 80.0, 520.0, sr=sr)
+        mod = 0.62 + 0.38 * np.sin(2.0 * np.pi * 0.14 * t_all + 0.4)
+    elif gen in ("minimal_quiet", "rescue_ambience"):
         base = _bp(rng.standard_normal(n_total), 140.0, 480.0, sr=sr)
         mod = 0.70 + 0.30 * np.sin(2.0 * np.pi * 0.11 * t_all)
     else:

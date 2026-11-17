@@ -1,0 +1,15 @@
+TASK: smoke_all_engines
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_smoke_all_engines -v
+STATUS: PASS (exit=0, elapsed=261.64s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_remaining_five_engines_smoke_renders (tests.test_smoke_all_engines.TestAllEnginesSmokeAndUpstreamIsolation.test_remaining_five_engines_smoke_renders) ... ok
+test_upstream_repo_unmodified_and_standalone_prepare_works (tests.test_smoke_all_engines.TestAllEnginesSmokeAndUpstreamIsolation.test_upstream_repo_unmodified_and_standalone_prepare_works) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 260.045s
+
+OK
+

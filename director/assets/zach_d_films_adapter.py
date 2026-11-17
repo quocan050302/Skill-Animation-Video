@@ -21,6 +21,7 @@ from ..editorial_overlay import EDITORIAL_OVERLAY_RENDERER_JS, build_editorial_t
 from .zdf_rigs import CHARACTER_ACTION_RIG_JS, LAYERED_CUTAWAY_JS
 from .zdf_mechanical_scenes import MECHANICAL_SYSTEMS_JS
 from .zdf_aircraft_window_scenes import AIRCRAFT_WINDOW_SCENES_JS
+from .zdf_boston_molasses_scenes import BOSTON_MOLASSES_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -923,6 +924,8 @@ const SKY_THEMES = {
   datacenter_dark: { top: 0x060b16, mid: 0x0f172a, horizon: 0x1e293b, floorC: 0x090f1a, sun: 1.75, hemi: 0.58 },
   cosmic: { top: 0x02040a, mid: 0x090d22, horizon: 0x1b1536, floorC: 0x050712, sun: 1.90, hemi: 0.48 },
   lab_studio: { top: 0x1e3a5f, mid: 0x355c7d, horizon: 0x6c8ead, floorC: 0x2b3e50, sun: 2.25, hemi: 0.80 },
+  boston_overcast: { top: 0x5c6d7e, mid: 0x8998a6, horizon: 0xb7c0c7, floorC: 0x6c747a, sun: 1.95, hemi: 0.88 },
+  boston_amber: { top: 0x262938, mid: 0x5a4648, horizon: 0xb37452, floorC: 0x3d302c, sun: 2.05, hemi: 0.65 },
 };
 
 function skyMaterial(theme = 'day') {
@@ -1116,6 +1119,7 @@ window.renderAtTime = (rawT) => {
   let camTel = null;
   let contactTel = null;
   let cutawayTel = null;
+  let narrativeActionTel = null;
   let shotAnchors = {};
   let trTel = { active: false, method: def.tr || 'cut', alpha: 0.0, from_shot: def.id, to_shot: null };
 
@@ -1166,6 +1170,7 @@ window.renderAtTime = (rawT) => {
     camTel = rMain.camTel || null;
     contactTel = rMain.contact || null;
     cutawayTel = rMain.cutaway || null;
+    narrativeActionTel = rMain.narrativeAction || null;
     shotAnchors = { ...(rMain.anchors || {}), default: camTel?.focal_anchor_uv || null };
     bloom.strength = ((rMain.bloom ?? 0.30) * 0.52);
     renderer.toneMappingExposure = rMain.exposure ?? 1.03;
@@ -1193,6 +1198,7 @@ window.renderAtTime = (rawT) => {
     camTel = r.camTel || null;
     contactTel = r.contact || null;
     cutawayTel = r.cutaway || null;
+    narrativeActionTel = r.narrativeAction || null;
     shotAnchors = { ...(r.anchors || {}), default: camTel?.focal_anchor_uv || null };
   }
 
@@ -1206,6 +1212,7 @@ window.renderAtTime = (rawT) => {
     transition: trTel,
     contact: contactTel,
     cutaway: cutawayTel,
+    narrative_action: narrativeActionTel,
     anchors: shotAnchors,
     overlay: ovTel,
   };
@@ -1476,6 +1483,317 @@ def _build_non_roman_scene_shot_code(
         "target_radius_m": 0.028,
         "button_depress_m": 0.008,
     })
+
+    if gen == "zach3d:boston_street_hook_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'boston_overcast', sunDir: [-3, 7, 5] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 14.0, includeCart: true }});
+  scene.add(street.root);
+  const tank = makeMolassesStorageTank1919({{ radius: 1.65, height: 3.2 }});
+  tank.position.set(-0.35, 0, -4.8); scene.add(tank);
+  const crowd = makePeriodCrowdActionRig(makeHuman, {char_spec_json}, 'pedestrians');
+  scene.add(crowd.root);
+  const heroTarget = new THREE.Object3D(); heroTarget.position.set(0.0, 1.35, 0.20); scene.add(heroTarget);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 38);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const actTel = crowd.update(lt, {dur}, 'street_turn');
+      if (street.wheelMeshes) street.wheelMeshes.forEach(w => {{ w.rotation.x = lt * 0.9; }});
+      if (street.cartGroup) street.cartGroup.position.z = lerp(-1.85, -0.95, easeInOut(u));
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, {{ street_hero_look: heroTarget }}, []);
+      return {{
+        bloom: 0.24, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'boston_north_end_street_1919',
+          physicalAction: 'street_rumble_foreshadow',
+          actorCount: crowd.actors.length,
+          structuralState: actTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_molasses_reveal_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'boston_overcast', sunDir: [-2, 6, 4] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 13.0, includeCart: false }});
+  scene.add(street.root);
+  const tank = makeMolassesStorageTank1919({{ radius: 1.55, height: 3.1 }});
+  tank.position.set(0.0, 0, -4.4); scene.add(tank);
+  const wave = makeMolassesGravityCurrentRig({{ width: 3.8, height: 1.6 }});
+  scene.add(wave.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const wTel = wave.update(lt, {dur}, {{ zStart: -2.8, zEnd: 0.65 }});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = wave.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.28, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'boston_commercial_alley_1919',
+          physicalAction: 'thick_fluid_reveal',
+          fluidFrontPos: wTel.wave_front_z,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_tank_leak_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.8, skyTheme: 'boston_overcast', sunDir: [-3, 6, 4] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 12.0, includeCart: false }});
+  scene.add(street.root);
+  const tank = makeMolassesStorageTank1919({{ radius: 1.65, height: 3.25 }});
+  tank.position.set(0.0, 0, -1.25); scene.add(tank);
+  const seep = makeSeamLeakAndRivetFailureRig({{ mode: 'seep' }});
+  seep.root.position.set(-0.25, 0, 0.14);
+  scene.add(seep.root);
+  const crowd = makePeriodCrowdActionRig(makeHuman, {char_spec_json}, 'dock_worker');
+  scene.add(crowd.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const sTel = seep.update(lt, {dur});
+      const wTel = crowd.update(lt, {dur}, 'inspect_leak');
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = seep.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.30, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'usia_tank_base_1915',
+          physicalAction: 'chronic_seam_seepage',
+          actorCount: crowd.actors.length,
+          structuralState: {{ ...sTel, ...wTel }},
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_tank_rupture_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, skyTheme: 'boston_amber', sunDir: [-3, 7, 5] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 12.0, includeCart: false }});
+  scene.add(street.root);
+  const rup = makeSeamLeakAndRivetFailureRig({{ mode: 'rupture' }});
+  scene.add(rup.root);
+  const droplets = sparks(55, {{ speed: 1.85, spread: 1.6, gravity: -4.2, life: 0.95, size: 0.022, dir: V(0, 0.35, 1), seed: {seed + i}, color: [0.36, 0.17, 0.06] }});
+  droplets.position.set(0.0, 1.25, 0.56); scene.add(droplets);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const CONTACT = {contact_json};
+  const HIT_T = CONTACT?.hit_time_rel_sec ?? {round(dur * 0.46, 3)};
+  const c = cam(KFS[0].fov || 35);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const rState = rup.update(lt, {dur}, HIT_T);
+      droplets.update(lt - HIT_T);
+      const shake = (lt > HIT_T && lt < HIT_T + 0.38) ? Math.sin((lt - HIT_T) * 55) * Math.exp(-(lt - HIT_T) * 6.0) * 0.014 : 0;
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, {{ ...poseCam, roll: (poseCam.roll || 0) + shake }}, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rup.getAnchorsTelemetry(c);
+      return {{
+        bloom: rState.ruptureProgress > 0.05 ? 0.40 : 0.28,
+        camTel, anchors,
+        contact: {{ hit_time_rel_sec: HIT_T, rupture_progress: rState.ruptureProgress, world_error_m: rState.world_error_m }},
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'usia_tank_base_1915',
+          physicalAction: 'tank_panel_rupture',
+          structuralState: rState,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_wave_street_stage":
+        is_speed = (s.get("setup_type") == "boston_wave_speed_sweep") or any(k in nar_low for k in ("35", "faster", "race", "horse"))
+        z_start_val = -0.8 if is_speed else -2.6
+        z_end_val = 3.2 if is_speed else 2.2
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.8, skyTheme: 'boston_amber', sunDir: [-3, 7, 5] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 15.0, includeCart: true }});
+  scene.add(street.root);
+  const wave = makeMolassesGravityCurrentRig({{ width: 4.3, height: 1.72 }});
+  scene.add(wave.root);
+  const crowd = makePeriodCrowdActionRig(makeHuman, {char_spec_json}, 'pedestrians');
+  crowd.root.position.set(0, 0, 1.35);
+  scene.add(crowd.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const wTel = wave.update(lt, {dur}, {{ zStart: {z_start_val}, zEnd: {z_end_val} }});
+      const aTel = crowd.update(lt, {dur}, 'retreat_run');
+      if (street.wheelMeshes) street.wheelMeshes.forEach(w => {{ w.rotation.x = lt * 2.2; }});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = wave.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.30, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'commercial_street_corridor_1919',
+          physicalAction: {'"wave_speed_chase_escalation"' if is_speed else '"molasses_wave_surge"'},
+          actorCount: crowd.actors.length,
+          fluidFrontPos: wTel.wave_front_z,
+          structuralState: aTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_elevated_rail_impact_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.8, skyTheme: 'boston_amber', sunDir: [-3, 7, 5] }});
+  const street = makeNorthEndStreet1919({{ streetLength: 14.0, includeCart: false }});
+  scene.add(street.root);
+  const rail = makeElevatedRailAndStreetImpactRig();
+  scene.add(rail.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const CONTACT = {contact_json};
+  const HIT_T = CONTACT?.hit_time_rel_sec ?? {round(dur * 0.44, 3)};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const rTel = rail.update(lt, {dur}, HIT_T);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rail.getAnchorsTelemetry(c);
+      return {{
+        bloom: rTel.hit_active ? 0.36 : 0.28, camTel, anchors,
+        contact: {{ hit_time_rel_sec: HIT_T, rail_deflection_rad: rTel.rail_deflection_rad, world_error_m: rTel.world_error_m }},
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'elevated_rail_trestle_1919',
+          physicalAction: 'street_structure_impact',
+          structuralState: rTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_rescue_aftermath_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.2, skyTheme: 'dusk', sunDir: [-2, 5, 4], sun: 1.35 }});
+  const street = makeNorthEndStreet1919({{ streetLength: 13.0, includeCart: false }});
+  scene.add(street.root);
+  const rescue = makeRescueAndAftermathRig(makeHuman);
+  scene.add(rescue.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 35);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const rTel = rescue.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rescue.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.34, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'north_end_aftermath_sector_1919',
+          physicalAction: 'rescue_and_settling_aftermath',
+          actorCount: 2,
+          structuralState: rTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_engineering_cutaway_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.8, skyTheme: 'lab_studio', sunDir: [-3, 6, 4] }});
+  const sec = makeBostonSteelSectionCutawayRig();
+  scene.add(sec.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 33);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const sTel = sec.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = sec.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.42, camTel, anchors,
+        cutaway: sec.getTelemetry(),
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'engineering_analysis_section',
+          physicalAction: 'structural_defect_cutaway',
+          cutawayState: sTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:boston_harbor_payoff_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'boston_amber', sunDir: [-4, 8, 5] }});
+  const ov = makeBostonLocationOverview();
+  scene.add(ov.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 38);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = ov.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.30, camTel, anchors,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'boston_harbor_north_end_overview',
+          physicalAction: 'historical_overview_pullback',
+        }}),
+      }};
+    }}
+  }};
+}}"""
 
     if gen == "zach3d:airplane_window_hole_stage":
         setup = str(s.get("setup_type") or "")
@@ -1995,7 +2313,13 @@ def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]
   makePushButtonPanelRig, makeControllerCabinetRig, makeTractionDriveMachineRig,
   makeElevatorShaftRig, makeLandingDoorsRig, makeSchematicMechanismStage
 } from './mechanical_systems.js';
-import { makeAircraftWindowAssemblyRig } from './aircraft_window_scenes.js';"""
+import { makeAircraftWindowAssemblyRig } from './aircraft_window_scenes.js';
+import {
+  makeNorthEndStreet1919, makeMolassesStorageTank1919, makeSeamLeakAndRivetFailureRig,
+  makeMolassesGravityCurrentRig, makeElevatedRailAndStreetImpactRig, makePeriodCrowdActionRig,
+  makeRescueAndAftermathRig, makeBostonSteelSectionCutawayRig, makeBostonLocationOverview,
+  getNarrativeActionTelemetry, computeAnchorsTelemetry
+} from './boston_molasses_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -2061,6 +2385,9 @@ def generate_engine_project(
     aw_p = src_dst / "aircraft_window_scenes.js"
     aw_p.write_text(AIRCRAFT_WINDOW_SCENES_JS, encoding="utf-8")
 
+    boston_p = src_dst / "boston_molasses_scenes.js"
+    boston_p.write_text(BOSTON_MOLASSES_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
 
@@ -2097,8 +2424,10 @@ def generate_engine_project(
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
   canvas { display: block; width: 1080px; height: 1920px; }
   #cap {
-    position: absolute; left: 100px; width: 880px; top: 1410px; text-align: center;
-    font: 700 64px/1.12 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
+    position: absolute; left: 100px; width: 880px; top: 1390px;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+    column-gap: 0.28em; row-gap: 0.14em; text-align: center;
+    font: 700 60px/1.15 'Cap', sans-serif; color: #fff; letter-spacing: 0.01em;
     text-shadow: 0 0 4px rgba(0,0,0,.78), 0 4px 16px rgba(0,0,0,.72);
     z-index: 15; pointer-events: none;
   }
@@ -2125,6 +2454,7 @@ def generate_engine_project(
         str(cutaway_p.resolve()),
         str(mech_p.resolve()),
         str(aw_p.resolve()),
+        str(boston_p.resolve()),
         str(novel_p.resolve()),
         str(ed_tl_p.resolve()),
         str(ed_ov_p.resolve()),

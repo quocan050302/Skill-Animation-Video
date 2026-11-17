@@ -314,6 +314,7 @@ def run_final_quality_gate(
     preview_mp4: Path,
     final_4k_mp4: Path,
     max_static_hold_sec: Optional[float] = None,
+    historical_claims: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """STEP 7 Complete QC Gate: PASS / FAIL / WARN / NOT_RUN per check."""
     checks: Dict[str, Dict[str, Any]] = {}
@@ -585,6 +586,40 @@ def run_final_quality_gate(
             }
         else:
             checks["editorial_retention_finish"] = {"status": "NOT_RUN", "reason": "Deliverable MP4 missing"}
+
+    # 6c. Story-Driven Visual Action, Reveal Order, Period Integrity & Claims QA
+    action_graph_doc = storyboard.get("story_action_graph")
+    if action_graph_doc is None and (run_dir / "story_action_graph.json").exists():
+        action_graph_doc = json.loads((run_dir / "story_action_graph.json").read_text(encoding="utf-8"))
+    if isinstance(action_graph_doc, dict):
+        from .visual_storytelling_qa import run_visual_storytelling_qa
+        ed_tl_doc = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8")) if (run_dir / "editorial_timeline.json").exists() else {}
+        sdiv_doc = json.loads((run_dir / "scene_diversity_report.json").read_text(encoding="utf-8")) if (run_dir / "scene_diversity_report.json").exists() else None
+        raw_tel_p3 = run_dir / "logs" / "raw_render_telemetry.json"
+        raw_traces3 = list((json.loads(raw_tel_p3.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p3.exists() else None
+        ap_doc = json.loads((run_dir / "audio" / "audio_plan.json").read_text(encoding="utf-8")) if (run_dir / "audio" / "audio_plan.json").exists() else None
+        words_doc = json.loads((run_dir / "audio" / "words.json").read_text(encoding="utf-8")) if (run_dir / "audio" / "words.json").exists() else None
+        hc_doc = historical_claims
+        if hc_doc is None and (run_dir / "historical_claims.json").exists():
+            hc_doc = json.loads((run_dir / "historical_claims.json").read_text(encoding="utf-8"))
+
+        vs_qa = run_visual_storytelling_qa(
+            run_dir=run_dir,
+            storyboard=storyboard,
+            action_graph=action_graph_doc,
+            editorial_timeline=ed_tl_doc,
+            scene_diversity_report=sdiv_doc,
+            raw_traces=raw_traces3,
+            audio_plan=ap_doc,
+            historical_claims=hc_doc,
+            words=words_doc,
+        )
+        checks["visual_storytelling"] = {
+            "status": vs_qa["overall_status"],
+            "visual_storytelling_qa_report": str((run_dir / "visual_storytelling_qa_report.json").resolve()),
+            "subjective_visual_review": vs_qa.get("subjective_visual_review", "NOT_VERIFIED"),
+            "checks_summary": {k: v["status"] for k, v in (vs_qa.get("checks") or {}).items()},
+        }
 
     # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])

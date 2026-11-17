@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import json
 import os
+import shutil
 import sys
 import time
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ class ValidationTask:
     deps: List[str] = field(default_factory=list)
     timeout_sec: float = 300.0
     description: str = ""
+    resource_class: str = "cpu"  # "cpu" (bounded pool) or "gpu" (strictly serialized 1 at a time)
 
 
 def build_task_graph(mode: str) -> List[ValidationTask]:
@@ -39,6 +41,7 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             deps=[],
             timeout_sec=120.0,
             description="Style-lock negative & routing contracts",
+            resource_class="cpu",
         ),
         ValidationTask(
             task_id="visual_event_coverage",
@@ -46,6 +49,23 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             deps=[],
             timeout_sec=120.0,
             description="VisualEventGraph, coverage, bounds & fault-injection unit contracts",
+            resource_class="cpu",
+        ),
+        ValidationTask(
+            task_id="visual_storytelling_dir",
+            cmd=[py, "-m", "unittest", "tests.test_visual_storytelling_director", "-v"],
+            deps=["visual_event_coverage"],
+            timeout_sec=150.0,
+            description="R2.1 story action graph, world-state causality, reveal order & period integrity",
+            resource_class="cpu",
+        ),
+        ValidationTask(
+            task_id="storytelling_qa",
+            cmd=[py, "-m", "unittest", "tests.test_storytelling_qa", "-v"],
+            deps=["visual_storytelling_dir"],
+            timeout_sec=150.0,
+            description="R2.6 false-pass-proof overlay diff, A/B event alignment & N11-N24 QA traps",
+            resource_class="cpu",
         ),
         ValidationTask(
             task_id="audio_determinism",
@@ -53,6 +73,7 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             deps=[],
             timeout_sec=180.0,
             description="Audio DSP determinism & mastering LUFS/TP checks",
+            resource_class="cpu",
         ),
         ValidationTask(
             task_id="zdf_motion01_matrix",
@@ -60,6 +81,7 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             deps=["unit_and_negative", "visual_event_coverage"],
             timeout_sec=420.0,
             description="T01-T20 ZDF-MOTION-01 contracts, IK, cutaway, transition & QA tamper traps",
+            resource_class="gpu",
         ),
         ValidationTask(
             task_id="audio_catalog_licenses",
@@ -67,27 +89,39 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             deps=[],
             timeout_sec=120.0,
             description="Audio catalog, license policy & Windows portable traversal guard",
+            resource_class="cpu",
         ),
         ValidationTask(
             task_id="voice_prosody",
             cmd=[py, "-m", "unittest", "tests.test_voice_prosody", "-v"],
             deps=[],
-            timeout_sec=120.0,
-            description="R1 semantic voice prosody, capability disclosure & traps N1-N3/N15",
+            timeout_sec=150.0,
+            description="R1/R2.3 semantic voice prosody, candidate eval & traps N1-N3/N15",
+            resource_class="cpu",
         ),
         ValidationTask(
             task_id="editorial_overlays",
             cmd=[py, "-m", "unittest", "tests.test_editorial_overlays", "-v"],
             deps=["voice_prosody"],
             timeout_sec=240.0,
-            description="R2/R3 kinetic captions, WebGL 3D tracking, occlusion hide & traps N4-N9/N16",
+            description="R2.4 kinetic captions across mobile widths, 3D tracking, occlusion & N4-N9/N16",
+            resource_class="gpu",
+        ),
+        ValidationTask(
+            task_id="boston_molasses_scenes",
+            cmd=[py, "-m", "unittest", "tests.test_boston_molasses_scenes", "-v"],
+            deps=["visual_storytelling_dir"],
+            timeout_sec=240.0,
+            description="R2.2 modular 1919 Boston WebGL scenes, rupture/wave dynamics & determinism",
+            resource_class="gpu",
         ),
         ValidationTask(
             task_id="retention_audio_sync",
             cmd=[py, "-m", "unittest", "tests.test_retention_audio_sync", "-v"],
             deps=["audio_determinism", "editorial_overlays"],
             timeout_sec=180.0,
-            description="R4 SFX editorial timeline sync, isolation & traps N10-N12/N14",
+            description="R2.5 bespoke SFX sync, isolation & traps N10-N12/N14",
+            resource_class="cpu",
         ),
     ]
 
@@ -99,13 +133,15 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 deps=["zdf_motion01_matrix"],
                 timeout_sec=420.0,
                 description="ZDF non-Roman cutaway stills, determinism hashes & E2E pipeline",
+                resource_class="gpu",
             ),
             ValidationTask(
                 task_id="retention_e2e",
                 cmd=[py, "-m", "unittest", "tests.test_retention_e2e", "-v"],
-                deps=["editorial_overlays", "retention_audio_sync"],
-                timeout_sec=240.0,
-                description="3-pane aircraft window WebGL cutaway, determinism & trap N13",
+                deps=["editorial_overlays", "retention_audio_sync", "storytelling_qa", "boston_molasses_scenes"],
+                timeout_sec=300.0,
+                description="3-pane WebGL cutaway, determinism & trap N13",
+                resource_class="gpu",
             ),
         ])
     if mode == "full":
@@ -116,6 +152,7 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 deps=["unit_and_negative"],
                 timeout_sec=240.0,
                 description="Seeded TTS/storyboard/resource budget determinism",
+                resource_class="cpu",
             ),
             ValidationTask(
                 task_id="smoke_all_engines",
@@ -123,6 +160,7 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 deps=["zdf_motion01_matrix"],
                 timeout_sec=540.0,
                 description="All remaining 5 visual engines smoke + upstream isolation check",
+                resource_class="gpu",
             ),
         ])
     return tasks
@@ -144,13 +182,15 @@ async def _terminate_proc(proc: asyncio.subprocess.Process) -> None:
 
 async def _run_one_task(
     task: ValidationTask,
-    sem: asyncio.Semaphore,
+    cpu_sem: asyncio.Semaphore,
+    gpu_sem: asyncio.Semaphore,
     log_dir: Path,
     timeout_override: Optional[float],
 ) -> Dict[str, object]:
     t_timeout = float(timeout_override or task.timeout_sec)
     log_file = log_dir / f"{task.task_id}.log"
-    async with sem:
+    res_sem = gpu_sem if task.resource_class == "gpu" else cpu_sem
+    async with res_sem:
         t0 = time.monotonic()
         proc: Optional[asyncio.subprocess.Process] = None
         status = "FAIL"
@@ -210,9 +250,15 @@ async def _run_one_task(
 
 async def run_dag(mode: str, workers: int, log_dir: Path, timeout_override: Optional[float]) -> Dict[str, object]:
     log_dir.mkdir(parents=True, exist_ok=True)
+    disk_usage = shutil.disk_usage(str(log_dir))
+    free_gb = round(disk_usage.free / float(1024 ** 3), 2)
+    if free_gb < 1.5:
+        raise RuntimeError(f"Insufficient free disk ({free_gb} GiB < 1.5 GiB) before running async validation DAG.")
+
     tasks = build_task_graph(mode)
     task_map = {t.task_id: t for t in tasks}
-    sem = asyncio.Semaphore(max(1, min(4, workers)))
+    cpu_sem = asyncio.Semaphore(max(1, min(4, workers)))
+    gpu_sem = asyncio.Semaphore(1)
 
     results: Dict[str, Dict[str, object]] = {}
     pending = set(task_map.keys())
@@ -242,7 +288,7 @@ async def run_dag(mode: str, workers: int, log_dir: Path, timeout_override: Opti
                 }
                 print(f"[SKIP   ] {tid:<26s} blocked by {blocked_deps}", flush=True)
             else:
-                in_flight[tid] = asyncio.create_task(_run_one_task(t, sem, log_dir, timeout_override))
+                in_flight[tid] = asyncio.create_task(_run_one_task(t, cpu_sem, gpu_sem, log_dir, timeout_override))
 
         if not in_flight:
             if pending:

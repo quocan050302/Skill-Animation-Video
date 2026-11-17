@@ -381,6 +381,20 @@ def _aggregate_lines_from_phrases(
     return out
 
 
+def _apply_phrase_edge_envelope(samples: np.ndarray, sr: int, fade_ms: float = 12.0) -> np.ndarray:
+    """Apply smooth raised-cosine edge fade-in/out to prevent clicks or phrase-boundary pops."""
+    if len(samples) < 8:
+        return samples
+    out = samples.astype(np.float32, copy=True)
+    fade_n = min(len(out) // 4, max(4, int(round((fade_ms / 1000.0) * sr))))
+    if fade_n > 0:
+        t = np.linspace(0.0, np.pi, fade_n, dtype=np.float32)
+        env = 0.5 * (1.0 - np.cos(t))
+        out[:fade_n] *= env
+        out[-fade_n:] *= env[::-1]
+    return out
+
+
 def synthesize_and_align_voice(
     sentences: List[str],
     audio_dir: Path,
@@ -390,6 +404,7 @@ def synthesize_and_align_voice(
     target_sr: int = 44100,
     voice_style: str = "cinematic",
     voice_backend: str = "auto",
+    voice_id_override: Optional[str] = None,
     voice_pause_strength: float = 1.0,
     override_prosody_plan: Optional[Dict[str, Any]] = None,
     domain_terms: Optional[List[str]] = None,
@@ -397,7 +412,11 @@ def synthesize_and_align_voice(
     """Synthesize or ingest expressive phrase-paced voiceover, align words, and audit delivery."""
     audio_dir.mkdir(parents=True, exist_ok=True)
     ok, backend, voice_id, note = verify_language_voice_support(
-        lang, kit_dir, user_voice_file, requested_backend=voice_backend
+        lang,
+        kit_dir,
+        user_voice_file,
+        requested_backend=voice_backend,
+        requested_voice_id=voice_id_override,
     )
     if not ok:
         raise RuntimeError(note)
@@ -494,7 +513,7 @@ def synthesize_and_align_voice(
             raw_s, sr = kokoro.create(ph["text"], voice=voice_id, speed=spd, lang=k_lang)
             if sr != target_sr:
                 raw_s = signal.resample_poly(raw_s, target_sr, sr).astype(np.float32)
-            trimmed = _trim_silence(raw_s.astype(np.float32), target_sr)
+            trimmed = _apply_phrase_edge_envelope(_trim_silence(raw_s.astype(np.float32), target_sr), target_sr, fade_ms=12.0)
             trimmed = trimmed * (10.0 ** (float(ph.get("volume_trim_db", 0.0)) / 20.0))
             pk = float(np.max(np.abs(trimmed)))
             if pk > 0.88:
@@ -548,8 +567,16 @@ def synthesize_and_align_voice(
                     s_esc = ph["text"].replace("'", "''")
                     ps_lines.append(f"$s.Speak('{s_esc}')")
             ps_lines.append("$s.Dispose()")
-            enc = base64.b64encode("\n".join(ps_lines).encode("utf-16le")).decode("ascii")
-            subprocess.run([ps_bin, "-NoProfile", "-EncodedCommand", enc], check=True, capture_output=True)
+            ps_script_p = audio_dir / "_sapi_tts.ps1"
+            ps_script_p.write_text("\n".join(ps_lines) + "\n", encoding="utf-8-sig")
+            try:
+                subprocess.run(
+                    [ps_bin, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ps_script_p)],
+                    check=True,
+                    capture_output=True,
+                )
+            finally:
+                ps_script_p.unlink(missing_ok=True)
 
         for pi, ph in enumerate(phrases):
             raw_tmp = raw_files[pi] if backend == "windows_sapi" else (audio_dir / f"_phrase_{pi:02d}_raw.aiff")
@@ -578,6 +605,7 @@ def synthesize_and_align_voice(
             pk = float(np.max(np.abs(trimmed)))
             if pk > 0.88:
                 trimmed = trimmed * (0.88 / pk)
+            trimmed = _apply_phrase_edge_envelope(trimmed, target_sr, fade_ms=12.0)
 
             start_s = sample_cursor / float(target_sr)
             seg_dur = len(trimmed) / float(target_sr)
@@ -691,6 +719,7 @@ def parse_script_and_build_voice(
     voice_mode: str = "auto",
     voice_style: Optional[str] = None,
     voice_backend: str = "auto",
+    voice_id: Optional[str] = None,
     voice_prosody_in: Optional[Path] = None,
     voice_pause_strength: float = 1.0,
 ) -> Dict[str, Any]:
@@ -726,6 +755,7 @@ def parse_script_and_build_voice(
             user_voice_file=user_voice_file,
             voice_style=effective_style,
             voice_backend=voice_backend,
+            voice_id_override=voice_id,
             voice_pause_strength=voice_pause_strength,
             override_prosody_plan=override_plan,
             domain_terms=analysis.get("detected_motifs"),

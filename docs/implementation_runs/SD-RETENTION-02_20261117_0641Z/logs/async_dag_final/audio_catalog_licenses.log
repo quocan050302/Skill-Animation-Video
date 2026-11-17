@@ -1,0 +1,17 @@
+TASK: audio_catalog_licenses
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_audio_catalog_and_licenses -v
+STATUS: PASS (exit=0, elapsed=0.42s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_a19_a20_qa_mode_fails_early_and_low_disk_fails_closed (tests.test_audio_catalog_and_licenses.TestAudioCatalogAndLicenses.test_a19_a20_qa_mode_fails_early_and_low_disk_fails_closed) ... ok
+test_a1_a2_native_and_qa_root_detection (tests.test_audio_catalog_and_licenses.TestAudioCatalogAndLicenses.test_a1_a2_native_and_qa_root_detection) ... ok
+test_a3_ccby_credits_cc0_provenance_and_missing_license_rejected (tests.test_audio_catalog_and_licenses.TestAudioCatalogAndLicenses.test_a3_ccby_credits_cc0_provenance_and_missing_license_rejected) ... ok
+test_a4_corrupt_zero_wrong_hash_and_path_traversal_rejected (tests.test_audio_catalog_and_licenses.TestAudioCatalogAndLicenses.test_a4_corrupt_zero_wrong_hash_and_path_traversal_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.204s
+
+OK
+

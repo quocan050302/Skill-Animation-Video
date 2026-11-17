@@ -95,6 +95,41 @@ class TestRetentionAudioSync(unittest.TestCase):
                 self.assertFalse((work / "src" / "editorial_overlay_renderer.js").exists(), f"Overlay JS leaked into {sk}")
                 ProvenanceGuard.deactivate()
 
+    def test_boston_1919_bespoke_sfx_sync_and_solemn_aftermath(self) -> None:
+        kit = PROJECT_ROOT / "vendor" / "claude-animation-skills" / "kit"
+        prompt = (
+            "/short-director --skill zach-d-films "
+            "In January 1919, a leaking Boston molasses tank groaned quietly. "
+            "On January 15th, those tank walls finally gave way. "
+            "The wave smashed buildings and an elevated railway support. "
+            "Twenty-one people died and about 150 were injured."
+        )
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)
+            dec, cleaned, _ = route_and_lock_style(PROJECT_ROOT, prompt, cli_skill="zach-d-films", upstream_sha="test")
+            ps = parse_script_and_build_voice(cleaned, "zach-d-films", rd, kit, voice_mode="off")
+            sb = build_storyboard_and_bible(ps, dec, rd, fps=30, seed=42, caption_mode="kinetic", callout_mode="smart")
+            plan = build_audio_narrative_plan(ps, sb, run_dir=rd, sfx_density="detailed")
+            mix_production_audio(sb, ps, rd, seed=42, audio_plan=plan, voice_expected=False)
+
+            self.assertEqual(plan["ambience"]["generator_name"], "period_street_ambience")
+            intents = [c["intent"] for c in plan["sfx"]]
+            self.assertIn("tank_rupture_impact", intents)
+            self.assertIn("street_obstacle_impact", intents)
+
+            # Impact SFX synced strictly within <= 1 frame (34ms) of visual contact_action.hit_time_sec
+            rup_shot = next(s for s in sb["shots"] if s["procedural_generator"] == "zach3d:boston_tank_rupture_stage")
+            ca = (rup_shot.get("staging") or {}).get("contact_action")
+            self.assertIsNotNone(ca)
+            rup_sfx = next(c for c in plan["sfx"] if c["intent"] == "tank_rupture_impact")
+            self.assertLessEqual(abs(float(rup_sfx["time_sec"]) - float(ca["hit_time_sec"])), 0.034)
+
+            # Respectful aftermath shot emits zero UI overlay pops
+            aft_shot = next((s for s in sb["shots"] if s["procedural_generator"] == "zach3d:boston_rescue_aftermath_stage"), None)
+            if aft_shot:
+                aft_ui = [c for c in plan["sfx"] if c["shot_id"] == aft_shot["shot_id"] and c["kind"] == "ui"]
+                self.assertEqual(aft_ui, [], f"Disrespectful UI SFX scheduled on aftermath shot: {aft_ui}")
+
 
 if __name__ == "__main__":
     unittest.main()

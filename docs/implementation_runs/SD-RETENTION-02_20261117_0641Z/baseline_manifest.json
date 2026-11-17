@@ -1,0 +1,30 @@
+{
+  "schema_version": "sd-retention-02-baseline-1",
+  "captured_at_utc": "2026-11-17T06:42:00Z",
+  "repo_root": "D:/Project_github/Skill-animations/short-director/Skill-Animation-Video",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "base_head_sha": "3cea6e5ecda307a29a4dac1220d10e1ca04d0b9a",
+  "master_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "submodule_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "host_resources": {
+    "os": "Windows-11-10.0.26300-SP0",
+    "cpu_cores": 12,
+    "free_disk_gb": 53.48,
+    "sapi_voices": ["Microsoft David Desktop", "Microsoft Zira Desktop"],
+    "kokoro_installed": false,
+    "kit_models_present": false
+  },
+  "observed_defects_to_fix": {
+    "single_asset_camera_illusion": "Previously repeated 1 scene geometry across shots with zoom/orbit/explode changes",
+    "early_spoiler_callout": "Reveal labels appeared early (~1.5s) before narration reached core answer token",
+    "cramped_kinetic_words": "inline-block spans without explicit CSS flex/pre-space caused tight glyph adjacency",
+    "audit_overlay_render_false_pass": "Computed roi_edge_grad without failing on missing/invisible overlay pixels",
+    "compare_ab_versions_absolute_time": "Compared A vs B at raw timestamps even when A and B durations differed"
+  },
+  "subjective_statuses": {
+    "subjective_visual_review": "NOT_VERIFIED",
+    "subjective_editorial_listening": "NOT_VERIFIED",
+    "subjective_voice_quality_status": "NOT_VERIFIED",
+    "viewer_retention_status": "NOT_VERIFIED"
+  }
+}

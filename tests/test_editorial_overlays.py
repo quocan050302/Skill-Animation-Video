@@ -149,6 +149,74 @@ class TestEditorialOverlays(unittest.TestCase):
             box_mad = float(np.mean(np.abs(img_on[by0:by1, bx0:bx1] - img_off[by0:by1, bx0:bx1])))
             self.assertGreater(box_mad, 4.0, f"N8 overlay pixel diff too small ({box_mad:.2f})")
 
+            # Mobile & desktop kinetic caption flex word-spacing check across 320/360/390/1080 widths
+            kit_nm = (PROJECT_ROOT / "vendor" / "claude-animation-skills" / "kit" / "node_modules").resolve()
+            cap_test_js = f"""
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import {{ createRequire }} from 'node:module';
+const require = createRequire(import.meta.url);
+const {{ chromium }} = require({json.dumps(str(kit_nm / 'playwright'))});
+
+const workDir = {json.dumps(str(ep_on["work_dir"]))};
+const MIME = {{ '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.woff2': 'font/woff2' }};
+const server = http.createServer((req, res) => {{
+  const rel = decodeURIComponent((req.url || '/').split('?')[0]).replace(/^\\/+/, '') || 'index.html';
+  const fp = path.join(workDir, rel);
+  fs.readFile(fp, (err, data) => {{
+    if (err) {{ res.writeHead(404); res.end('not found'); return; }}
+    res.writeHead(200, {{ 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' }});
+    res.end(data);
+  }});
+}});
+await new Promise(r => server.listen(0, '127.0.0.1', r));
+const port = server.address().port;
+
+const browser = await chromium.launch({{ executablePath: process.env.PLAYWRIGHT_CHROME_PATH, headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=d3d11'] }});
+const widths = [320, 360, 390, 1080];
+const results = {{}};
+try {{
+  const page = await browser.newPage({{ viewport: {{ width: 1080, height: 1920 }} }});
+  await page.goto(`http://127.0.0.1:${{port}}/index.html`, {{ waitUntil: 'load' }});
+  await page.evaluate(() => window.SHORT_DIRECTOR_READY);
+  await page.evaluate((t) => window.renderAtTime(t), {t_mid:.3f});
+  const baseTel = await page.evaluate(() => window.__LAST_RENDER_TELEMETRY__);
+  results['canvas_1080'] = baseTel?.overlay?.caption?.caption_layout || null;
+
+  for (const vw of widths) {{
+    await page.setViewportSize({{ width: vw, height: 1920 }});
+    const probe = await page.evaluate(() => {{
+      const cap = document.getElementById('cap');
+      const spans = Array.from(cap.querySelectorAll('span'));
+      const gaps = [];
+      for (let i = 0; i + 1 < spans.length; i++) {{
+        const a = spans[i].getBoundingClientRect();
+        const b = spans[i + 1].getBoundingClientRect();
+        if (Math.abs(a.top - b.top) < 12) gaps.push(b.left - a.right);
+      }}
+      const st = getComputedStyle(cap);
+      return {{ display: st.display, columnGap: st.columnGap, minGap: gaps.length ? Math.min(...gaps) : 99, spanCount: spans.length }};
+    }});
+    results['w_' + vw] = probe;
+  }}
+}} finally {{
+  await browser.close();
+  server.close();
+}}
+console.log(JSON.stringify(results));
+"""
+            pw_res = subprocess.run(["node", "--input-type=module", "-e", cap_test_js], cwd=str(PROJECT_ROOT), capture_output=True, text=True, check=True, env=env)
+            cap_rep = json.loads([l for l in pw_res.stdout.splitlines() if l.startswith("{")][-1])
+            c_1080 = cap_rep["canvas_1080"]
+            self.assertIsNotNone(c_1080)
+            self.assertEqual(c_1080["word_overlap_count"], 0)
+            if c_1080["min_word_gap_px"] is not None:
+                self.assertGreaterEqual(c_1080["min_word_gap_px"], 3.0)
+            for key in ("w_320", "w_360", "w_390", "w_1080"):
+                self.assertEqual(cap_rep[key]["display"], "flex")
+                self.assertGreaterEqual(cap_rep[key]["minGap"], 3.0)
+
 
 if __name__ == "__main__":
     unittest.main()

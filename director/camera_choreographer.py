@@ -86,6 +86,75 @@ def _zdf_keyframes_for_generator(
             {"t_norm": 1.0, "pos": [round(0.24 * sx, 3), 1.16, 3.02], "look": [0.0, 0.96, 0.08], "fov": 39, "roll": 0.0, "ease": "cubic"},
         ]
 
+    if gen == "zach3d:boston_street_hook_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.42, 1.52, 3.85], "look": [0.05, 1.32, 0.25], "fov": 38, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [-0.62, 1.44, 3.05], "look": [0.02, 1.35, 0.22], "fov": 36, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.22, 1.40, 2.38], "look": [0.0, 1.36, 0.18], "fov": 35, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_molasses_reveal_stage":
+        return [
+            {"t_norm": 0.0, "pos": [0.85, 1.08, 3.12], "look": [-0.08, 1.25, 0.12], "fov": 36, "roll": -0.01, "ease": "quintic"},
+            {"t_norm": 0.45, "pos": [0.18, 1.26, 2.45], "look": [0.0, 1.28, 0.15], "fov": 34, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.46, 1.46, 2.10], "look": [0.02, 1.30, 0.15], "fov": 33, "roll": 0.008, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_tank_leak_stage":
+        return [
+            {"t_norm": 0.0, "pos": [0.95, 1.05, 2.75], "look": [-0.20, 1.08, 0.55], "fov": 36, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [0.58, 1.32, 2.42], "look": [-0.18, 1.18, 0.55], "fov": 34, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.22, 1.62, 2.22], "look": [-0.15, 1.32, 0.52], "fov": 33, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_tank_rupture_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.25, 1.42, 2.85], "look": [0.0, 1.28, 0.45], "fov": 37, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.48, "pos": [-0.32, 1.44, 2.38], "look": [0.0, 1.30, 0.45], "fov": 35, "roll": 0.012, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.68, 1.58, 2.72], "look": [0.04, 1.24, 0.40], "fov": 38, "roll": -0.006, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_wave_street_stage":
+        if setup == "boston_wave_speed_sweep":
+            return [
+                {"t_norm": 0.0, "pos": [1.55, 2.25, 5.15], "look": [-0.05, 1.05, 0.35], "fov": 40, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [0.95, 2.02, 4.18], "look": [0.0, 1.06, 0.35], "fov": 38, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.95, 1.92, 3.45], "look": [0.0, 1.08, 0.30], "fov": 38, "roll": 0.0, "ease": "quintic"},
+            ]
+        return [
+            {"t_norm": 0.0, "pos": [-0.24, 1.56, 3.15], "look": [0.0, 1.08, 0.35], "fov": 38, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [-0.42, 1.72, 3.85], "look": [0.0, 1.10, 0.45], "fov": 39, "roll": -0.006, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.58, 1.88, 4.55], "look": [0.0, 1.12, 0.55], "fov": 40, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_elevated_rail_impact_stage":
+        return [
+            {"t_norm": 0.0, "pos": [2.22, 2.25, 4.35], "look": [-0.35, 1.95, 0.05], "fov": 40, "roll": 0.008, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [1.75, 2.08, 3.72], "look": [-0.28, 1.92, 0.05], "fov": 39, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.18, 2.18, 3.35], "look": [-0.20, 1.95, 0.05], "fov": 38, "roll": -0.006, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_rescue_aftermath_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-0.95, 1.56, 3.55], "look": [0.0, 0.96, 0.20], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.5, "pos": [-0.25, 1.48, 3.28], "look": [0.0, 0.94, 0.20], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [0.45, 1.44, 3.12], "look": [0.0, 0.92, 0.18], "fov": 35, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:boston_engineering_cutaway_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.55, 1.62, 3.25], "look": [0.0, 1.24, 0.08], "fov": 38, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.18, 1.42, 2.75], "look": [0.0, 1.24, 0.08], "fov": 36, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.45, 1.36, 2.95], "look": [0.0, 1.24, 0.08], "fov": 37, "roll": 0.008, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:boston_harbor_payoff_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.05, 3.35, 4.95], "look": [0.0, 0.72, -0.45], "fov": 39, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [0.22, 4.35, 6.15], "look": [0.0, 0.68, -0.55], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.35, 5.25, 7.25], "look": [0.0, 0.65, -0.65], "fov": 42, "roll": 0.0, "ease": "quintic"},
+        ]
+
     if gen == "zach3d:airplane_window_hole_stage":
         if setup == "airplane_window_layers_exploded":
             return [

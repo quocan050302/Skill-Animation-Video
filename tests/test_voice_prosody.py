@@ -13,7 +13,9 @@ import soundfile as sf
 from director.parse_script import parse_script_and_build_voice
 from director.preflight import verify_language_voice_support
 from director.retention_qa import audit_prosody_delivery, audit_word_alignment
+from director.voice_candidate_eval import evaluate_voice_candidates
 from director.voice_prosody import (
+    _infer_clause_intent,
     build_prosody_plan,
     get_backend_capabilities,
     measure_voice_delivery,
@@ -129,6 +131,33 @@ class TestVoiceProsody(unittest.TestCase):
             self.assertEqual(wa["status"], "FAIL")
             # Missing delivery report with active voice also fails audit_prosody_delivery
             self.assertEqual(audit_prosody_delivery(rd)["status"], "FAIL")
+
+    def test_storytelling_intents_explicit_voice_id_and_candidate_eval(self) -> None:
+        self.assertEqual(_infer_clause_intent("In January 1919, nobody expected a flood.", 0, 5, 0), "hook_whispered_curiosity")
+        self.assertEqual(_infer_clause_intent("It wasn't water, it was molasses.", 1, 5, 0), "sudden_reveal")
+        self.assertEqual(_infer_clause_intent("Those tank walls finally gave way.", 2, 5, 0), "rupture_burst")
+        self.assertEqual(_infer_clause_intent("Twenty-one people died and 150 were injured.", 3, 5, 0), "human_cost")
+        self.assertEqual(_infer_clause_intent("It forced engineers to tighten structural rules.", 4, 5, 0), "reflective_payoff")
+
+        # Invalid explicit --voice-id MUST fail cleanly (never silently fall back)
+        ok_bad, _, _, _ = verify_language_voice_support("en", KIT_DIR, requested_voice_id="Nonexistent Fantasy Neural Voice")
+        self.assertFalse(ok_bad)
+
+        script = (
+            "In January 1919, nobody expected a flood. "
+            "The wave roaring down the street wasn't water, it was molasses. "
+            "On January 15th, those tank walls finally gave way. "
+            "Twenty-one people died and about 150 were injured."
+        )
+        with tempfile.TemporaryDirectory() as td:
+            ev = evaluate_voice_candidates(script, Path(td), KIT_DIR, lang="en")
+            self.assertTrue((Path(td) / "voice_only_A.wav").exists())
+            self.assertTrue((Path(td) / "voice_only_B.wav").exists())
+            self.assertTrue(Path(ev["voice_ab_probe_wav"]).exists())
+            self.assertTrue(Path(ev["checklist_md"]).exists())
+            self.assertEqual(ev["payload"]["subjective_voice_quality_status"], "NOT_VERIFIED")
+            for cand in ev["payload"]["candidates"]:
+                self.assertLess(cand["max_sample_step"], 0.90, f"Sudden phrase boundary jump in {cand['candidate_id']}")
 
 
 if __name__ == "__main__":

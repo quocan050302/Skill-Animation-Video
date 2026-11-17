@@ -180,6 +180,69 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "bounds": {"x_min": -4.2, "x_max": 4.2, "y_min": 0.12, "y_max": 3.8, "z_min": -4.2, "z_max": 5.2},
         "collider_boxes": [],
     },
+    "zach3d:boston_street_hook_stage": {
+        "capabilities": ["north_end_1919", "brick_storefronts", "horse_cart_1919", "period_crowd"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "street_hero_look", "world_pos": [0.0, 1.35, 0.20], "radius_m": 0.48},
+        "bounds": {"x_min": -5.0, "x_max": 5.0, "y_min": 0.12, "y_max": 4.8, "z_min": -6.0, "z_max": 6.2},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_molasses_reveal_stage": {
+        "capabilities": ["alley_reveal", "viscous_molasses_front", "dark_tank_silhouette"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "molasses_reveal_crest", "world_pos": [0.0, 1.25, 0.15], "radius_m": 0.50},
+        "bounds": {"x_min": -4.8, "x_max": 4.8, "y_min": 0.12, "y_max": 4.8, "z_min": -5.5, "z_max": 5.8},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_tank_leak_stage": {
+        "capabilities": ["riveted_tank_wall", "viscous_seep_drips", "dock_worker_1919"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "tank_seam_drip", "world_pos": [-0.25, 1.15, 0.65], "radius_m": 0.35},
+        "bounds": {"x_min": -4.5, "x_max": 4.5, "y_min": 0.12, "y_max": 5.2, "z_min": -5.0, "z_max": 5.8},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_tank_rupture_stage": {
+        "capabilities": ["riveted_seam_failure", "plate_split", "shear_rivet_ejection", "initial_surge"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "tank_rivet_seam", "world_pos": [0.0, 1.32, 0.45], "radius_m": 0.42},
+        "bounds": {"x_min": -4.8, "x_max": 4.8, "y_min": 0.12, "y_max": 5.2, "z_min": -5.2, "z_max": 5.8},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_wave_street_stage": {
+        "capabilities": ["gravity_current_wave", "commercial_street_corridor", "period_crowd_retreat", "debris_rafts"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "wave_front_crest", "world_pos": [0.0, 1.15, 0.40], "radius_m": 0.55},
+        "bounds": {"x_min": -5.8, "x_max": 5.8, "y_min": 0.12, "y_max": 4.8, "z_min": -6.2, "z_max": 6.4},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_elevated_rail_impact_stage": {
+        "capabilities": ["elevated_railway_truss", "delivery_wagon", "structural_deflection"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "elevated_rail_column", "world_pos": [0.12, 1.48, 0.10], "radius_m": 0.48},
+        "bounds": {"x_min": -5.2, "x_max": 5.2, "y_min": 0.12, "y_max": 5.8, "z_min": -5.8, "z_max": 6.0},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_rescue_aftermath_stage": {
+        "capabilities": ["calm_sludge_field", "rescue_responders_1919", "lantern_lighting"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "rescue_aftermath_center", "world_pos": [0.0, 0.92, 0.20], "radius_m": 0.52},
+        "bounds": {"x_min": -5.0, "x_max": 5.0, "y_min": 0.12, "y_max": 4.5, "z_min": -5.5, "z_max": 5.8},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_engineering_cutaway_stage": {
+        "capabilities": ["steel_plate_cutaway", "lap_joint_strain", "rivet_failure_zones"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "lap_joint_defect", "world_pos": [0.0, 1.24, 0.08], "radius_m": 0.28},
+        "bounds": {"x_min": -3.4, "x_max": 3.4, "y_min": 0.12, "y_max": 3.8, "z_min": -3.2, "z_max": 4.5},
+        "collider_boxes": [],
+    },
+    "zach3d:boston_harbor_payoff_stage": {
+        "capabilities": ["north_end_wharf_overview", "harbor_skyline_1919", "memorial_footprint"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "boston_overview_center", "world_pos": [0.0, 1.10, -0.35], "radius_m": 0.60},
+        "bounds": {"x_min": -6.8, "x_max": 6.8, "y_min": 0.12, "y_max": 6.8, "z_min": -6.8, "z_max": 7.2},
+        "collider_boxes": [],
+    },
     "zach3d:studio_demonstrator_stage": {
         "capabilities": ["human_character", "studio_gear_pedestal"],
         "fidelity_mode": "stylized_schematic",
@@ -198,14 +261,55 @@ def build_character_and_prop_registry(
     """Build immutable per-run `character_registry` & `prop_registry` so identities stay locked across shots."""
     events = list(event_graph.get("events") or [])
     has_roman = any(ev.get("scene_family") == "roman_historical" for ev in events)
-    has_modern_human = any(
+    has_boston = any(str(ev.get("scene_family") or "").startswith("boston_") for ev in events)
+    has_modern_human = (not has_boston) and any(
         "human" in str(ev.get("subject", ""))
         or ev.get("scene_family") in ("human_device", "elevator_lobby_button", "elevator_landing_doors", "human_studio")
         for ev in events
     )
 
     characters: Dict[str, Dict[str, Any]] = {}
-    if has_modern_human or selected_skill == "zach-d-films":
+    if has_boston:
+        characters["char_resident_1919_01"] = {
+            "character_id": "char_resident_1919_01",
+            "role": "boston_resident_1919",
+            "outfit_style": "wool_coat_1919",
+            "height_m": 1.72,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x4A3F35,
+            "shirt_material_id": "mat_1919_wool_4a3f35",
+            "pants_hex": 0x2F2A26,
+            "skin_hex": 0xD9A484,
+            "allowed_states": ["street_walk_1919", "alarm_retreat"],
+        }
+        characters["char_worker_1919_01"] = {
+            "character_id": "char_worker_1919_01",
+            "role": "dock_worker_1919",
+            "outfit_style": "canvas_apron_flatcap_1919",
+            "height_m": 1.74,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x5A493A,
+            "shirt_material_id": "mat_1919_canvas_5a493a",
+            "pants_hex": 0x35322F,
+            "skin_hex": 0xD69E7E,
+            "allowed_states": ["inspect_leak", "step_back"],
+        }
+        characters["char_rescuer_1919_01"] = {
+            "character_id": "char_rescuer_1919_01",
+            "role": "rescue_responder_1919",
+            "outfit_style": "heavy_greatcoat_1919",
+            "height_m": 1.75,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x26323E,
+            "shirt_material_id": "mat_1919_greatcoat_26323e",
+            "pants_hex": 0x1E242B,
+            "skin_hex": 0xD6A080,
+            "allowed_states": ["lantern_search", "assist_aftermath"],
+        }
+    elif has_modern_human or selected_skill == "zach-d-films":
         # Immutable modern hero identity locked across every shot in the run (never shot_index % palette!)
         shirt_choices = [0x2563EB, 0x0D9488, 0x1D4ED8]
         shirt_hex = shirt_choices[abs(int(seed)) % len(shirt_choices)]
@@ -336,6 +440,24 @@ def _map_family_to_generator(
             return "zach3d:schematic_mechanism_stage"
         if fam in ("roman_historical",) or prop in ("roman_arena", "roman_ledger"):
             return "zach3d:roman_historical_stage"
+        if fam == "boston_street_hook" or prop == "north_end_street_1919":
+            return "zach3d:boston_street_hook_stage"
+        if fam == "boston_molasses_reveal" or prop == "molasses_gravity_wave":
+            return "zach3d:boston_molasses_reveal_stage"
+        if fam == "boston_tank_leak_seep" or prop == "tank_seam_leak_rig":
+            return "zach3d:boston_tank_leak_stage"
+        if fam == "boston_tank_rupture" or prop == "rivet_rupture_assembly":
+            return "zach3d:boston_tank_rupture_stage"
+        if fam == "boston_wave_street_flow" or prop == "molasses_gravity_current":
+            return "zach3d:boston_wave_street_stage"
+        if fam == "boston_elevated_rail_impact" or prop == "elevated_rail_impact_rig":
+            return "zach3d:boston_elevated_rail_impact_stage"
+        if fam == "boston_rescue_aftermath" or prop == "rescue_aftermath_rig":
+            return "zach3d:boston_rescue_aftermath_stage"
+        if fam == "boston_engineering_cutaway" or prop == "steel_section_cutaway_rig":
+            return "zach3d:boston_engineering_cutaway_stage"
+        if fam == "boston_harbor_payoff" or prop == "boston_overview_stage":
+            return "zach3d:boston_harbor_payoff_stage"
         if fam == "airplane_window" or prop == "airplane_window_bleed":
             return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":

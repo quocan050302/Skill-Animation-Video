@@ -174,8 +174,8 @@ def _split_beat_into_action_clauses(text: str, dur: float) -> List[str]:
         s_toks = seg.split()
         if dur >= 2.2 or len(s_toks) >= 8:
             clauses = re.split(
-                r",\s+(?=(?:and\s+then|and|then|before|until|while|but|yet|however|instead|suddenly|from\s+there|across|through|into|inside|down|up|a\s+controller|a\s+modern|and\s+a)\b)"
-                r"|\s+(?=(?:and\s+then|and\s+plunge|and\s+decides|before\s+(?:a|an|the|it|they|water|light|atoms|signals|one|you|every)|while\s+(?:a|an|the|tiny|your)|until\s+(?:a|an|the|it|you)|powered\s+by\b|using\s+(?:turbines|a|an|the)|traces?\s+back\s+to\b|beneath\s+(?:distant|ancient|dark)|into\s+(?:a|an|the)\s+(?:dark|subsea|massive|glowing|distant))\b)",
+                r",\s+(?=(?:and\s+then|and|then|before|until|while|but|yet|however|instead|suddenly|from\s+there|across|through|into|inside|down|up|a\s+controller|a\s+modern|and\s+a|striking|forcing)\b)"
+                r"|\s+(?=(?:before\s+(?:those|that|it|they|the)|and\s+then|and\s+plunge|and\s+decides|before\s+(?:a|an|the|it|they|water|light|atoms|signals|one|you|every)|while\s+(?:a|an|the|tiny|your)|until\s+(?:a|an|the|it|you)|powered\s+by\b|using\s+(?:turbines|a|an|the)|traces?\s+back\s+to\b|beneath\s+(?:distant|ancient|dark)|into\s+(?:a|an|the)\s+(?:dark|subsea|massive|glowing|distant))\b)",
                 seg,
                 flags=re.IGNORECASE,
             )
@@ -230,10 +230,58 @@ def classify_visual_clause(
     families: List[str] = []
     scales: List[str] = []
 
-    if unsupported_domain:
+    is_boston_molasses_story = (
+        selected_skill == "zach-d-films"
+        and "boston" in full_script_low
+        and "molasses" in full_script_low
+    )
+
+    if unsupported_domain and not is_boston_molasses_story:
         matched_props = ["schematic_mechanism"]
         families = ["schematic_mechanism"]
         scales = ["macro_object"]
+    elif is_boston_molasses_story:
+        if any(k in low for k in ("gave way", "walls gave", "rupture", "burst", "afternoon")):
+            matched_props = ["rivet_rupture_assembly"]
+            families = ["boston_tank_rupture"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("investigators", "problems", "construction", "flaw")):
+            matched_props = ["steel_section_cutaway_rig"]
+            families = ["boston_engineering_cutaway"]
+            scales = ["macro_object"]
+        elif any(k in low for k in ("twenty-one", "21", "died", "injured", "150", "casualt", "rescuer")):
+            matched_props = ["rescue_aftermath_rig"]
+            families = ["boston_rescue_aftermath"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("smashed", "striking", "buckled", "buildings", "trapped", "railway", "trestle")):
+            matched_props = ["elevated_rail_impact_rig"]
+            families = ["boston_elevated_rail_impact"]
+            scales = ["industrial_scale"]
+        elif "wasn't water" in low or "was molasses" in low or ("wasn't" in low and "molasses" in low):
+            matched_props = ["molasses_gravity_wave"]
+            families = ["boston_molasses_reveal"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("2.3", "million gallons", "poured", "race", "35 miles", "35 mph", "rushing", "surge", "waterfront", "outran", "crowds and carts")):
+            matched_props = ["molasses_gravity_current"]
+            families = ["boston_wave_street_flow"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("leaking", "leak", "seep", "for years", "storage tank", "steel tank")):
+            matched_props = ["tank_seam_leak_rig"]
+            families = ["boston_tank_leak_seep"]
+            scales = ["macro_object"]
+        elif beat_index == 0 or any(k in low for k in ("expected", "1919", "normal winter", "nothing like", "unlike anything", "rumble", "north end")):
+            matched_props = ["north_end_street_1919"]
+            families = ["boston_street_hook"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("strangest", "preventable", "milestone", "lesson", "harbor", "boston's")):
+            matched_props = ["boston_overview_stage"]
+            families = ["boston_harbor_payoff"]
+            scales = ["street_aerial"]
+        else:
+            matched_props = ["boston_overview_stage"]
+            families = ["boston_harbor_payoff"]
+            scales = ["street_aerial"]
+        unsupported_domain = None
     else:
         for prop_id, fam, sc, kws in DOMAIN_PROP_RULES:
             if any(
@@ -309,18 +357,32 @@ def classify_visual_clause(
     scene_family = families[0]
     scale_level = scales[0]
 
-    # Per-clause Roman gating (NO global override!)
+    # Per-clause Roman & period gating (NO global override!)
     clause_is_roman = scene_family == "roman_historical"
     forbidden: List[str] = []
     if not clause_is_roman:
         forbidden.extend(["roman_gladiator_armor", "medieval_sword_default"])
+    if scene_family.startswith("boston_"):
+        forbidden.extend(["modern_smartphone", "modern_suv", "cell_tower", "datacenter_server"])
     if selected_skill == "map-route":
         forbidden.append("fake_gis_accuracy_claim")
 
     # 2. Subject & character extraction
     subject = "narrator_subject"
     character_id: Optional[str] = None
-    if any(k in low for k in ("you", "finger", "thumb", "person", "user", "human", "explorer", "hero", "gladiator", "opponent", "organizer", "messenger", "tap", "button")):
+    if scene_family.startswith("boston_"):
+        if scene_family == "boston_street_hook":
+            subject = "boston_pedestrians_1919"
+            character_id = "char_resident_1919_01"
+        elif scene_family == "boston_tank_leak_seep":
+            subject = "dock_worker_01"
+            character_id = "char_worker_1919_01"
+        elif scene_family == "boston_rescue_aftermath":
+            subject = "rescuer_crew_1919"
+            character_id = "char_rescuer_1919_01"
+        else:
+            subject = primary_prop
+    elif any(k in low for k in ("you", "finger", "thumb", "person", "user", "human", "explorer", "hero", "gladiator", "opponent", "organizer", "messenger", "tap", "button")):
         if "gladiator" in low or "opponent" in low or "messenger" in low:
             subject = "gladiator_character"
             character_id = "char_fighter_01"
@@ -342,6 +404,8 @@ def classify_visual_clause(
     elif primary_prop in ("phone_screen", "microchip_pcb", "battery_cell", "exploded_device", "controller_pcb", "traction_motor_sheave", "shaft_car_counterweight"):
         subject = primary_prop
     elif primary_prop in ("cell_tower_wave", "subsea_fiber_cable", "datacenter_rack", "power_turbine", "schematic_mechanism"):
+        subject = primary_prop
+    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage"):
         subject = primary_prop
     elif primary_prop in ("cosmic_origin", "atom_crystal", "ocean_nature"):
         subject = primary_prop
@@ -372,10 +436,12 @@ def classify_visual_clause(
                     else ("hooks_viewer" if beat_index == 0 and clause_index == 0 else "drives_next_step")))
     )
 
-    if any(k in low for k in ("dark", "night", "deep ocean", "subsea", "space", "universe", "star", "cosmos", "tension", "trap", "danger")):
+    if any(k in low for k in ("dark", "night", "deep ocean", "subsea", "space", "universe", "star", "cosmos", "tension", "trap", "danger", "twenty-one", "21", "died", "injured", "aftermath")):
         lighting_mood = "dark_dramatic"
-    elif beat_role == "payoff" or any(k in low for k in ("sun", "gold", "triumph", "spark", "bright", "morning", "warm", "open", "coordinated")):
+    elif scene_family == "boston_harbor_payoff" or beat_role == "payoff" or any(k in low for k in ("sun", "gold", "triumph", "spark", "bright", "morning", "warm", "open", "coordinated")):
         lighting_mood = "warm_payoff"
+    elif scene_family.startswith("boston_"):
+        lighting_mood = "historical_overcast" if scene_family in ("boston_street_hook", "boston_tank_leak_seep", "boston_molasses_reveal") else "dramatic_amber"
     elif primary_prop in ("microchip_pcb", "controller_pcb", "traction_motor_sheave", "shaft_car_counterweight", "datacenter_rack", "cell_tower_wave", "brain_neuron", "heart_organ"):
         lighting_mood = "tech_cool_studio"
     else:
@@ -447,6 +513,25 @@ def _build_intra_shot_activities(ev_meta: Dict[str, Any], dur: float) -> List[Di
     elif prop == "elevator_doors":
         acts.append({"rel_norm": 0.38, "type": "landing_level_lock", "detail": "Car levels with landing sill before doors unlock"})
         acts.append({"rel_norm": 0.65, "type": "doors_slide_open", "detail": "Bi-parting landing and car doors slide open smoothly"})
+    elif prop == "north_end_street_1919":
+        acts.append({"rel_norm": 0.35, "type": "street_rumble_foreshadow", "detail": "Pedestrians pause and horse cart turns toward harbor tank alley"})
+    elif prop == "molasses_gravity_wave":
+        acts.append({"rel_norm": 0.42, "type": "thick_fluid_reveal", "detail": "Dark viscous wave crest rises above low masonry alley"})
+    elif prop == "tank_seam_leak_rig":
+        acts.append({"rel_norm": 0.45, "type": "seam_seep_drips", "detail": "Amber-black molasses drips down riveted tank seam past 1919 worker"})
+    elif prop == "rivet_rupture_assembly":
+        acts.append({"rel_norm": 0.32, "type": "plate_bulge_stress", "detail": "Riveted steel seam strains outward before failure"})
+        acts.append({"rel_norm": 0.52, "type": "rivet_shear_rupture", "detail": "Rivet heads shear away and tank plate bursts outward"})
+    elif prop == "molasses_gravity_current":
+        acts.append({"rel_norm": 0.48, "type": "molasses_surge_advance", "detail": "High-viscosity dark gravity wave rolls down Commercial Street"})
+    elif prop == "elevated_rail_impact_rig":
+        acts.append({"rel_norm": 0.46, "type": "rail_truss_impact", "detail": "Surge strikes elevated railway stanchion and delivery wagon"})
+    elif prop == "rescue_aftermath_rig":
+        acts.append({"rel_norm": 0.50, "type": "rescue_lantern_sweep", "detail": "Responders with lanterns inspect calm settled sludge sector"})
+    elif prop == "steel_section_cutaway_rig":
+        acts.append({"rel_norm": 0.44, "type": "lap_joint_cutaway", "detail": "Cross-section slices open thin 1915 lap joint and strained rivet row"})
+    elif prop == "boston_overview_stage":
+        acts.append({"rel_norm": 0.55, "type": "harbor_pullback_context", "detail": "Pullback reveals North End waterfront district and memorial footprint"})
     elif verb in ("tap_activate", "strike_halt"):
         acts.append({"rel_norm": 0.38, "type": "action_impact", "detail": f"{ev_meta['subject']} executes {verb} on {prop}"})
     elif verb == "reveal_cutaway":
@@ -535,7 +620,7 @@ def bind_events_to_voice_words(
             "uncertain": uncertain,
         }
 
-        # Schedule physical contact action if this clause involves pressing/tapping a target
+        # Schedule physical contact/impact action for button press, tank rupture, and rail impact
         if ev_copy.get("relevant_prop") in ("elevator_button", "phone_screen") and ev_copy.get("verb_action") == "tap_activate":
             ev_dur = float(ev_copy["duration_sec"])
             # Snap contact hit near 0.44 * dur (and near button/tap word anchor when inside span)
@@ -559,6 +644,27 @@ def bind_events_to_voice_words(
                 target_world=target_world,
                 target_normal=target_norm,
                 target_radius_m=target_rad,
+            )
+        elif ev_copy.get("relevant_prop") in ("rivet_rupture_assembly", "elevated_rail_impact_rig"):
+            ev_dur = float(ev_copy["duration_sec"])
+            rel_hit = round(ev_dur * 0.48, 3)
+            trigger_toks = ("way", "rupture", "burst") if ev_copy["relevant_prop"] == "rivet_rupture_assembly" else ("smashed", "railway", "buildings")
+            for _, mw in matched_pairs:
+                if any(k in _norm_tok(mw["w"]) for k in trigger_toks):
+                    rel_cand = float(mw["s"]) - float(ev_copy["start_sec"])
+                    if 0.22 <= rel_cand <= ev_dur - 0.18:
+                        rel_hit = round(rel_cand, 3)
+                    break
+            is_rupt = ev_copy["relevant_prop"] == "rivet_rupture_assembly"
+            ev_copy["contact_action"] = plan_contact_action(
+                verb="structural_rupture" if is_rupt else "wave_column_impact",
+                performer_id="rivet_seam_01" if is_rupt else "molasses_wave_1919",
+                target_id="tank_seam_01" if is_rupt else "elevated_rail_column_01",
+                hit_time=rel_hit,
+                duration=ev_dur,
+                target_world=[0.0, 1.32, 0.45] if is_rupt else [0.12, 1.48, 0.10],
+                target_normal=[0.0, 0.0, 1.0],
+                target_radius_m=0.18 if is_rupt else 0.24,
             )
 
         bound.append(ev_copy)
@@ -789,6 +895,10 @@ def extract_semantic_visual_events(
         disclosures.append("Macro-to-cosmic scale transition is stylized conceptual progression, not literal metric scale factor.")
     if any(ev["scene_family"] in ("elevator_lobby_button", "controller_cabinet_cutaway", "traction_machine_room", "elevator_shaft_cutaway", "elevator_landing_doors") for ev in bound_events):
         disclosures.append("Elevator mechanism depicts a traction-type elevator schematic (counterweight + sheave design; not hydraulic).")
+    if any(str(ev["scene_family"]).startswith("boston_") for ev in bound_events):
+        disclosures.append(
+            "1919 Boston Molasses Flood reconstruction is a stylized educational 3D depiction; speed (~35 mph) and height reports reflect historical estimates."
+        )
     unsupported_found = sorted({ev["unsupported_exact_domain"] for ev in bound_events if ev.get("unsupported_exact_domain")})
     if unsupported_found:
         disclosures.append(

@@ -1,0 +1,72 @@
+{
+  "schema_version": "sd-historical-claims-1",
+  "title": "The Day Boston Was Flooded With Molasses",
+  "retrieved_at": "2026-11-17",
+  "period_year": 1919,
+  "location": "North End, Boston, Massachusetts",
+  "reconstruction_disclosure": "stylized_illustrative",
+  "claims": [
+    {
+      "claim_id": "claim_date_location_1919",
+      "text": "January 15, 1919 steel molasses tank collapse in Boston's North End",
+      "qualifier": "exact",
+      "verified": true,
+      "sources": ["boston.gov", "bpl.org", "history.com"]
+    },
+    {
+      "claim_id": "claim_chronic_leaks",
+      "text": "Storage tank leaked for years prior to failure and had structural defects",
+      "qualifier": "documented_historical_record",
+      "verified": true,
+      "sources": ["boston.gov", "history.com"]
+    },
+    {
+      "claim_id": "claim_volume_2_3m_gal",
+      "text": "About 2.3 million gallons of molasses poured into the streets",
+      "numeric_value": 2.3,
+      "unit": "M GALLONS",
+      "qualifier": "approximate",
+      "verified": true,
+      "reveal_after_token": "2.3",
+      "sources": ["boston.gov", "bpl.org"]
+    },
+    {
+      "claim_id": "claim_speed_35_mph",
+      "text": "Wave speed estimated around 35 mph",
+      "numeric_value": 35,
+      "unit": "MPH EST.",
+      "qualifier": "estimated",
+      "verified": true,
+      "reveal_after_token": "35",
+      "sources": ["boston.gov", "bpl.org"]
+    },
+    {
+      "claim_id": "claim_casualties_21_150",
+      "text": "21 people died; about 150 injured",
+      "numeric_value": 21,
+      "unit": "LIVES LOST",
+      "secondary_value": 150,
+      "secondary_unit": "~INJURED",
+      "qualifier": "documented_estimate_approx_150_injured",
+      "verified": true,
+      "reveal_after_token": "Twenty-one",
+      "sources": ["bpl.org", "history.com"]
+    },
+    {
+      "claim_id": "claim_construction_flaws",
+      "text": "Investigators found serious problems with the tank's steel construction and testing",
+      "qualifier": "documented_investigation",
+      "verified": true,
+      "reveal_after_token": "construction",
+      "sources": ["boston.gov", "bpl.org"]
+    }
+  ],
+  "forbidden_myths": [
+    "boiling",
+    "scalding",
+    "tsunami",
+    "smartphone",
+    "suv",
+    "skyscraper"
+  ]
+}

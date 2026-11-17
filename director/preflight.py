@@ -317,11 +317,13 @@ def verify_language_voice_support(
     kit_dir: Path,
     user_voice_file: Optional[Path] = None,
     requested_backend: str = "auto",
+    requested_voice_id: Optional[str] = None,
 ) -> Tuple[bool, str, str, str]:
     """Return (supported, backend, voice_id, explanation) truthfully."""
     norm = lang.strip().lower().replace("_", "-")
     base = norm.split("-")[0]
     req_b = (requested_backend or "auto").lower()
+    req_vid = requested_voice_id.strip() if requested_voice_id else None
 
     if user_voice_file is not None:
         if user_voice_file.exists():
@@ -352,11 +354,22 @@ def verify_language_voice_support(
         if say_voices:
             candidates = say_voices.get(norm) or say_voices.get(base) or []
             if candidates:
-                preferred_order = {
-                    "en": ["Samantha", "Daniel", "Reed (English (US))", "Eddy (English (US))", "Karen"],
-                    "vi": ["Linh"],
-                }.get(base, [])
-                chosen = next((p for p in preferred_order if p in candidates), candidates[0])
+                if req_vid:
+                    matched_say = next((c for c in candidates if c.lower() == req_vid.lower()), None)
+                    if not matched_say:
+                        return (
+                            False,
+                            "none",
+                            "",
+                            f"Requested --voice-id '{req_vid}' not found in macOS say voices for '{norm}': {candidates}",
+                        )
+                    chosen = matched_say
+                else:
+                    preferred_order = {
+                        "en": ["Samantha", "Daniel", "Reed (English (US))", "Eddy (English (US))", "Karen"],
+                        "vi": ["Linh"],
+                    }.get(base, [])
+                    chosen = next((p for p in preferred_order if p in candidates), candidates[0])
                 note = f"macOS Speech Synthesis (`say`) verified installed voice '{chosen}' for '{norm}'."
                 if base == "vi":
                     note += " (Note: Kokoro v1.0 does NOT support Vietnamese; verified host macOS voice 'Linh' vi_VN is used.)"
@@ -369,12 +382,26 @@ def verify_language_voice_support(
         if win_voices:
             candidates = win_voices.get(norm) or win_voices.get(base) or []
             if candidates:
-                preferred_order = {
-                    "en": ["Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Mark"],
-                    "vi": ["Microsoft An"],
-                }.get(base, [])
-                chosen = next((p for p in preferred_order if p in candidates), candidates[0])
-                note = f"Windows System.Speech SAPI verified installed voice '{chosen}' for '{norm}'."
+                if req_vid:
+                    matched_sapi = next((c for c in candidates if c.lower() == req_vid.lower()), None)
+                    if not matched_sapi:
+                        return (
+                            False,
+                            "none",
+                            "",
+                            f"Requested --voice-id '{req_vid}' not found in Windows SAPI voices for '{norm}': {candidates}",
+                        )
+                    chosen = matched_sapi
+                else:
+                    preferred_order = {
+                        "en": ["Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Mark"],
+                        "vi": ["Microsoft An"],
+                    }.get(base, [])
+                    chosen = next((p for p in preferred_order if p in candidates), candidates[0])
+                note = (
+                    f"Windows System.Speech SAPI verified installed desktop voice '{chosen}' for '{norm}' "
+                    f"(non-neural concatenative backend; available={candidates})."
+                )
                 return (True, "windows_sapi", chosen, note)
         if req_b in ("windows_sapi", "sapi"):
             return (False, "none", "", f"Requested --voice-backend windows_sapi unavailable for '{norm}'.")

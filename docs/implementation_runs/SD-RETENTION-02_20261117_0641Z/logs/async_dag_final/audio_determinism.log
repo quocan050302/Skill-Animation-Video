@@ -1,0 +1,15 @@
+TASK: audio_determinism
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_audio_mix_determinism -v
+STATUS: PASS (exit=0, elapsed=5.44s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_a10_a11_a12_a13_determinism_ducking_and_crossfade_seams (tests.test_audio_mix_determinism.TestAudioMixDeterminismAndQC.test_a10_a11_a12_a13_determinism_ducking_and_crossfade_seams) ... ok
+test_b8_quality_gate_catches_muted_music_loud_sfx_clipping_and_missing_credits (tests.test_audio_mix_determinism.TestAudioMixDeterminismAndQC.test_b8_quality_gate_catches_muted_music_loud_sfx_clipping_and_missing_credits) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 4.133s
+
+OK
+

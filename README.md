@@ -63,6 +63,12 @@ python3 -m director.run \
 - **Evidence-Based Retention QA (`retention_qa.py`, `quality_gate.py`)**: Audits voice delivery waves, tracking telemetry, decoded overlay pixel deltas, SFX sync, and fatigue bounds into `editorial_qa_report.json` while keeping `subjective_visual_review`, `subjective_editorial_listening`, `subjective_voice_quality_status`, and `viewer_retention_status` explicitly labeled `NOT_VERIFIED` without human review.
 - **New CLI Flags**: `--voice-style legacy|natural|cinematic`, `--voice-backend auto|kokoro|windows_sapi|macos_say`, `--voice-prosody-in PATH`, `--voice-pause-strength FLOAT`, `--voice-compare-ab`, `--caption-mode plain|kinetic|phrase`, `--callout-mode off|smart`, `--verified-numbers-json PATH`.
 
+## Event-Driven Visual Storytelling & Fail-Closed QA (`SD-RETENTION-02`)
+- **Story Action Graph & World-State Progression (`visual_storytelling_director.py`, `build_storyboard.py`, `shot_director.py`)**: Plans explicit `story_action_graph.json` (`narrative_event_id`, location IDs, physical actions, world-state causality) and enforces causal reveal ordering (`reveal_order` locks preventing premature term/statistic spoilers on hook shots) across arbitrary 3D storytelling topics, plus modular 1919 Boston scenes (`director/assets/zdf_boston_molasses_scenes.py`) with Three.js mechanical contact & `LayeredCutaway` geometry.
+- **Voice Fidelity, Candidates & Seam Smoothing (`voice_candidate_eval.py`, `parse_script.py`, `preflight.py`, `voice_prosody.py`)**: Supports `--voice-id` routing, 12 ms raised-cosine phrase-boundary fades eliminating splice clicks, Windows `-File` `.ps1` SAPI5 synthesis avoiding long-SSML command-line limits, and multi-candidate WAV export + `VOICE_LISTENING_CHECKLIST.md`.
+- **Flex Kinetic Captions & Grounded Callouts (`editorial_overlay.py`, `zach_d_films_adapter.py`)**: Renders flex-wrapped captions with measured inter-word DOM gaps (`columnGap: 0.40em`, active scale capped at `1.05x`), mobile-legible smart callout boxes, bespoke disaster/foley DSP cues (`audio_dsp.py`, `sfx_director.py`), and `--historical-claims-json` / `--factual-sources-note` validation.
+- **False-Pass-Proof Post-Render QA (`visual_storytelling_qa.py`, `retention_qa.py`, `quality_gate.py`)**: Fixes `audit_overlay_render` using true spatial luma std (`patch.mean(axis=2)`), Chromium DOM telemetry, and optional ON/OFF ROI MAD diffing; replaces timestamp-only A/B diffing with event-aligned `ab_alignment.json` (`compare_ab_versions`); and audits `story_action_coverage`, `reveal_order_decoded`, `caption_layout`, `period_integrity`, and `historical_claims` into `visual_storytelling_qa_report.json`.
+
 ## Continuous Shot Direction & Scene Novelty (`v0.4.0` Changelog)
 - **Semantic Visual Event Graph (`visual_event_graph.py`)**: Extracts subjects, verbs, props, causality, scale shifts, and word-anchored event windows (`visual_events.json`) directly from narration + verified audio timing.
 - **Anti-Repetition Coverage Planner (`shot_director.py`)**: Replaces cyclic shot templates and duplicated split text with candidate generation, rolling 3-shot diversity scoring, justified transformed callbacks, intra-shot transformation schedules, and non-overlapping narration spans (`shot_coverage.json`).
@@ -81,9 +87,9 @@ python3 -m director.run \
 
 Every completed run writes verified artifacts to `<out-dir>/`:
 - `style_decisions.json` — Immutable `selection_mode`, `selected_skill`, `style_lock`, and upstream commit provenance
-- `visual_events.json`, `shot_coverage.json`, `camera_paths.json`, `transition_edl.json` — Semantic event graph, anti-repetition shot coverage, camera keyframe traces, and frame-verified transition EDL
+- `visual_events.json`, `story_action_graph.json`, `shot_coverage.json`, `camera_paths.json`, `transition_edl.json` — Semantic event graph, narrative story action graph, anti-repetition shot coverage, camera keyframe traces, and frame-verified transition EDL
 - `storyboard.json` & `art_bible.md` — Per-shot camera blocking, setups, transitions, style parameters, and `visual_assets` inventory
-- `editorial_timeline.json`, `overlay_plan.json`, `overlay_coverage.json`, `editorial_qa_report.json`, `editorial_attention_timeline.json` — Unified editorial timing, safe-area smart callout telemetry, and objective finish QA
+- `editorial_timeline.json`, `overlay_plan.json`, `overlay_coverage.json`, `editorial_qa_report.json`, `editorial_attention_timeline.json`, `visual_storytelling_qa_report.json` — Unified editorial timing, safe-area smart callout telemetry, DOM caption layout, and fail-closed storytelling/editorial finish QA
 - `scene_diversity_report.json` & `style_lock_audit.json` — Caption-masked SSIM/dHash diversity QA plus recursive source & `sys.addaudithook` single-skill provenance audit
 - `audio/` — `audio_plan.json`, `voice_prosody_plan.json`, `prosody_script.md`, `voice_delivery_report.json`, `audio_director_notes.md`, `music_cue_sheet.json`, `sfx_cue_sheet.json`, `audio_asset_manifest.json`, `audio_mix_report.json`, `audio_qc_report.json`, `credits_audio.txt`, and 48 kHz stereo stems (`voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`)
 - `stills/` & `contact_sheet.jpg` — First, busiest, and end frames of every shot plus 9:16 safe-area sheet
@@ -94,5 +100,6 @@ Every completed run writes verified artifacts to `<out-dir>/`:
 ## Running the Test Suite
 
 ```bash
-python3 -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
+python tools/run_validation_async.py --mode full --workers 2
 ```

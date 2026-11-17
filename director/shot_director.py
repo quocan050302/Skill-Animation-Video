@@ -20,6 +20,126 @@ from .visual_event_graph import classify_visual_clause
 ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
     "zach-d-films": [
         {
+            "setup": "boston_street_hook_crowd",
+            "families": ("boston_street_hook",),
+            "framing": "WS_StreetHero",
+            "angle": "three_quarter_street_level",
+            "move": "dolly_push_in",
+            "focal_mm": 28,
+            "placement": "left_brick_alley",
+            "silhouette": "1919_cobblestone_street_crowd",
+            "pose": "street_rumble_foreshadow",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_molasses_wave_reveal",
+            "families": ("boston_molasses_reveal",),
+            "framing": "MS_LowReveal",
+            "angle": "reverse_alley_low_tilt",
+            "move": "whip_pan_reveal",
+            "focal_mm": 35,
+            "placement": "center_dark_surge",
+            "silhouette": "dark_viscous_crest_tank",
+            "pose": "thick_fluid_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_tank_leak_seep_cu",
+            "families": ("boston_tank_leak_seep",),
+            "framing": "CU_TankSeam",
+            "angle": "low_upward_tank_wall",
+            "move": "vertical_creep_tilt",
+            "focal_mm": 50,
+            "placement": "left_rivet_seam",
+            "silhouette": "dripping_seam_worker_lantern",
+            "pose": "chronic_seam_seepage",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_tank_rupture_blast",
+            "families": ("boston_tank_rupture",),
+            "framing": "MCU_RivetBurst",
+            "angle": "three_quarter_burst_angle",
+            "move": "impact_push_shake",
+            "focal_mm": 40,
+            "placement": "center_burst_seam",
+            "silhouette": "sheared_plates_molasses_burst",
+            "pose": "tank_panel_rupture",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_wave_chase_street",
+            "families": ("boston_wave_street_flow",),
+            "framing": "MS_TrackingChase",
+            "angle": "ahead_of_wave_backward_track",
+            "move": "retreating_dolly_chase",
+            "focal_mm": 30,
+            "placement": "diagonal_street_flood",
+            "silhouette": "surging_wave_crates_retreat",
+            "pose": "molasses_wave_surge",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_wave_speed_sweep",
+            "families": ("boston_wave_street_flow",),
+            "framing": "WS_SideTracking",
+            "angle": "elevated_side_track",
+            "move": "side_sweep_track",
+            "focal_mm": 26,
+            "placement": "right_cart_sweep",
+            "silhouette": "street_wave_speed_sweep",
+            "pose": "wave_speed_chase_escalation",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_elevated_rail_crush",
+            "families": ("boston_elevated_rail_impact",),
+            "framing": "MS_StructuralImpact",
+            "angle": "right_oblique_trestle",
+            "move": "slowmo_track_impact",
+            "focal_mm": 38,
+            "placement": "right_trestle_pillar",
+            "silhouette": "bent_trestle_delivery_wagon",
+            "pose": "street_structure_impact",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_rescue_aftermath_still",
+            "families": ("boston_rescue_aftermath",),
+            "framing": "MS_RespectfulWide",
+            "angle": "eye_level_solemn_drift",
+            "move": "slow_solemn_drift",
+            "focal_mm": 34,
+            "placement": "centered_lantern_crew",
+            "silhouette": "calm_sludge_responders_lanterns",
+            "pose": "rescue_and_settling_aftermath",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_engineering_lap_cutaway",
+            "families": ("boston_engineering_cutaway",),
+            "framing": "ECU_SectionCutaway",
+            "angle": "exploded_oblique_35deg",
+            "move": "peel_orbit_reveal",
+            "focal_mm": 58,
+            "placement": "center_lap_cutaway",
+            "silhouette": "thin_steel_lap_joint_cutaway",
+            "pose": "structural_defect_cutaway",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_harbor_overview_payoff",
+            "families": ("boston_harbor_payoff",),
+            "framing": "VWS_HarborPullback",
+            "angle": "elevated_harbor_overview",
+            "move": "pull_back_crane",
+            "focal_mm": 24,
+            "placement": "centered_wharf_horizon",
+            "silhouette": "north_end_wharf_skyline_1919",
+            "pose": "historical_overview_pullback",
+            "novel_non_template": True,
+        },
+        {
             "setup": "airplane_window_hole_macro",
             "families": ("airplane_window",),
             "framing": "CU_BleedHole",
@@ -447,6 +567,8 @@ def split_long_visual_beats_by_actions(
             # Split cleanly around midpoint onto a distinct frame boundary ONLY if sub-clauses depict different visual stages
             n_parts = 2
             split_idx = len(toks) // 2
+            while 2 < split_idx < len(toks) - 2 and toks[split_idx - 1].lower().endswith(("'s", "the", "a", "an", "in", "on", "of", "at")):
+                split_idx += 1
             mid_raw = st + dur * (split_idx / float(len(toks)))
             mid_f = round(round(mid_raw * fps) / float(fps), 3)
             mid_f = max(st + min_shot_dur, min(en - min_shot_dur, mid_f))
@@ -458,7 +580,7 @@ def split_long_visual_beats_by_actions(
                 meta_b = classify_visual_clause(span_b, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 1, meta_a["scene_family"], [], skill_s, full_script_low=full_script_low)
                 fam_a = meta_a["scene_family"] if meta_a["relevant_prop"] not in ("idea_spark", "atom_crystal") else ev.get("scene_family")
                 fam_b = meta_b["scene_family"] if meta_b["relevant_prop"] not in ("idea_spark", "atom_crystal") else ev.get("scene_family")
-                allow_same_fam_split = (skill_s != "zach-d-films") or (dur > 5.2)
+                allow_same_fam_split = (skill_s != "zach-d-films") or (dur > 6.5)
                 if allow_same_fam_split or (fam_b != fam_a):
                     u_a = dict(ev)
                     u_a["unit_id"] = f"{ev['event_id']}_a"
@@ -504,6 +626,8 @@ def split_long_visual_beats_by_actions(
             prev is not None
             and u.get("selected_skill") == "zach-d-films"
             and prev.get("scene_family") == u.get("scene_family")
+            and prev.get("verb_action") == u.get("verb_action")
+            and prev.get("relevant_prop") == u.get("relevant_prop")
             and (float(u["end_sec"]) - float(prev["start_sec"])) <= 5.2
             and not prev.get("contact_action")
             and not u.get("contact_action")
@@ -558,6 +682,12 @@ def generate_candidate_shot_set(
             continue
 
         c["semantic_fit"] = 1.0 if fam_match else 0.35
+        if fam == "boston_wave_street_flow":
+            is_speed_beat = any(k in nar_low for k in ("35", "faster", "race", "speed", "horse", "per hour"))
+            if is_speed_beat and c["setup"] == "boston_wave_speed_sweep":
+                c["semantic_fit"] += 0.80
+            elif (not is_speed_beat) and c["setup"] == "boston_wave_chase_street":
+                c["semantic_fit"] += 0.65
         if fam == "traction_machine_room":
             is_brake_beat = any(k in nar_low for k in ("brake", "caliper", "clamp", "slow", "stop"))
             if is_brake_beat and c["setup"] == "traction_caliper_brake_macro":

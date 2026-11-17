@@ -47,6 +47,9 @@ EXPLANATION_KEYWORDS = {
     "inner", "backup", "fail-safe", "failsafe", "moisture", "condensation", "frost",
     "fogging", "layers", "layer", "tiny", "hole", "crack", "cabin", "altitude",
     "three", "clear", "safe", "slowly",
+    "molasses", "flood", "gallons", "million", "tank", "leaking", "rivet", "steel",
+    "miles", "faster", "horse", "smashed", "trapped", "twenty-one", "150", "injured",
+    "construction", "engineers", "tighten",
 }
 
 
@@ -183,12 +186,26 @@ def _split_sentence_into_clauses(sentence: str) -> List[str]:
 def _infer_clause_intent(clause: str, sent_idx: int, total_sentences: int, clause_idx: int) -> str:
     low = clause.lower().strip()
     if sent_idx == 0 and clause_idx == 0:
+        if any(k in low for k in ("never", "nothing like", "unlikely", "expected", "unexpected", "1919")):
+            return "hook_whispered_curiosity"
         return "hook" if clause.endswith("?") or any(w in low for w in ("ever ", "why ", "what if", "wonder")) else "hook"
+    if "wasn't" in low or "was molasses" in low or "it was " in low:
+        return "sudden_reveal"
+    if any(k in low for k in ("leaking", "leak", "for years", "warning", "strained")):
+        return "quiet_foreshadow"
+    if any(k in low for k in ("gave way", "walls gave", "rupture", "burst")):
+        return "rupture_burst"
+    if any(k in low for k in ("2.3", "million gallons", "poured", "35", "faster", "race", "smashed", "trapped")):
+        return "danger_acceleration"
+    if any(k in low for k in ("twenty-one", "21", "died", "injured", "150", "casualt")):
+        return "human_cost"
     if clause.endswith("?") or low.startswith("wait") or "what if" in low:
         return "twist_question"
     if any(re.search(rf"\b{re.escape(m)}\b", low) for m in ("but", "however", "isn't", "doesn't", "never", "instead")):
         return "contrast"
     if sent_idx == total_sentences - 1:
+        if any(k in low for k in ("engineers", "tighten", "rules", "history", "lesson", "remember")):
+            return "reflective_payoff"
         return "payoff"
     if any(k in low for k in ("equalizes", "equalize", "three", "because", "carries", "backup", "vents", "becomes")):
         return "mechanism"
@@ -331,12 +348,61 @@ def plan_phrase_delivery(
             boost = 1.0 if style == "cinematic" else 0.62
             emp_cands = score_emphasis_candidates(clause, intent, domain_terms=domain_terms)
             if intent == "hook":
-                rate_mult = 1.06 + 0.04 * boost
-                pitch_st = 1.8 * boost
+                rate_mult = 1.04 + 0.03 * boost
+                pitch_st = 1.4 * boost
                 emp_level = "moderate"
-                vol_db = 0.7 * boost
+                vol_db = 0.6 * boost
                 pause_before = 0
                 pause_after = int(round((240 if clause.endswith("?") else 170) * pause_scale))
+            elif intent == "hook_whispered_curiosity":
+                rate_mult = 0.96
+                pitch_st = -0.3 * boost
+                emp_level = "moderate"
+                vol_db = -0.3
+                pause_before = 0
+                pause_after = int(round(220 * pause_scale))
+            elif intent == "sudden_reveal":
+                rate_mult = 0.93
+                pitch_st = 1.2 * boost
+                emp_level = "strong"
+                vol_db = 0.8 * boost
+                pause_before = int(round(120 * pause_scale))
+                pause_after = int(round(230 * pause_scale))
+            elif intent == "quiet_foreshadow":
+                rate_mult = 0.94
+                pitch_st = -0.7 * boost
+                emp_level = "moderate"
+                vol_db = -0.2
+                pause_before = int(round(60 * pause_scale))
+                pause_after = int(round(240 * pause_scale))
+            elif intent == "rupture_burst":
+                rate_mult = 1.02 + 0.03 * boost
+                pitch_st = 1.3 * boost
+                emp_level = "strong"
+                vol_db = 1.0 * boost
+                pause_before = int(round(140 * pause_scale))
+                pause_after = int(round(180 * pause_scale))
+            elif intent == "danger_acceleration":
+                rate_mult = 1.04 + 0.03 * boost
+                pitch_st = 0.7 * boost
+                emp_level = "moderate"
+                vol_db = 0.6 * boost
+                pause_before = 0
+                pause_after = int(round(135 * pause_scale))
+            elif intent == "human_cost":
+                rate_mult = 0.87
+                pitch_st = -1.2 * boost
+                emp_level = "moderate"
+                vol_db = -0.45
+                pause_before = int(round(160 * pause_scale))
+                pause_after = int(round(290 * pause_scale))
+            elif intent == "reflective_payoff":
+                rate_mult = 0.93
+                pitch_st = 0.4 * boost
+                emp_level = "moderate"
+                vol_db = 0.4 * boost
+                pause_before = int(round(90 * pause_scale))
+                pause_after = 0 if is_last_sent else int(round(180 * pause_scale))
             elif intent == "twist_question":
                 rate_mult = 0.90 - 0.04 * boost
                 pitch_st = 2.4 * boost
@@ -607,8 +673,10 @@ def measure_voice_delivery(
             g0 = i1
             g1 = min(len(samples), int(round(next_s * sr)))
             measured_pause_ms = int(round(max(0.0, (g1 - g0) / float(sr)) * 1000.0))
+            planned_inter_pause_ms = int(sp.get("pause_after_ms", 0)) + int(phrase_spans[idx + 1].get("pause_before_ms", 0))
         else:
             measured_pause_ms = 0
+            planned_inter_pause_ms = 0
 
         phrase_metrics.append({
             "phrase_id": sp.get("phrase_id", f"ph_{idx:02d}"),
@@ -618,7 +686,7 @@ def measure_voice_delivery(
             "duration_sec": round(dur_s, 3),
             "planned_rate_mult": sp.get("rate_multiplier"),
             "planned_pitch_st": sp.get("pitch_semitones"),
-            "planned_pause_after_ms": sp.get("pause_after_ms", 0),
+            "planned_pause_after_ms": planned_inter_pause_ms,
             "measured_pause_after_ms": measured_pause_ms,
             "rms_dbfs": rms_db,
             "f0_median_hz": f0_med,

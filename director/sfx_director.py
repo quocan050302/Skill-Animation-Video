@@ -28,24 +28,31 @@ from .audio_dsp import (
     _electric_crackle,
     _elevator_arrival_chime,
     _elevator_button_click,
+    _footsteps_retreat,
     _glass_tap,
     _low_sting,
     _lp,
     _marker_ring_draw,
     _mechanical_click,
+    _molasses_wave_rush,
     _motor_drive_hum,
     _pin_drop,
     _place,
     _pop,
+    _rail_creak,
     _relay_cabinet_click,
     _reveal_soft,
     _riser,
+    _rivet_tension_ping,
     _sand_thud,
     _sheave_cable_whir,
     _shield_clang,
     _step_gravel,
+    _street_obstacle_impact,
     _subsea_bubble,
     _sword_draw,
+    _tank_rupture_impact,
+    _tank_structural_groan,
     _thud,
     _tick,
     _ui_pop_soft,
@@ -133,6 +140,26 @@ def select_procedural_sfx(
         return _low_sting(rng, 0.32)
     if gen == "airflow_hiss":
         return _airflow_hiss(rng, 0.48)
+    if gen == "tank_structural_groan":
+        return _tank_structural_groan(rng, 0.58)
+    if gen == "rivet_tension_ping":
+        return _rivet_tension_ping(rng, 0.16)
+    if gen == "tank_rupture_impact":
+        return _tank_rupture_impact(rng, 0.46)
+    if gen == "molasses_wave_rush":
+        return _molasses_wave_rush(rng, 0.72)
+    if gen == "street_obstacle_impact":
+        return _street_obstacle_impact(rng, 0.34)
+    if gen == "footsteps_retreat":
+        return _footsteps_retreat(rng, 0.52)
+    if gen == "rail_creak":
+        return _rail_creak(rng, 0.44)
+    if gen == "reveal_pop":
+        return _ui_pop_soft(rng, 500.0)
+    if gen == "tracked_focus_ring_draw":
+        return _marker_ring_draw(rng, 0.16)
+    if gen == "counter_emphasis_soft":
+        return _reveal_soft(rng, 0.32)
     return _pop(520.0) * 0.6
 
 
