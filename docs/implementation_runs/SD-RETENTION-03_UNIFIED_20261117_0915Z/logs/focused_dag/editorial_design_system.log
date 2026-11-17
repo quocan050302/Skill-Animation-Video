@@ -1,0 +1,17 @@
+TASK: editorial_design_system
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_editorial_design_system -v
+STATUS: PASS (exit=0, elapsed=0.11s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_g01_g02_role_derivation_and_multi_variant_registry (tests.test_editorial_design_system.TestEditorialDesignSystem.test_g01_g02_role_derivation_and_multi_variant_registry) ... ok
+test_g03_g04_mobile_viewport_layout_and_tokens_emission (tests.test_editorial_design_system.TestEditorialDesignSystem.test_g03_g04_mobile_viewport_layout_and_tokens_emission) ... ok
+test_g19_generalizes_beyond_tacoma_and_boston (tests.test_editorial_design_system.TestEditorialDesignSystem.test_g19_generalizes_beyond_tacoma_and_boston) ... ok
+test_negative_traps_n01_n02_n03_n04_n31 (tests.test_editorial_design_system.TestEditorialDesignSystem.test_negative_traps_n01_n02_n03_n04_n31) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.005s
+
+OK
+

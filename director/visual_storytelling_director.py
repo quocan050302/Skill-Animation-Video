@@ -234,6 +234,200 @@ def _classify_narrative_action_unit(
             "reconstruction_disclosure": disclosure,
         }
 
+    # 1b. Tacoma Narrows 1940 Historical Engineering Reconstruction
+    is_tacoma_story = (
+        "tacoma" in full_script_low
+        or "galloping gertie" in full_script_low
+        or ("bridge" in full_script_low and "twist" in full_script_low)
+    ) or fam.startswith("tacoma_")
+
+    if is_tacoma_story:
+        base_period = 1940
+        disclosure = "stylized_illustrative"
+        is_aftermath_line = any(k in low for k in ("no human", "forced bridge", "rethink", "changed the way", "forever", "flexible bridges", "redesigned", "worldwide after", "after that collapse"))
+        if fam == "tacoma_hook_telephoto" or idx == 0:
+            return {
+                "location_id": "tacoma_midspan_telephoto_hook",
+                "entity_ids": ["tacoma_bridge_1940", "suspender_cables_1940"],
+                "physical_action": "bridge_hook_initial_sway",
+                "world_state_before": ["bridge_calm_morning"],
+                "world_state_after": ["slender_deck_oscillating_noticeably"],
+                "new_visual_evidence": ["telephoto_warped_centerline", "taut_cable_harmonics"],
+                "required_anchors": ["bridge_midspan_twist"],
+                "required_stage_family": "tacoma_hook_telephoto",
+                "primary_asset": "tacoma_bridge_hook_rig",
+                "factual_claim_id": "claim_tacoma_open_1940",
+                "editorial_intent": "curiosity_hook",
+                "curiosity_gap": True,
+                "tone": "intrigue",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed", "plunged", "broke"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_aftermath" or (is_aftermath_line and not any(k in low for k in ("broke free", "plunged", "crashed"))):
+            return {
+                "location_id": "tacoma_narrows_aftermath_wide_1940",
+                "entity_ids": ["tacoma_towers_1940", "puget_sound_water"],
+                "physical_action": "bridge_collapse_aftermath",
+                "world_state_before": ["center_span_plunged"],
+                "world_state_after": ["towers_standing_over_empty_narrows_aftermath"],
+                "new_visual_evidence": ["missing_center_roadway", "dangling_suspenders", "calm_aftermath_ripples"],
+                "required_anchors": ["aftermath_broken_gap"],
+                "required_stage_family": "tacoma_aftermath",
+                "primary_asset": "tacoma_aftermath_rig",
+                "factual_claim_id": "claim_tacoma_engineering_legacy",
+                "editorial_intent": "aftermath_takeaway",
+                "curiosity_gap": False,
+                "tone": "sober_analytical",
+                "reveal_after_token": None,
+                "spoiler_tokens": [],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_collapse_plunge" or any(k in low for k in ("broke free", "plunged", "crashed", "section fell", "center section")) or ("collapse" in low and not is_aftermath_line):
+            return {
+                "location_id": "tacoma_center_span_collapse_1940",
+                "entity_ids": ["tacoma_bridge_1940", "puget_sound_water"],
+                "physical_action": "bridge_span_collapse",
+                "world_state_before": ["extreme_torsional_flutter_deck"],
+                "world_state_after": ["center_span_detached_plunging_water_splash"],
+                "new_visual_evidence": ["snapped_suspenders", "falling_girder_span", "narrows_water_splash"],
+                "required_anchors": ["collapse_break_seam"],
+                "required_stage_family": "tacoma_collapse_plunge",
+                "primary_asset": "tacoma_collapse_span_rig",
+                "factual_claim_id": "claim_tacoma_collapse_1940_11_07",
+                "editorial_intent": "structural_collapse",
+                "curiosity_gap": False,
+                "tone": "dramatic_factual",
+                "reveal_after_token": "broke",
+                "spoiler_tokens": ["broke", "collapsed", "plunged"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_shore_onlooker" or (
+            fam != "tacoma_torsion_twist"
+            and any(k in low for k in ("witness", "onlooker", "shore", "braced", "stepped back"))
+        ):
+            return {
+                "location_id": "tacoma_west_shore_approach_1940",
+                "entity_ids": ["char_onlooker_1940_01", "tacoma_bridge_1940"],
+                "physical_action": "shore_onlooker_reaction",
+                "world_state_before": ["shore_observer_looking"],
+                "world_state_after": ["observer_braces_steps_back_from_twisting_bridge"],
+                "new_visual_evidence": ["grounded_step_back", "far_span_violent_torsion"],
+                "required_anchors": ["shore_onlooker_head"],
+                "required_stage_family": "tacoma_shore_onlooker",
+                "primary_asset": "tacoma_shore_onlooker_rig",
+                "factual_claim_id": "claim_tacoma_witnesses_1940",
+                "editorial_intent": "human_reaction",
+                "curiosity_gap": False,
+                "tone": "tense_factual",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_torsion_twist" or any(k in low for k in ("pitched", "opposite lane", "started twisting", "violent twist", "torsional waves")):
+            return {
+                "location_id": "tacoma_midspan_torsion_zone_1940",
+                "entity_ids": ["tacoma_bridge_1940", "suspender_cables_1940", "sedan_1940"],
+                "physical_action": "torsional_flutter_escalation",
+                "world_state_before": ["vertical_roadway_wave"],
+                "world_state_after": ["asymmetric_deck_torsion_oscillation"],
+                "new_visual_evidence": ["opposed_girder_roll", "taut_suspender_tilt", "abandoned_sedan_pitch"],
+                "required_anchors": ["deck_twist_edge_l"],
+                "required_stage_family": "tacoma_torsion_twist",
+                "primary_asset": "tacoma_torsion_span_rig",
+                "factual_claim_id": "claim_tacoma_flutter_mechanism",
+                "editorial_intent": "twist_escalation",
+                "curiosity_gap": True,
+                "tone": "high_tension",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed", "plunged"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_under_deck_girder" or any(k in low for k in ("plate girder", "flutter", "aerodynamic", "solid steel", "caught swirling")):
+            return {
+                "location_id": "tacoma_under_deck_girder_bay",
+                "entity_ids": ["plate_girder_8ft", "wind_streamlines"],
+                "physical_action": "plate_girder_wind_loading",
+                "world_state_before": ["steady_crosswind_flow"],
+                "world_state_after": ["wind_vortex_side_load_on_8ft_girder"],
+                "new_visual_evidence": ["shallow_solid_girder_profile", "illustrative_wind_streams"],
+                "required_anchors": ["plate_girder_windward"],
+                "required_stage_family": "tacoma_under_deck_girder",
+                "primary_asset": "tacoma_girder_wind_rig",
+                "factual_claim_id": "claim_tacoma_collapse_1940_11_07",
+                "editorial_intent": "mechanism_explanation",
+                "curiosity_gap": False,
+                "tone": "analytical",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed", "plunged"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_roadway_wave" or any(k in low for k in ("bounced", "bouncing", "bounce", "vertical", "up and down", "crosswinds", "gallop")):
+            return {
+                "location_id": "tacoma_roadway_center_deck",
+                "entity_ids": ["tacoma_bridge_1940", "sedan_1940"],
+                "physical_action": "bridge_vertical_bounce",
+                "world_state_before": ["initial_cable_wobble"],
+                "world_state_after": ["vertical_standing_wave_roadbed"],
+                "new_visual_evidence": ["rolling_deck_crests", "1940_sedan_bouncing_along_lane"],
+                "required_anchors": ["bridge_midspan_twist"],
+                "required_stage_family": "tacoma_roadway_wave",
+                "primary_asset": "tacoma_roadway_wave_rig",
+                "factual_claim_id": "claim_galloping_gertie_1940",
+                "editorial_intent": "mechanism_explanation",
+                "curiosity_gap": False,
+                "tone": "analytical",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed", "plunged"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "tacoma_wide_establish" or any(k in low for k in ("opened", "july", "nicknamed", "narrow span", "washington", "tacoma narrows", "puget sound", "drivers")):
+            return {
+                "location_id": "tacoma_narrows_strait_1940",
+                "entity_ids": ["tacoma_towers_1940", "puget_sound_cliffs"],
+                "physical_action": "strait_wide_establish",
+                "world_state_before": ["telephoto_deck_anomaly"],
+                "world_state_after": ["full_slender_suspension_bridge_context"],
+                "new_visual_evidence": ["twin_deco_towers", "narrow_39ft_deck_across_strait"],
+                "required_anchors": ["bridge_midspan_twist"],
+                "required_stage_family": "tacoma_wide_establish",
+                "primary_asset": "tacoma_wide_establish_rig",
+                "factual_claim_id": "claim_galloping_gertie_1940",
+                "editorial_intent": "context_establish",
+                "curiosity_gap": False,
+                "tone": "informative",
+                "reveal_after_token": None,
+                "spoiler_tokens": ["collapsed", "plunged"],
+                "period_year": base_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        return {
+            "location_id": "tacoma_narrows_strait_1940",
+            "entity_ids": ["tacoma_towers_1940", "puget_sound_water"],
+            "physical_action": "strait_wide_establish",
+            "world_state_before": ["telephoto_deck_anomaly"],
+            "world_state_after": ["full_slender_suspension_bridge_context"],
+            "new_visual_evidence": ["twin_deco_towers", "narrow_39ft_deck_across_strait"],
+            "required_anchors": ["bridge_midspan_twist"],
+            "required_stage_family": "tacoma_wide_establish",
+            "primary_asset": "tacoma_wide_establish_rig",
+            "factual_claim_id": "claim_galloping_gertie_1940",
+            "editorial_intent": "context_establish",
+            "curiosity_gap": False,
+            "tone": "informative",
+            "reveal_after_token": None,
+            "spoiler_tokens": ["collapsed", "plunged"],
+            "period_year": base_period,
+            "reconstruction_disclosure": disclosure,
+        }
+
     # 2. Generalized Domain Mapping (Mechanisms / Science / Roman / Biology / Generic)
     action_map = {
         "tap_activate": "human_physical_contact",
@@ -313,6 +507,8 @@ def plan_story_action_graph(
         if seen_acts and act_name == seen_acts[-1] and spec["required_stage_family"] == "boston_wave_street_flow":
             act_name = "wave_speed_chase_escalation"
             spec["physical_action"] = act_name
+        spec = advance_subphase_if_repeated(narrative_events[-1] if narrative_events else None, spec)
+        act_name = spec["physical_action"]
         seen_acts.append(act_name)
 
         narrative_events.append({
@@ -321,6 +517,9 @@ def plan_story_action_graph(
             "beat_role": ev.get("beat_role", "mechanism"),
             "narration_text": ev.get("exact_narration_phrase", ""),
             "factual_claim_id": spec["factual_claim_id"],
+            "editorial_intent": spec.get("editorial_intent"),
+            "curiosity_gap": bool(spec.get("curiosity_gap", idx == 0)),
+            "tone": spec.get("tone", "informative"),
             "entity_ids": spec["entity_ids"],
             "location_id": spec["location_id"],
             "world_state_before": spec["world_state_before"],
@@ -353,6 +552,43 @@ def plan_story_action_graph(
         "world_state_transitions": transitions,
         "unique_actions_count": len({e["physical_action"] for e in narrative_events}),
         "unique_locations_count": len({e["location_id"] for e in narrative_events}),
+    }
+
+
+CONTINUATION_SUBPHASES: Dict[str, Tuple[str, str, List[str]]] = {
+    "tacoma_hook_telephoto": ("bridge_hook_lane_heave", "tacoma_hook_lane_rig", ["highway_lanes_heaving_visibly"]),
+    "tacoma_wide_establish": ("strait_crosswind_buildup", "tacoma_wide_wind_rig", ["crosswinds_sweeping_across_narrow_strait"]),
+    "tacoma_roadway_wave": ("bridge_car_suspension_bounce", "tacoma_roadway_car_rig", ["1940_sedan_bouncing_along_vertical_wave"]),
+    "tacoma_under_deck_girder": ("vortex_shedding_oscillation", "tacoma_girder_vortex_rig", ["alternating_vortex_shedding_behind_girder"]),
+    "tacoma_torsion_twist": ("extreme_opposed_edge_roll", "tacoma_torsion_extreme_rig", ["deck_edges_rocking_violently_out_of_phase"]),
+    "tacoma_shore_onlooker": ("shore_onlooker_step_back", "tacoma_shore_step_rig", ["observer_steps_back_watching_cables"]),
+    "tacoma_collapse_plunge": ("center_section_water_plunge", "tacoma_collapse_splash_rig", ["detached_steel_span_impacts_water_surface"]),
+    "tacoma_aftermath": ("bridge_code_redesign_aftermath", "tacoma_aftermath_redesign", ["aerodynamic_truss_standards_adopted"]),
+}
+
+
+def advance_subphase_if_repeated(
+    prev_ev: Optional[Dict[str, Any]],
+    cur_ev: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Differentiate a multi-shot narrative beat when consecutive clauses share the same physical stage."""
+    if not prev_ev:
+        return cur_ev
+    if (
+        prev_ev.get("physical_action") != cur_ev.get("physical_action")
+        and prev_ev.get("world_state_after") != cur_ev.get("world_state_after")
+    ):
+        return cur_ev
+    fam_k = str(cur_ev.get("required_stage_family") or "")
+    sub = CONTINUATION_SUBPHASES.get(fam_k)
+    if sub is None:
+        return cur_ev
+    next_act, next_asset, next_ws = sub
+    return {
+        **cur_ev,
+        "physical_action": next_act,
+        "primary_asset": next_asset,
+        "world_state_after": list(next_ws),
     }
 
 
@@ -522,6 +758,12 @@ def validate_narrative_causality(
     if "rescue_and_settling_aftermath" in acts and "molasses_wave_surge" in acts:
         if acts.index("rescue_and_settling_aftermath") < acts.index("molasses_wave_surge"):
             violations.append("Causal inversion: rescue_and_settling_aftermath precedes molasses_wave_surge")
+    if "bridge_span_collapse" in acts and "torsional_flutter_escalation" in acts:
+        if acts.index("bridge_span_collapse") < acts.index("torsional_flutter_escalation"):
+            violations.append("N15: Causal inversion: bridge_span_collapse precedes torsional_flutter_escalation")
+    if "bridge_collapse_aftermath" in acts and "bridge_span_collapse" in acts:
+        if acts.index("bridge_collapse_aftermath") < acts.index("bridge_span_collapse"):
+            violations.append("Causal inversion: bridge_collapse_aftermath precedes bridge_span_collapse")
 
     # Period appropriateness check (no modern smartphone/Roman armor/SUV in historical 1919 scenes)
     if period_year is not None and int(period_year) <= 1940:

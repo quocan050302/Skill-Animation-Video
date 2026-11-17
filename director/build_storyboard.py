@@ -21,7 +21,10 @@ from typing import Any, Dict, List, Optional
 
 from .assets.style_params import build_style_params
 from .camera_choreographer import build_camera_plan
+from .character_performance import plan_character_action
+from .cinematic_composition_qa import audit_cinematic_composition
 from .editorial_overlay import build_editorial_timeline
+from .physical_motion import plan_contact_schedule, plan_motion_intent
 from .scene_asset_factory import (
     compile_scene_entities,
     materialize_engine_scene,
@@ -33,6 +36,7 @@ from .visual_event_graph import extract_semantic_visual_events, write_visual_eve
 from .visual_storytelling_director import (
     NarrativeCausalityError,
     _classify_narrative_action_unit,
+    advance_subphase_if_repeated,
     plan_story_action_graph,
     plan_world_state_transitions,
     score_story_diversity,
@@ -113,6 +117,8 @@ def build_storyboard_and_bible(
     callout_mode: str = "smart",
     verified_numbers: Optional[List[Dict[str, Any]]] = None,
     historical_claims: Optional[Dict[str, Any]] = None,
+    editorial_theme: str = "role-aware",
+    curiosity_layer: str = "auto",
 ) -> Dict[str, Any]:
     """Produce STEP 3 `storyboard.json`, `art_bible.md`, and visual direction artifacts."""
     selected_skill = style_decisions["selected_skill"]
@@ -252,10 +258,15 @@ def build_storyboard_and_bible(
                     "new_visual_evidence": sub_spec["new_visual_evidence"],
                     "required_stage_family": sub_spec["required_stage_family"],
                     "primary_asset": sub_spec["primary_asset"],
+                    "editorial_intent": sub_spec.get("editorial_intent"),
+                    "curiosity_gap": sub_spec.get("curiosity_gap"),
+                    "tone": sub_spec.get("tone"),
                     "start_sec": sc["start"],
                     "end_sec": sc["end"],
                     "duration_sec": sc["duration"],
                 }
+            if refined_nevs:
+                matched_nev = advance_subphase_if_repeated(refined_nevs[-1], matched_nev)
             used_nevs.add(str(matched_nev.get("narrative_event_id")))
             refined_nevs.append(matched_nev)
             sc["narrative_event_id"] = matched_nev.get("narrative_event_id")
@@ -268,6 +279,18 @@ def build_storyboard_and_bible(
             sc["reveal_after_sec"] = matched_nev.get("reveal_after_sec")
             sc["spoiler_tokens"] = list(matched_nev.get("spoiler_tokens") or [])
             sc["period_year"] = matched_nev.get("period_year")
+            sc["editorial_intent"] = matched_nev.get("editorial_intent")
+            sc["curiosity_gap"] = matched_nev.get("curiosity_gap")
+            sc["tone"] = matched_nev.get("tone")
+            if selected_skill == "zach-d-films":
+                sc["physical_motion_spec"] = plan_motion_intent(sc, story_event=matched_nev, seed=seed + i)
+                act_s = str(matched_nev.get("physical_action") or "").lower()
+                char_id = (sc.get("staging") or {}).get("character_id")
+                if char_id or any(k in act_s for k in ("crowd", "onlooker", "retreat", "rescue", "react", "press", "inspect")):
+                    sc["character_performance_plan"] = plan_character_action(
+                        matched_nev,
+                        context={"role": str(char_id or "onlooker")},
+                    )
             if sc.get("staging", {}).get("verb_action") == "travel_stream" and matched_nev.get("physical_action") == "wave_speed_chase_escalation":
                 sc["staging"]["verb_action"] = "escalate_tick"
                 sc["staging"]["action"] = f"{sc['staging'].get('subject')} escalate_tick ({sc['staging'].get('visual_metaphor')})"
@@ -322,6 +345,8 @@ def build_storyboard_and_bible(
     total_duration = float(visual_events["total_duration_sec"])
 
     effective_callout_mode = callout_mode if selected_skill == "zach-d-films" else "off"
+    effective_editorial_theme = editorial_theme if selected_skill == "zach-d-films" else "legacy"
+    effective_curiosity_layer = curiosity_layer if selected_skill == "zach-d-films" else "off"
     storyboard: Dict[str, Any] = {
         "schema_version": "0.5.0",
         "selection_mode": style_decisions["selection_mode"],
@@ -336,6 +361,9 @@ def build_storyboard_and_bible(
         "total_duration_sec": round(total_duration, 3),
         "caption_mode": caption_mode,
         "callout_mode": effective_callout_mode,
+        "editorial_theme": effective_editorial_theme,
+        "curiosity_layer": effective_curiosity_layer,
+        "contact_schedule": plan_contact_schedule(shots, story_action_graph),
         "edit_energy": coverage["edit_energy"],
         "scene_novelty": scene_novelty,
         "transition_policy": transition_policy,
@@ -370,11 +398,25 @@ def build_storyboard_and_bible(
         callout_mode=effective_callout_mode,
         prosody_plan=(parsed_script.get("voice") or {}).get("prosody_plan"),
         verified_numbers=verified_numbers,
+        editorial_theme=effective_editorial_theme,
+        curiosity_layer=effective_curiosity_layer,
     )
+    comp_plan_audit = audit_cinematic_composition(
+        run_dir=run_dir,
+        storyboard=storyboard,
+        editorial_timeline=ed_timeline,
+        raw_traces=None,
+    )
+    roles_used = sorted({str(o.get("role")) for o in ed_timeline.get("overlays", []) if o.get("role")})
     storyboard["editorial_timeline_summary"] = {
         "schema_version": ed_timeline["schema_version"],
         "caption_mode": ed_timeline["caption_mode"],
         "callout_mode": ed_timeline["callout_mode"],
+        "editorial_theme": ed_timeline.get("editorial_theme", effective_editorial_theme),
+        "curiosity_layer": ed_timeline.get("curiosity_layer", effective_curiosity_layer),
+        "editorial_roles_used": roles_used,
+        "editorial_roles_count": len(roles_used),
+        "cinematic_composition_status": comp_plan_audit.get("status"),
         "word_anchor_confidence": ed_timeline["word_anchor_confidence"],
         "caption_chunks_count": len(ed_timeline["caption_chunks"]),
         "overlays_count": len(ed_timeline["overlays"]),

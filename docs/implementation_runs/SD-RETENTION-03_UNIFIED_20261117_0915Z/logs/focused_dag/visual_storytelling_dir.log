@@ -1,0 +1,16 @@
+TASK: visual_storytelling_dir
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_visual_storytelling_director -v
+STATUS: PASS (exit=0, elapsed=1.91s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_boston_1919_story_action_graph_and_storyboard_routing (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_boston_1919_story_action_graph_and_storyboard_routing) ... ok
+test_generalization_across_mixed_non_boston_topics (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_generalization_across_mixed_non_boston_topics) ... ok
+test_negative_traps_n04_n05_n06_n07 (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_negative_traps_n04_n05_n06_n07) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.520s
+
+OK
+

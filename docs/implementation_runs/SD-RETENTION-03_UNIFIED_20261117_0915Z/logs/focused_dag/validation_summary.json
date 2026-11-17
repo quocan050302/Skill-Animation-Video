@@ -1,0 +1,366 @@
+{
+  "schema_version": "sd-async-validation-1",
+  "mode": "focused",
+  "workers": 2,
+  "overall_status": "PASS",
+  "total_elapsed_sec": 138.0,
+  "tasks": [
+    {
+      "task_id": "unit_and_negative",
+      "description": "Style-lock negative & routing contracts",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_unit_and_negative",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 1.31,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\unit_and_negative.log"
+    },
+    {
+      "task_id": "visual_event_coverage",
+      "description": "VisualEventGraph, coverage, bounds & fault-injection unit contracts",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_visual_event_and_coverage",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.23,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\visual_event_coverage.log"
+    },
+    {
+      "task_id": "visual_storytelling_dir",
+      "description": "R2.1 story action graph, world-state causality, reveal order & period integrity",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_visual_storytelling_director",
+        "-v"
+      ],
+      "deps": [
+        "visual_event_coverage"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 1.91,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\visual_storytelling_dir.log"
+    },
+    {
+      "task_id": "storytelling_qa",
+      "description": "R2.6 false-pass-proof overlay diff, A/B event alignment & N11-N24 QA traps",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_storytelling_qa",
+        "-v"
+      ],
+      "deps": [
+        "visual_storytelling_dir"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 1.14,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\storytelling_qa.log"
+    },
+    {
+      "task_id": "audio_determinism",
+      "description": "Audio DSP determinism & mastering LUFS/TP checks",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_audio_mix_determinism",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 5.28,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\audio_determinism.log"
+    },
+    {
+      "task_id": "zdf_motion01_matrix",
+      "description": "T01-T20 ZDF-MOTION-01 contracts, IK, cutaway, transition & QA tamper traps",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_zdf_motion01",
+        "-v"
+      ],
+      "deps": [
+        "unit_and_negative",
+        "visual_event_coverage"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 13.2,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\zdf_motion01_matrix.log"
+    },
+    {
+      "task_id": "audio_catalog_licenses",
+      "description": "Audio catalog, license policy & Windows portable traversal guard",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_audio_catalog_and_licenses",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.41,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\audio_catalog_licenses.log"
+    },
+    {
+      "task_id": "voice_prosody",
+      "description": "R1/R2.3 semantic voice prosody, candidate eval & traps N1-N3/N15",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_voice_prosody",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 9.42,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\voice_prosody.log"
+    },
+    {
+      "task_id": "editorial_overlays",
+      "description": "R2.4 kinetic captions across mobile widths, 3D tracking, occlusion & N4-N9/N16",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_editorial_overlays",
+        "-v"
+      ],
+      "deps": [
+        "voice_prosody"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 10.19,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\editorial_overlays.log"
+    },
+    {
+      "task_id": "boston_molasses_scenes",
+      "description": "R2.2 modular 1919 Boston WebGL scenes, rupture/wave dynamics & determinism",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_boston_molasses_scenes",
+        "-v"
+      ],
+      "deps": [
+        "visual_storytelling_dir"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 9.39,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\boston_molasses_scenes.log"
+    },
+    {
+      "task_id": "retention_audio_sync",
+      "description": "R2.5 bespoke SFX sync, isolation & traps N10-N12/N14",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_retention_audio_sync",
+        "-v"
+      ],
+      "deps": [
+        "audio_determinism",
+        "editorial_overlays"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 4.11,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\retention_audio_sync.log"
+    },
+    {
+      "task_id": "editorial_design_system",
+      "description": "SD-RETENTION-03 semantic roles, mobile widths, design tokens & N01-N04/N31",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_editorial_design_system",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.11,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\editorial_design_system.log"
+    },
+    {
+      "task_id": "curiosity_director",
+      "description": "SD-RETENTION-03 <=2 curiosity headlines, pointer planning & N09-N10",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_curiosity_director",
+        "-v"
+      ],
+      "deps": [
+        "editorial_design_system"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.11,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\curiosity_director.log"
+    },
+    {
+      "task_id": "cinematic_composition",
+      "description": "SD-RETENTION-03 9:16 negative-space framing, progression & collision QA",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_cinematic_composition",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.09,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\cinematic_composition.log"
+    },
+    {
+      "task_id": "physical_motion",
+      "description": "SD-RETENTION-03 deterministic torsion/collapse/viscous waves, seek determinism & N13-N15/N20-N22",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_physical_motion",
+        "-v"
+      ],
+      "deps": [
+        "visual_storytelling_dir"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 3.58,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\physical_motion.log"
+    },
+    {
+      "task_id": "character_performance",
+      "description": "SD-RETENTION-03 human.js foot-lock grounding, non-slide retreat & N17-N19",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_character_performance",
+        "-v"
+      ],
+      "deps": [
+        "visual_storytelling_dir"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 3.77,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\character_performance.log"
+    },
+    {
+      "task_id": "visual_scene_factory_e2e",
+      "description": "ZDF non-Roman cutaway stills, determinism hashes & E2E pipeline",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_visual_scene_factory_and_diversity",
+        "-v"
+      ],
+      "deps": [
+        "zdf_motion01_matrix"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 80.69,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\visual_scene_factory_e2e.log"
+    },
+    {
+      "task_id": "retention_e2e",
+      "description": "3-pane WebGL cutaway, determinism & trap N13",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_retention_e2e",
+        "-v"
+      ],
+      "deps": [
+        "editorial_overlays",
+        "retention_audio_sync",
+        "storytelling_qa",
+        "boston_molasses_scenes"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 10.88,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\retention_e2e.log"
+    },
+    {
+      "task_id": "retention03_integration",
+      "description": "SD-RETENTION-03 Tacoma Narrows WebGL integration, role SFX sync, isolation & N25/N29",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_retention03_integration",
+        "-v"
+      ],
+      "deps": [
+        "editorial_design_system",
+        "curiosity_director",
+        "cinematic_composition",
+        "physical_motion",
+        "character_performance",
+        "storytelling_qa"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 4.14,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\SD-RETENTION-03_UNIFIED_20261117_0915Z\\logs\\focused_dag\\retention03_integration.log"
+    }
+  ]
+}

@@ -211,6 +211,10 @@ def _synthesize_ambience_bed(
         # Historical 1919 Boston harbor air & quiet distant street tone (zero modern engines/sirens)
         base = _bp(rng.standard_normal(n_total), 80.0, 520.0, sr=sr)
         mod = 0.62 + 0.38 * np.sin(2.0 * np.pi * 0.14 * t_all + 0.4)
+    elif gen == "coastal_wind_ambience":
+        # 1940 Puget Sound narrows coastal air & subtle bridge wind swell
+        base = _bp(rng.standard_normal(n_total), 95.0, 680.0, sr=sr)
+        mod = 0.58 + 0.42 * np.sin(2.0 * np.pi * 0.18 * t_all + 0.6)
     elif gen in ("minimal_quiet", "rescue_ambience"):
         base = _bp(rng.standard_normal(n_total), 140.0, 480.0, sr=sr)
         mod = 0.70 + 0.30 * np.sin(2.0 * np.pi * 0.11 * t_all)

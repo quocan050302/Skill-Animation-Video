@@ -22,6 +22,8 @@ import { clamp, easeInOut, easeOut, lerp, range, smooth } from './anim.js';
 import { buildRegisteredCharacter } from './character_action_rig.js';
 import { LayeredCutaway } from './layered_cutaway.js';
 import { computeAnchorsTelemetry } from './aircraft_window_scenes.js';
+import { makeContinuousViscousSurface, evaluateSurfaceWave } from './physical_motion_primitives.js';
+import { evaluateCharacterPose, applyGroundedCharacterPose, getCharacterPerformanceTelemetry } from './character_performance.js';
 
 function shadow(o) {
   o.traverse(c => {
@@ -487,42 +489,30 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
  */
 export function makeMolassesGravityCurrentRig({ width = 4.2, height = 1.65 } = {}) {
   const root = new THREE.Group();
-  const molMat = makeMolassesMaterial();
-  const sheenMat = new THREE.MeshStandardMaterial({
-    color: 0x7c360c, emissive: 0x2a0f02, emissiveIntensity: 0.34, roughness: 0.16, metalness: 0.06,
-  });
-
   const waveGroup = new THREE.Group();
-  // Stacked viscous lobes + trailing gravity current tail (no flat cylinder disk!)
-  const lobes = [];
-  for (let i = 0; i < 6; i++) {
-    const x = -width * 0.38 + (i / 5) * width * 0.76;
-    const r = 0.56 + (i % 2) * 0.12;
-    const lobe = new THREE.Mesh(new THREE.SphereGeometry(r, 22, 16), i % 2 === 0 ? molMat : sheenMat);
-    lobe.scale.set(1.18, 1.25 * (height / 1.4), 1.32);
-    lobe.position.set(x, r * 0.76, (i % 3 - 1) * 0.18);
-    waveGroup.add(lobe);
-    lobes.push(lobe);
-  }
-  const crestBar = new THREE.Mesh(new THREE.CylinderGeometry(height * 0.52, height * 0.68, width, 24), molMat);
-  crestBar.rotation.z = Math.PI / 2;
-  crestBar.position.set(0, height * 0.52, -0.35);
-  waveGroup.add(crestBar);
 
-  const surgeTail = new THREE.Mesh(new THREE.BoxGeometry(width * 1.05, height * 0.56, 5.2), molMat);
-  surgeTail.position.set(0, height * 0.28, -2.95);
-  waveGroup.add(surgeTail);
+  // Continuous deformable 3D viscous surface (replaces disconnected spheres/bars cleanly)
+  const viscousWave = makeContinuousViscousSurface({
+    width,
+    length: 5.8,
+    height,
+    nx: 40,
+    nz: 22,
+    colorHex: 0x5c2708,
+    emissiveHex: 0x260d02,
+  });
+  waveGroup.add(viscousWave.mesh);
 
-  // Floating timber planks & barrels embedded dynamically at wave shoulder
+  // Floating timber planks & barrels riding the live crest height profile
   const plankMat = new THREE.MeshStandardMaterial({ color: 0x704d30, roughness: 0.86 });
   const barrel1 = makeWoodenBarrel1919(0.22, 0.58);
-  barrel1.position.set(-0.95, height * 0.82, 0.25);
+  barrel1.position.set(-0.95, height * 0.78, -0.25);
   barrel1.rotation.set(0.35, 0.4, 0.9);
   const crate1 = makeWoodenCrate1919(0.45, 0.38, 0.45);
-  crate1.position.set(0.88, height * 0.75, 0.18);
+  crate1.position.set(0.88, height * 0.72, -0.35);
   crate1.rotation.set(-0.22, 0.6, 0.28);
   const plank1 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.24), plankMat);
-  plank1.position.set(0.05, height * 0.92, 0.42);
+  plank1.position.set(0.05, height * 0.88, -0.08);
   plank1.rotation.set(0.18, -0.32, 0.15);
   waveGroup.add(barrel1, crate1, plank1);
 
@@ -533,6 +523,7 @@ export function makeMolassesGravityCurrentRig({ width = 4.2, height = 1.65 } = {
   waveGroup.add(crestAnchor);
 
   let waveFrontZ = -2.2;
+  let lastSurfTel = { vertex_disp_max_m: 0.0, crest_y_max_m: height, nose_z_local: 0.72 };
 
   function updateWave(lt, dur, { zStart = -2.4, zEnd = 2.6, hitTimeRel = null, impactZ = -0.86 } = {}) {
     const u = clamp(lt / Math.max(0.2, dur), 0, 1);
@@ -547,25 +538,37 @@ export function makeMolassesGravityCurrentRig({ width = 4.2, height = 1.65 } = {
       waveFrontZ = lerp(zStart, zEnd, adv);
     }
     waveGroup.position.z = waveFrontZ;
-    lobes.forEach((lb, k) => {
-      lb.position.y = (0.56 + (k % 2) * 0.12) * 0.76 + Math.sin(lt * 4.2 + k * 0.9) * 0.07;
-      lb.rotation.x = lt * 0.9;
-    });
+    lastSurfTel = viscousWave.update(lt);
+    const surfA = evaluateSurfaceWave(lt, -0.44, 0.84, { baseHeight: height });
+    const surfB = evaluateSurfaceWave(lt, 0.40, 0.82, { baseHeight: height });
+    const surfMid = evaluateSurfaceWave(lt, 0.02, 0.87, { baseHeight: height });
+    barrel1.position.y = Math.max(0.25, surfA.y - 0.05);
     barrel1.rotation.z = 0.9 + Math.sin(lt * 2.8) * 0.25;
+    crate1.position.y = Math.max(0.22, surfB.y - 0.06);
     crate1.rotation.x = -0.22 + Math.cos(lt * 2.5) * 0.22;
-    return { wave_front_z: Number(waveFrontZ.toFixed(3)), progress: Number(u.toFixed(3)) };
+    plank1.position.y = Math.max(0.28, surfMid.y + 0.02);
+    plank1.position.z = -0.05 + surfMid.dz * 0.45;
+    crestAnchor.position.set(0.0, surfMid.y * 0.85, 0.35 + surfMid.dz * 0.65);
+    return {
+      wave_front_z: Number(waveFrontZ.toFixed(3)),
+      progress: Number(u.toFixed(3)),
+      vertex_disp_max_m: lastSurfTel.vertex_disp_max_m,
+      crest_y_max_m: lastSurfTel.crest_y_max_m,
+      surface_mode: 'continuous_viscous_heightfield',
+    };
   }
 
   return {
     root: shadow(root),
     waveGroup,
     crestAnchor,
+    waveMesh: viscousWave.mesh,
     update: updateWave,
     getAnchorsTelemetry: cam => computeAnchorsTelemetry(cam, {
       molasses_reveal_crest: crestAnchor,
       wave_front_crest: crestAnchor,
     }, []),
-    getTelemetry: () => ({ wave_front_z: Number(waveFrontZ.toFixed(3)) }),
+    getTelemetry: () => ({ wave_front_z: Number(waveFrontZ.toFixed(3)), ...lastSurfTel, surface_mode: 'continuous_viscous_heightfield' }),
   };
 }
 
@@ -741,65 +744,83 @@ export function makePeriodCrowdActionRig(makeHumanFn, charSpec = {}, roleMode = 
   }
 
   let leadPos = [0, 0, 0];
+  let leadCharTel = null;
+  const stanceTrackers = actors.map(() => ({ epoch: -1, foot: '', anchorXZ: null }));
 
   function updateCrowd(lt, dur, actionMode = 'street_turn') {
     const u = clamp(lt / Math.max(0.2, dur), 0, 1);
     if (actionMode === 'inspect_leak' && actors[0]) {
-      const stepBack = smooth(range(u, 0.52, 0.92));
-      actors[0].root.position.set(-0.68 - stepBack * 0.22, 0, 0.95 + stepBack * 0.26);
-      actors[0].setPose({
-        lSh: [0.05, 0, 0.16], rSh: [-0.85 - Math.sin(lt * 2.2) * 0.06, 0.15, -0.18],
-        lEl: [-0.25, 0, 0], rEl: [-0.62, 0, 0],
-        head: [0.24, -0.18 + Math.sin(lt * 1.4) * 0.10, 0],
-        chest: [-0.08, 0.12, 0],
+      const evalRes = evaluateCharacterPose(lt, {
+        primary_intent: 'inspect',
+        duration_sec: dur,
+        base_x: -0.68,
+        base_z: 0.95,
+        base_yaw: 0.72,
+        reaction_onset_sec: Math.min(0.45, dur * 0.5),
+        retreat_distance_m: 0.34,
+        threat_world: [0.0, 1.3, -1.2],
       });
+      applyGroundedCharacterPose(actors[0], evalRes);
+      leadCharTel = getCharacterPerformanceTelemetry(actors[0], evalRes, stanceTrackers[0], [0.0, 1.3, -1.2]);
       leadPos = [actors[0].root.position.x, actors[0].root.position.y, actors[0].root.position.z];
     } else if (actionMode === 'retreat_run') {
       actors.forEach((a, idx) => {
-        const stride = lt * (6.8 + idx * 0.5) + idx * 1.1;
-        const fwdZ = a.userBasePos[2] + u * (2.6 + idx * 0.25);
-        a.root.position.set(a.userBasePos[0] * 0.85, Math.abs(Math.sin(stride)) * 0.04, fwdZ);
-        a.root.rotation.y = 0.08 * (idx % 2 ? -1 : 1);
-        a.setPose({
-          lHip: [Math.sin(stride) * 0.55, 0, 0.06], rHip: [-Math.sin(stride) * 0.55, 0, -0.06],
-          lKn: [Math.max(0.15, -Math.sin(stride) * 0.65), 0, 0], rKn: [Math.max(0.15, Math.sin(stride) * 0.65), 0, 0],
-          lSh: [-Math.sin(stride) * 0.52, 0, 0.18], rSh: [Math.sin(stride) * 0.52, 0, -0.18],
-          lEl: [-0.85, 0, 0], rEl: [-0.85, 0, 0],
-          spine: [0.18, 0, 0], head: [0.05, Math.sin(lt * 3.0 + idx) * 0.22, 0],
+        const bPos = a.userBasePos || [0, 0, 0.5];
+        const evalRes = evaluateCharacterPose(lt, {
+          primary_intent: 'retreat',
+          duration_sec: dur,
+          base_x: bPos[0],
+          base_z: bPos[2],
+          base_yaw: a.userBaseRot || 0.0,
+          reaction_onset_sec: 0.14 + idx * 0.08,
+          retreat_distance_m: 2.35 + idx * 0.18,
+          threat_world: [bPos[0], 1.2, bPos[2] - 4.0],
         });
+        applyGroundedCharacterPose(a, evalRes);
+        const tel = getCharacterPerformanceTelemetry(a, evalRes, stanceTrackers[idx], [bPos[0], 1.2, bPos[2] - 4.0]);
+        if (idx === 0) leadCharTel = tel;
       });
       if (actors[0]) leadPos = [actors[0].root.position.x, 0, actors[0].root.position.z];
     } else if (actionMode === 'rescuer_lantern') {
       actors.forEach((a, idx) => {
-        const sway = Math.sin(lt * 1.3 + idx * 1.7);
-        a.setPose({
-          lSh: [0.08, 0, 0.16], rSh: [-0.62 + sway * 0.08, sway * 0.14, -0.16],
-          lEl: [-0.25, 0, 0], rEl: [-0.52, 0, 0],
-          head: [-0.14, sway * 0.22, 0], spine: [0.12, sway * 0.05, 0],
+        const baseRot = idx === 0 ? 0.42 : -0.58;
+        const evalRes = evaluateCharacterPose(lt + idx * 0.8, {
+          primary_intent: 'help',
+          duration_sec: dur,
+          base_x: a.root.position.x,
+          base_z: a.root.position.z,
+          base_yaw: baseRot,
+          retreat_distance_m: 0.0,
         });
+        applyGroundedCharacterPose(a, evalRes);
+        const tel = getCharacterPerformanceTelemetry(a, evalRes, stanceTrackers[idx]);
+        if (idx === 0) leadCharTel = tel;
       });
       if (actors[0]) leadPos = [actors[0].root.position.x, 0, actors[0].root.position.z];
     } else {
-      // street_turn: walk calmly then pause & turn toward harbor rumble
+      // street_turn: grounded turn & wary step back toward harbor rumble
       actors.forEach((a, idx) => {
-        const walkU = clamp(u * 2.2, 0, 1);
-        const turnU = smooth(range(u, 0.45, 0.88));
-        const stride = walkU < 0.9 ? Math.sin(lt * 4.5 + idx) * (1.0 - turnU) * 0.26 : 0;
-        a.root.position.set(a.userBasePos[0], 0, a.userBasePos[2] - walkU * 0.35);
-        a.root.rotation.y = lerp(a.userBaseRot, Math.PI * 0.88, turnU);
-        a.setPose({
-          lHip: [stride, 0, 0.06], rHip: [-stride, 0, -0.06],
-          lSh: [-stride * 0.6, 0, 0.16], rSh: [stride * 0.6, 0, -0.16],
-          lEl: [-0.25, 0, 0], rEl: [-0.25, 0, 0],
-          head: [0.06 * turnU, -0.22 * turnU, 0],
+        const bPos = a.userBasePos || [0, 0, 0.5];
+        const evalRes = evaluateCharacterPose(lt, {
+          primary_intent: 'brace',
+          duration_sec: dur,
+          base_x: bPos[0],
+          base_z: bPos[2],
+          base_yaw: a.userBaseRot || 0.0,
+          reaction_onset_sec: 0.45 + idx * 0.12,
+          retreat_distance_m: 0.42,
+          threat_world: [0.0, 1.8, -4.8],
         });
+        applyGroundedCharacterPose(a, evalRes);
+        const tel = getCharacterPerformanceTelemetry(a, evalRes, stanceTrackers[idx], [0.0, 1.8, -4.8]);
+        if (idx === 0) leadCharTel = tel;
       });
       if (actors[0]) leadPos = [actors[0].root.position.x, 0, actors[0].root.position.z];
     }
-    return { lead_actor_pos: leadPos.map(v => Number(v.toFixed(3))) };
+    return { lead_actor_pos: leadPos.map(v => Number(v.toFixed(3))), character_performance: leadCharTel };
   }
 
-  return { root, actors, update: updateCrowd, getTelemetry: () => ({ lead_actor_pos: leadPos }) };
+  return { root, actors, update: updateCrowd, getTelemetry: () => ({ lead_actor_pos: leadPos, character_performance: leadCharTel }) };
 }
 
 /**

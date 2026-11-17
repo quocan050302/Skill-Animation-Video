@@ -1,0 +1,37 @@
+{
+  "run_id": "SD-RETENTION-03_UNIFIED_20261117_0915Z",
+  "timestamp_utc": "2026-11-17T09:15:00Z",
+  "repository": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video",
+  "remote_origin": "https://github.com/quocan050302/Skill-Animation-Video.git",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "starting_head_sha": "ab5928922a45745099ee82aafa15d020166ac381",
+  "master_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "submodule_vendor_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "host_audit": {
+    "os": "Windows 11 Pro",
+    "logical_cpus": 12,
+    "ram_total_kb": 33289648,
+    "ram_free_kb": 11743480,
+    "disk_d_free_gib": 52.55,
+    "gpu": "Intel(R) UHD Graphics 730 (32.0.101.7088)",
+    "browser": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "python": "3.12.10",
+    "node": "v26.13.1",
+    "ffmpeg": "9.0.2-full_build-www.gyan.dev",
+    "git_lfs": "3.8.1",
+    "tts_voices_en": ["Microsoft David Desktop", "Microsoft Zira Desktop"],
+    "neural_tts_offline_available": false,
+    "word_anchor_confidence": "ESTIMATED",
+    "local_fonts": [
+      "@fontsource/montserrat (latin 100..900 woff2)",
+      "inter / inter-tight / poppins (vendor kit fonts)"
+    ]
+  },
+  "baseline_regression_refs": {
+    "boston_enhanced_b_frames_dir": "docs/implementation_runs/SD-RETENTION-03_UNIFIED_20261117_0915Z/qa/boston_baseline_ref",
+    "boston_frames_captured": 10,
+    "reused_as_tacoma_input": false
+  },
+  "target_showcase_title": "The Bridge That Twisted Itself Apart",
+  "target_showcase_topic": "1940 Tacoma Narrows Bridge (Galloping Gertie) - November 7, 1940 aeroelastic torsional flutter"
+}

@@ -1,0 +1,15 @@
+TASK: curiosity_director
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_curiosity_director -v
+STATUS: PASS (exit=0, elapsed=0.11s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_g05_g06_g07_g08_curiosity_cap_pointer_binding_and_value_score (tests.test_curiosity_director.TestCuriosityDirector.test_g05_g06_g07_g08_curiosity_cap_pointer_binding_and_value_score) ... ok
+test_negative_traps_n09_n10_early_spoiler_and_duplicate_headline (tests.test_curiosity_director.TestCuriosityDirector.test_negative_traps_n09_n10_early_spoiler_and_duplicate_headline) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.000s
+
+OK
+

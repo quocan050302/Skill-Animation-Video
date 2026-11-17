@@ -22,6 +22,9 @@ from .zdf_rigs import CHARACTER_ACTION_RIG_JS, LAYERED_CUTAWAY_JS
 from .zdf_mechanical_scenes import MECHANICAL_SYSTEMS_JS
 from .zdf_aircraft_window_scenes import AIRCRAFT_WINDOW_SCENES_JS
 from .zdf_boston_molasses_scenes import BOSTON_MOLASSES_SCENES_JS
+from .physical_motion_primitives import PHYSICAL_MOTION_PRIMITIVES_JS
+from .character_performance import CHARACTER_PERFORMANCE_JS
+from .zdf_tacoma_bridge_scenes import TACOMA_BRIDGE_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -926,6 +929,9 @@ const SKY_THEMES = {
   lab_studio: { top: 0x1e3a5f, mid: 0x355c7d, horizon: 0x6c8ead, floorC: 0x2b3e50, sun: 2.25, hemi: 0.80 },
   boston_overcast: { top: 0x5c6d7e, mid: 0x8998a6, horizon: 0xb7c0c7, floorC: 0x6c747a, sun: 1.95, hemi: 0.88 },
   boston_amber: { top: 0x262938, mid: 0x5a4648, horizon: 0xb37452, floorC: 0x3d302c, sun: 2.05, hemi: 0.65 },
+  tacoma_overcast: { top: 0x4b5f73, mid: 0x7b90a4, horizon: 0xb4c2cf, floorC: 0x364a59, sun: 2.05, hemi: 0.86 },
+  tacoma_storm: { top: 0x2b3b4e, mid: 0x4c6074, horizon: 0x8c9aa6, floorC: 0x22323f, sun: 1.90, hemi: 0.76 },
+  tacoma_aftermath: { top: 0x354354, mid: 0x64788c, horizon: 0xa4b3c0, floorC: 0x283846, sun: 1.75, hemi: 0.82 },
 };
 
 function skyMaterial(theme = 'day') {
@@ -1120,6 +1126,8 @@ window.renderAtTime = (rawT) => {
   let contactTel = null;
   let cutawayTel = null;
   let narrativeActionTel = null;
+  let physMotionTel = null;
+  let charPerfTel = null;
   let shotAnchors = {};
   let trTel = { active: false, method: def.tr || 'cut', alpha: 0.0, from_shot: def.id, to_shot: null };
 
@@ -1171,6 +1179,8 @@ window.renderAtTime = (rawT) => {
     contactTel = rMain.contact || null;
     cutawayTel = rMain.cutaway || null;
     narrativeActionTel = rMain.narrativeAction || null;
+    physMotionTel = rMain.physicalMotion || null;
+    charPerfTel = rMain.characterPerformance || null;
     shotAnchors = { ...(rMain.anchors || {}), default: camTel?.focal_anchor_uv || null };
     bloom.strength = ((rMain.bloom ?? 0.30) * 0.52);
     renderer.toneMappingExposure = rMain.exposure ?? 1.03;
@@ -1199,6 +1209,8 @@ window.renderAtTime = (rawT) => {
     contactTel = r.contact || null;
     cutawayTel = r.cutaway || null;
     narrativeActionTel = r.narrativeAction || null;
+    physMotionTel = r.physicalMotion || null;
+    charPerfTel = r.characterPerformance || null;
     shotAnchors = { ...(r.anchors || {}), default: camTel?.focal_anchor_uv || null };
   }
 
@@ -1213,6 +1225,8 @@ window.renderAtTime = (rawT) => {
     contact: contactTel,
     cutaway: cutawayTel,
     narrative_action: narrativeActionTel,
+    physical_motion: physMotionTel,
+    character_performance: charPerfTel,
     anchors: shotAnchors,
     overlay: ovTel,
   };
@@ -1484,6 +1498,92 @@ def _build_non_roman_scene_shot_code(
         "button_depress_m": 0.008,
     })
 
+    if gen.startswith("zach3d:tacoma_"):
+        cfg_map = {
+            "zach3d:tacoma_hook_telephoto_stage": ("tacoma_overcast", "bridge_hook_initial_sway", "tacoma_midspan_telephoto_hook", "{ mode: 'wobble_hook', verticalAmp: 0.16, torsionRad: 0.18 }", False, False, 0.24),
+            "zach3d:tacoma_wide_establish_stage": ("tacoma_overcast", "strait_wide_establish", "tacoma_narrows_strait_1940", "{ mode: 'vertical_wave', verticalAmp: 0.14, torsionRad: 0.10 }", True, False, 0.24),
+            "zach3d:tacoma_roadway_wave_stage": ("tacoma_overcast", "bridge_vertical_bounce", "tacoma_roadway_center_deck", "{ mode: 'vertical_wave', verticalAmp: 0.28, torsionRad: 0.08 }", False, False, 0.25),
+            "zach3d:tacoma_under_deck_girder_stage": ("tacoma_storm", "plate_girder_wind_loading", "tacoma_under_deck_girder_bay", "{ mode: 'vertical_wave', verticalAmp: 0.16, torsionRad: 0.18 }", False, True, 0.28),
+            "zach3d:tacoma_torsion_twist_stage": ("tacoma_storm", "torsional_flutter_escalation", "tacoma_midspan_torsion_zone_1940", "{ mode: 'torsion_heavy', verticalAmp: 0.18, torsionRad: 0.40 }", False, False, 0.30),
+            "zach3d:tacoma_collapse_plunge_stage": ("tacoma_storm", "bridge_span_collapse", "tacoma_center_span_collapse_1940", f"{{ mode: 'collapse', verticalAmp: 0.18, torsionRad: 0.38, collapseOnsetSec: {round(dur * 0.38, 3)} }}", True, False, 0.34),
+            "zach3d:tacoma_aftermath_stage": ("tacoma_aftermath", "bridge_collapse_aftermath", "tacoma_narrows_aftermath_wide_1940", "{ mode: 'aftermath', verticalAmp: 0.02, torsionRad: 0.03, aftermathCollapsed: true }", True, False, 0.22),
+        }
+        if gen == "zach3d:tacoma_shore_onlooker_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'tacoma_storm', sunDir: [-3, 7, 5] }});
+  const env = makePugetSoundEnvironment({{ includeShore: false }});
+  env.root.position.set(0, -1.8, -5.5);
+  scene.add(env.root);
+  const bgBridge = makeTacomaSuspensionBridgeRig({{ deckBaseY: 0.9, spanLength: 14.0, nSegments: 18, includeCar: false }});
+  bgBridge.root.position.set(0, 0, -6.5);
+  scene.add(bgBridge.root);
+  const shore = makeTacomaShoreOnlookerRig(makeHuman, {char_spec_json});
+  scene.add(shore.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      env.update(lt, 0.0);
+      const bTel = bgBridge.update(lt, {dur}, {{ mode: 'torsion_heavy', verticalAmp: 0.20, torsionRad: 0.42 }});
+      const cTel = shore.update(lt, {dur}, [0, 2.2, -6.5]);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = {{ ...shore.getAnchorsTelemetry(c), ...bgBridge.getAnchorsTelemetry(c) }};
+      return {{
+        bloom: 0.26, camTel, anchors,
+        physicalMotion: bTel,
+        characterPerformance: cTel,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'tacoma_west_shore_approach_1940',
+          physicalAction: 'shore_onlooker_reaction',
+          actorCount: 1,
+          structuralState: cTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        sky_t, phys_act, loc_id, upd_args, inc_shore, show_wind, bloom_v = cfg_map[gen]
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 7.5, skyTheme: '{sky_t}', sunDir: [-4, 8, 6] }});
+  const env = makePugetSoundEnvironment({{ includeShore: {'true' if inc_shore else 'false'} }});
+  scene.add(env.root);
+  const bridge = makeTacomaSuspensionBridgeRig({{
+    deckBaseY: 2.45, spanLength: 15.6, nSegments: 22,
+    showWindStreams: {'true' if show_wind else 'false'}, includeCar: true
+  }});
+  scene.add(bridge.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 36);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const bTel = bridge.update(lt, {dur}, {upd_args});
+      const splash = bTel.collapse_active ? clamp((lt - {round(dur * 0.38, 3)}) / 0.9, 0, 1) : 0.0;
+      env.update(lt, splash);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = bridge.getAnchorsTelemetry(c);
+      return {{
+        bloom: {bloom_v}, camTel, anchors,
+        physicalMotion: bridge.getPhysicalState(),
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: '{loc_id}',
+          physicalAction: '{phys_act}',
+          structuralState: bTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
     if gen == "zach3d:boston_street_hook_stage":
         return f"""
 function shot_{i}({{ makeStage }}) {{
@@ -1510,6 +1610,7 @@ function shot_{i}({{ makeStage }}) {{
       const anchors = computeAnchorsTelemetry(c, {{ street_hero_look: heroTarget }}, []);
       return {{
         bloom: 0.24, camTel, anchors,
+        characterPerformance: actTel?.character_performance || null,
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'boston_north_end_street_1919',
           physicalAction: 'street_rumble_foreshadow',
@@ -1660,6 +1761,8 @@ function shot_{i}({{ makeStage }}) {{
       const anchors = wave.getAnchorsTelemetry(c);
       return {{
         bloom: 0.30, camTel, anchors,
+        physicalMotion: wTel,
+        characterPerformance: aTel?.character_performance || null,
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'commercial_street_corridor_1919',
           physicalAction: {'"wave_speed_chase_escalation"' if is_speed else '"molasses_wave_surge"'},
@@ -2319,7 +2422,10 @@ import {
   makeMolassesGravityCurrentRig, makeElevatedRailAndStreetImpactRig, makePeriodCrowdActionRig,
   makeRescueAndAftermathRig, makeBostonSteelSectionCutawayRig, makeBostonLocationOverview,
   getNarrativeActionTelemetry, computeAnchorsTelemetry
-} from './boston_molasses_scenes.js';"""
+} from './boston_molasses_scenes.js';
+import {
+  makePugetSoundEnvironment, makeTacomaSuspensionBridgeRig, makeTacomaShoreOnlookerRig
+} from './tacoma_bridge_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -2388,6 +2494,15 @@ def generate_engine_project(
     boston_p = src_dst / "boston_molasses_scenes.js"
     boston_p.write_text(BOSTON_MOLASSES_SCENES_JS, encoding="utf-8")
 
+    phys_p = src_dst / "physical_motion_primitives.js"
+    phys_p.write_text(PHYSICAL_MOTION_PRIMITIVES_JS, encoding="utf-8")
+
+    char_perf_p = src_dst / "character_performance.js"
+    char_perf_p.write_text(CHARACTER_PERFORMANCE_JS, encoding="utf-8")
+
+    tacoma_p = src_dst / "tacoma_bridge_scenes.js"
+    tacoma_p.write_text(TACOMA_BRIDGE_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
 
@@ -2401,6 +2516,8 @@ def generate_engine_project(
             run_dir=None,
             caption_mode=str(storyboard.get("caption_mode", "kinetic")),
             callout_mode=str(storyboard.get("callout_mode", "off")),
+            editorial_theme=str(storyboard.get("editorial_theme", "role-aware")),
+            curiosity_layer=str(storyboard.get("curiosity_layer", "auto")),
         )
     ed_tl_p = src_dst / "editorial_timeline.js"
     ed_tl_p.write_text("export const EDITORIAL_TIMELINE = " + json.dumps(ed_timeline, ensure_ascii=False) + ";\n", encoding="utf-8")
@@ -2419,6 +2536,7 @@ def generate_engine_project(
 <style>
   @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
   @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2') format('woff2'); font-weight: 800; }
+  @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-900-normal.woff2') format('woff2'); font-weight: 900; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1080px; height: 1920px; background: #000; overflow: hidden; }
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
@@ -2455,6 +2573,9 @@ def generate_engine_project(
         str(mech_p.resolve()),
         str(aw_p.resolve()),
         str(boston_p.resolve()),
+        str(phys_p.resolve()),
+        str(char_perf_p.resolve()),
+        str(tacoma_p.resolve()),
         str(novel_p.resolve()),
         str(ed_tl_p.resolve()),
         str(ed_ov_p.resolve()),

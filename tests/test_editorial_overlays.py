@@ -217,6 +217,10 @@ console.log(JSON.stringify(results));
                 self.assertEqual(cap_rep[key]["display"], "flex")
                 self.assertGreaterEqual(cap_rep[key]["minGap"], 3.0)
 
+            # Verify semantic multi-theme role metadata is exported in timeline
+            self.assertEqual(tl_on.get("editorial_theme"), "role-aware")
+            self.assertTrue(any(o.get("role") for o in tl_on["overlays"]))
+
 
 if __name__ == "__main__":
     unittest.main()

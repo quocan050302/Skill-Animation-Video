@@ -235,11 +235,58 @@ def classify_visual_clause(
         and "boston" in full_script_low
         and "molasses" in full_script_low
     )
+    is_tacoma_bridge_story = (
+        selected_skill == "zach-d-films"
+        and ("tacoma" in full_script_low or "galloping gertie" in full_script_low or ("bridge" in full_script_low and "twist" in full_script_low))
+    )
 
-    if unsupported_domain and not is_boston_molasses_story:
+    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story:
         matched_props = ["schematic_mechanism"]
         families = ["schematic_mechanism"]
         scales = ["macro_object"]
+    elif is_tacoma_bridge_story:
+        is_aftermath_line = any(k in low for k in ("no human", "forced bridge", "rethink", "changed the way", "forever", "flexible bridges", "redesigned", "worldwide after", "after that collapse", "remained standing", "legacy"))
+        if (beat_index == 0 and clause_index == 0 and any(k in low for k in ("heave", "bending", "ribbon", "crossing", "ocean wave", "massive suspension", "1940, drivers"))) or any(k in low for k in ("heave upward", "bending like a ribbon", "swaying", "ocean wave", "moving like a wave", "newly opened")):
+            matched_props = ["tacoma_bridge_hook_rig"]
+            families = ["tacoma_hook_telephoto"]
+            scales = ["industrial_scale"]
+        elif is_aftermath_line and not any(k in low for k in ("broke free", "plunged", "crashed")):
+            matched_props = ["tacoma_aftermath_rig"]
+            families = ["tacoma_aftermath"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("broke free", "plunged", "crashed", "section fell", "center section", "11 a.m.", "600-foot", "suspenders")) or ("collapse" in low and not is_aftermath_line):
+            matched_props = ["tacoma_collapse_span_rig"]
+            families = ["tacoma_collapse_plunge"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("witness", "onlooker", "shore", "braced", "stepped back", "watching from", "cables whip")):
+            matched_props = ["tacoma_shore_onlooker_rig"]
+            families = ["tacoma_shore_onlooker"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("pitched", "opposite lane", "one side", "rose while", "other fell", "started twisting", "violent twist", "torsional waves", "tilted", "abandoned car", "10 a.m.", "november 7")):
+            matched_props = ["tacoma_torsion_span_rig"]
+            families = ["tacoma_torsion_twist"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("plate girder", "flutter", "aerodynamic", "twisted the", "solid steel", "caught swirling", "winds drove", "side force", "open trusses", "39-foot", "eight-foot")):
+            matched_props = ["tacoma_girder_wind_rig"]
+            families = ["tacoma_under_deck_girder"]
+            scales = ["macro_object"]
+        elif any(k in low for k in ("bounced", "bouncing", "bounce", "bend upward", "vertical wave", "up and down", "didn't stop", "motion didn't", "main span", "crosswinds", "gallop")):
+            matched_props = ["tacoma_roadway_wave_rig"]
+            families = ["tacoma_roadway_wave"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("opened", "july", "nicknamed", "narrow span", "washington", "tacoma narrows bridge", "puget sound")):
+            matched_props = ["tacoma_wide_establish_rig"]
+            families = ["tacoma_wide_establish"]
+            scales = ["street_aerial"]
+        elif prev_family and prev_family.startswith("tacoma_") and prev_family != "tacoma_aftermath":
+            matched_props = ["tacoma_roadway_wave_rig"]
+            families = [prev_family]
+            scales = ["industrial_scale"]
+        else:
+            matched_props = ["tacoma_wide_establish_rig"]
+            families = ["tacoma_wide_establish"]
+            scales = ["street_aerial"]
+        unsupported_domain = None
     elif is_boston_molasses_story:
         if any(k in low for k in ("gave way", "walls gave", "rupture", "burst", "afternoon")):
             matched_props = ["rivet_rupture_assembly"]
@@ -405,8 +452,10 @@ def classify_visual_clause(
         subject = primary_prop
     elif primary_prop in ("cell_tower_wave", "subsea_fiber_cable", "datacenter_rack", "power_turbine", "schematic_mechanism"):
         subject = primary_prop
-    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage"):
-        subject = primary_prop
+    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage", "tacoma_bridge_hook_rig", "tacoma_wide_establish_rig", "tacoma_roadway_wave_rig", "tacoma_girder_wind_rig", "tacoma_torsion_span_rig", "tacoma_shore_onlooker_rig", "tacoma_collapse_span_rig", "tacoma_aftermath_rig"):
+        subject = "char_onlooker_1940_01" if primary_prop == "tacoma_shore_onlooker_rig" else primary_prop
+        if primary_prop == "tacoma_shore_onlooker_rig":
+            character_id = "char_onlooker_1940_01"
     elif primary_prop in ("cosmic_origin", "atom_crystal", "ocean_nature"):
         subject = primary_prop
     elif primary_prop == "data_chart":
@@ -438,10 +487,10 @@ def classify_visual_clause(
 
     if any(k in low for k in ("dark", "night", "deep ocean", "subsea", "space", "universe", "star", "cosmos", "tension", "trap", "danger", "twenty-one", "21", "died", "injured", "aftermath")):
         lighting_mood = "dark_dramatic"
-    elif scene_family == "boston_harbor_payoff" or beat_role == "payoff" or any(k in low for k in ("sun", "gold", "triumph", "spark", "bright", "morning", "warm", "open", "coordinated")):
+    elif scene_family == "boston_harbor_payoff" or scene_family == "tacoma_aftermath" or beat_role == "payoff" or any(k in low for k in ("sun", "gold", "triumph", "spark", "bright", "morning", "warm", "open", "coordinated")):
         lighting_mood = "warm_payoff"
-    elif scene_family.startswith("boston_"):
-        lighting_mood = "historical_overcast" if scene_family in ("boston_street_hook", "boston_tank_leak_seep", "boston_molasses_reveal") else "dramatic_amber"
+    elif scene_family.startswith("boston_") or scene_family.startswith("tacoma_"):
+        lighting_mood = "historical_overcast" if scene_family in ("boston_street_hook", "boston_tank_leak_seep", "boston_molasses_reveal", "tacoma_hook_telephoto", "tacoma_wide_establish", "tacoma_roadway_wave") else "dramatic_amber"
     elif primary_prop in ("microchip_pcb", "controller_pcb", "traction_motor_sheave", "shaft_car_counterweight", "datacenter_rack", "cell_tower_wave", "brain_neuron", "heart_organ"):
         lighting_mood = "tech_cool_studio"
     else:

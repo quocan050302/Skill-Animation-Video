@@ -86,6 +86,62 @@ def _zdf_keyframes_for_generator(
             {"t_norm": 1.0, "pos": [round(0.24 * sx, 3), 1.16, 3.02], "look": [0.0, 0.96, 0.08], "fov": 39, "roll": 0.0, "ease": "cubic"},
         ]
 
+    if gen == "zach3d:tacoma_hook_telephoto_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-3.65, 3.45, 2.35], "look": [0.20, 2.45, 0.0], "fov": 26, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [-3.35, 3.38, 2.15], "look": [0.10, 2.45, 0.0], "fov": 26, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [-3.05, 3.30, 1.98], "look": [0.0, 2.45, 0.0], "fov": 25, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:tacoma_wide_establish_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-3.25, 5.20, 8.85], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-0.45, 5.45, 9.15], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [2.45, 5.65, 9.45], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:tacoma_roadway_wave_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.85, 3.55, 2.85], "look": [0.0, 2.45, 0.0], "fov": 36, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-1.25, 3.45, 3.15], "look": [0.0, 2.45, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.95, 3.38, 2.95], "look": [0.0, 2.45, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:tacoma_under_deck_girder_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.05, 1.55, 3.85], "look": [0.0, 2.22, 0.28], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.05, 1.48, 3.65], "look": [0.0, 2.22, 0.28], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.95, 1.58, 3.85], "look": [0.0, 2.22, 0.28], "fov": 43, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:tacoma_torsion_twist_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.35, 3.45, 3.65], "look": [0.0, 2.42, 0.25], "fov": 38, "roll": -0.01, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-0.35, 3.25, 3.35], "look": [0.0, 2.42, 0.25], "fov": 36, "roll": 0.015, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.75, 3.35, 3.55], "look": [0.0, 2.42, 0.25], "fov": 37, "roll": -0.008, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:tacoma_shore_onlooker_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.25, 1.85, 3.55], "look": [0.15, 1.38, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.52, "pos": [-0.85, 1.80, 3.85], "look": [0.15, 1.40, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [-0.45, 1.76, 4.10], "look": [0.15, 1.42, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:tacoma_collapse_plunge_stage":
+        return [
+            {"t_norm": 0.0, "pos": [1.85, 4.35, 7.85], "look": [0.20, 2.15, 0.0], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.45, "pos": [1.35, 3.85, 7.65], "look": [0.20, 1.75, 0.0], "fov": 47, "roll": 0.01, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.95, 3.35, 7.45], "look": [0.20, 1.15, 0.0], "fov": 48, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:tacoma_aftermath_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.45, 4.65, 7.25], "look": [0.0, 2.10, 0.0], "fov": 40, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [0.0, 5.45, 8.85], "look": [0.0, 1.95, 0.0], "fov": 42, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [1.55, 6.10, 10.25], "look": [0.0, 1.85, 0.0], "fov": 43, "roll": 0.0, "ease": "cubic"},
+        ]
+
     if gen == "zach3d:boston_street_hook_stage":
         return [
             {"t_norm": 0.0, "pos": [-1.42, 1.52, 3.85], "look": [0.05, 1.32, 0.25], "fov": 38, "roll": 0.0, "ease": "quintic"},

@@ -620,6 +620,24 @@ def run_final_quality_gate(
             "subjective_visual_review": vs_qa.get("subjective_visual_review", "NOT_VERIFIED"),
             "checks_summary": {k: v["status"] for k, v in (vs_qa.get("checks") or {}).items()},
         }
+        vchecks = vs_qa.get("checks") or {}
+        if "pointer_tracking" in vchecks:
+            checks["pointer_tracking"] = vchecks["pointer_tracking"]
+        if "physical_and_character_telemetry" in vchecks:
+            checks["physical_and_character_telemetry"] = vchecks["physical_and_character_telemetry"]
+
+    # 6d. Multi-Theme Composition & Safe-Margin Runtime Audit
+    if (run_dir / "editorial_timeline.json").exists():
+        from .cinematic_composition_qa import audit_cinematic_composition
+        ed_tl_comp = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8"))
+        raw_tel_p4 = run_dir / "logs" / "raw_render_telemetry.json"
+        raw_traces4 = list((json.loads(raw_tel_p4.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p4.exists() else None
+        checks["cinematic_composition"] = audit_cinematic_composition(
+            run_dir=run_dir,
+            storyboard=storyboard,
+            editorial_timeline=ed_tl_comp,
+            raw_traces=raw_traces4,
+        )
 
     # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])

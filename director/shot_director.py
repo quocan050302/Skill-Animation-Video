@@ -20,6 +20,102 @@ from .visual_event_graph import classify_visual_clause
 ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
     "zach-d-films": [
         {
+            "setup": "tacoma_hook_telephoto_wobble",
+            "families": ("tacoma_hook_telephoto",),
+            "framing": "CU_TelephotoSpan",
+            "angle": "telephoto_road_centerline",
+            "move": "subtle_telephoto_creep",
+            "focal_mm": 68,
+            "placement": "center_bridge_ribbon",
+            "silhouette": "warped_centerline_suspenders",
+            "pose": "bridge_hook_initial_sway",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_wide_establish_shore",
+            "families": ("tacoma_wide_establish",),
+            "framing": "WS_StraitContext",
+            "angle": "wide_oblique_puget_sound",
+            "move": "aerial_dolly_drift",
+            "focal_mm": 24,
+            "placement": "spanning_twintowers_strait",
+            "silhouette": "slender_suspension_bridge_shore",
+            "pose": "strait_wide_establish",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_roadway_wave_car",
+            "families": ("tacoma_roadway_wave",),
+            "framing": "MS_DeckChase",
+            "angle": "three_quarter_deck_chase",
+            "move": "deck_wave_track",
+            "focal_mm": 34,
+            "placement": "midspan_1940_sedan",
+            "silhouette": "bouncing_deck_1940_sedan",
+            "pose": "bridge_vertical_bounce",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_under_deck_girder_cutaway",
+            "families": ("tacoma_under_deck_girder",),
+            "framing": "MCU_UnderDeckGirder",
+            "angle": "low_under_truss_side",
+            "move": "underside_girder_sweep",
+            "focal_mm": 30,
+            "placement": "windward_plate_girder",
+            "silhouette": "solid_8ft_plate_girder_wind",
+            "pose": "plate_girder_wind_loading",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_torsion_twist_midspan",
+            "families": ("tacoma_torsion_twist",),
+            "framing": "MS_TorsionAxis",
+            "angle": "diagonal_midspan_twist",
+            "move": "torsion_counter_roll_track",
+            "focal_mm": 40,
+            "placement": "twisting_opposite_lanes",
+            "silhouette": "opposed_deck_edges_cables",
+            "pose": "torsional_flutter_escalation",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_shore_onlooker_react",
+            "families": ("tacoma_shore_onlooker",),
+            "framing": "MS_ShoreReaction",
+            "angle": "over_shoulder_shore_approach",
+            "move": "step_back_reframe",
+            "focal_mm": 35,
+            "placement": "foreground_1940_witness",
+            "silhouette": "onlooker_brace_bridge_behind",
+            "pose": "shore_onlooker_reaction",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_section_collapse_plunge",
+            "families": ("tacoma_collapse_plunge",),
+            "framing": "WS_CollapseDrop",
+            "angle": "side_three_quarter_narrows",
+            "move": "tilt_down_with_plunge",
+            "focal_mm": 26,
+            "placement": "snapping_center_section",
+            "silhouette": "falling_roadbed_water_splash",
+            "pose": "bridge_span_collapse",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_aftermath_broken_span",
+            "families": ("tacoma_aftermath",),
+            "framing": "WS_RespectfulAftermath",
+            "angle": "high_quiet_strait_pullback",
+            "move": "slow_pullback_still",
+            "focal_mm": 22,
+            "placement": "gap_between_towers",
+            "silhouette": "standing_towers_empty_water",
+            "pose": "bridge_collapse_aftermath",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_street_hook_crowd",
             "families": ("boston_street_hook",),
             "framing": "WS_StreetHero",
@@ -626,9 +722,8 @@ def split_long_visual_beats_by_actions(
             prev is not None
             and u.get("selected_skill") == "zach-d-films"
             and prev.get("scene_family") == u.get("scene_family")
-            and prev.get("verb_action") == u.get("verb_action")
             and prev.get("relevant_prop") == u.get("relevant_prop")
-            and (float(u["end_sec"]) - float(prev["start_sec"])) <= 5.2
+            and (float(u["end_sec"]) - float(prev["start_sec"])) <= 6.5
             and not prev.get("contact_action")
             and not u.get("contact_action")
         )

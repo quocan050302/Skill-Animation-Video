@@ -1,0 +1,16 @@
+TASK: physical_motion
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_physical_motion -v
+STATUS: PASS (exit=0, elapsed=3.58s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_g12_g13_motion_planner_validation_and_contact_schedule (tests.test_physical_motion.TestPhysicalMotion.test_g12_g13_motion_planner_validation_and_contact_schedule) ... ok
+test_g14_n20_tacoma_webgl_bridge_deformation_and_out_of_order_seek_determinism (tests.test_physical_motion.TestPhysicalMotion.test_g14_n20_tacoma_webgl_bridge_deformation_and_out_of_order_seek_determinism) ... ok
+test_negative_traps_n13_n14_n15_n21_n22 (tests.test_physical_motion.TestPhysicalMotion.test_negative_traps_n13_n14_n15_n21_n22) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.425s
+
+OK
+

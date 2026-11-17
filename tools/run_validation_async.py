@@ -123,6 +123,46 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             description="R2.5 bespoke SFX sync, isolation & traps N10-N12/N14",
             resource_class="cpu",
         ),
+        ValidationTask(
+            task_id="editorial_design_system",
+            cmd=[py, "-m", "unittest", "tests.test_editorial_design_system", "-v"],
+            deps=[],
+            timeout_sec=120.0,
+            description="SD-RETENTION-03 semantic roles, mobile widths, design tokens & N01-N04/N31",
+            resource_class="cpu",
+        ),
+        ValidationTask(
+            task_id="curiosity_director",
+            cmd=[py, "-m", "unittest", "tests.test_curiosity_director", "-v"],
+            deps=["editorial_design_system"],
+            timeout_sec=120.0,
+            description="SD-RETENTION-03 <=2 curiosity headlines, pointer planning & N09-N10",
+            resource_class="cpu",
+        ),
+        ValidationTask(
+            task_id="cinematic_composition",
+            cmd=[py, "-m", "unittest", "tests.test_cinematic_composition", "-v"],
+            deps=[],
+            timeout_sec=120.0,
+            description="SD-RETENTION-03 9:16 negative-space framing, progression & collision QA",
+            resource_class="cpu",
+        ),
+        ValidationTask(
+            task_id="physical_motion",
+            cmd=[py, "-m", "unittest", "tests.test_physical_motion", "-v"],
+            deps=["visual_storytelling_dir"],
+            timeout_sec=240.0,
+            description="SD-RETENTION-03 deterministic torsion/collapse/viscous waves, seek determinism & N13-N15/N20-N22",
+            resource_class="gpu",
+        ),
+        ValidationTask(
+            task_id="character_performance",
+            cmd=[py, "-m", "unittest", "tests.test_character_performance", "-v"],
+            deps=["visual_storytelling_dir"],
+            timeout_sec=240.0,
+            description="SD-RETENTION-03 human.js foot-lock grounding, non-slide retreat & N17-N19",
+            resource_class="gpu",
+        ),
     ]
 
     if mode in ("focused", "full"):
@@ -141,6 +181,14 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 deps=["editorial_overlays", "retention_audio_sync", "storytelling_qa", "boston_molasses_scenes"],
                 timeout_sec=300.0,
                 description="3-pane WebGL cutaway, determinism & trap N13",
+                resource_class="gpu",
+            ),
+            ValidationTask(
+                task_id="retention03_integration",
+                cmd=[py, "-m", "unittest", "tests.test_retention03_integration", "-v"],
+                deps=["editorial_design_system", "curiosity_director", "cinematic_composition", "physical_motion", "character_performance", "storytelling_qa"],
+                timeout_sec=300.0,
+                description="SD-RETENTION-03 Tacoma Narrows WebGL integration, role SFX sync, isolation & N25/N29",
                 resource_class="gpu",
             ),
         ])

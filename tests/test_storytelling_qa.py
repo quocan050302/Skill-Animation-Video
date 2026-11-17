@@ -123,6 +123,14 @@ class TestStorytellingQA(unittest.TestCase):
             with self.assertRaises(ValueError):
                 compare_ab_versions(run_a, run_b, rd / "ab_bad")
 
+            # N25: Missing matching event/beat IDs MUST fail closed instead of falling back to shot index
+            (run_b / "script.json").write_text(json.dumps(["Line one Boston.", "Line two molasses."]), encoding="utf-8")
+            (run_b / "storyboard.json").write_text(json.dumps({
+                "total_duration_sec": 5.2,
+                "shots": [{"shot_id": "shot_99", "narrative_event_id": "nev_unknown", "beat_id": "beat_unknown", "start": 0.0, "end": 5.2}],
+            }), encoding="utf-8")
+            self.assertEqual(build_ab_alignment(run_a, run_b, rd / "ab_unmatched")["alignment_status"], "FAIL")
+
     def test_n14_n17_n18_n19_n21_n23_n24_qa_traps(self) -> None:
         sag = {
             "schema_version": "sd-story-action-graph-1",

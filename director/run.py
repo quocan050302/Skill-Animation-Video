@@ -275,6 +275,8 @@ def execute_short_director_run(
     voice_compare_ab: bool = False,
     caption_mode: str = "kinetic",
     callout_mode: str = "smart",
+    editorial_theme: str = "role-aware",
+    curiosity_layer: str = "auto",
     verified_numbers: Optional[List[Dict[str, Any]]] = None,
     historical_claims: Optional[Dict[str, Any]] = None,
     factual_sources_note: Optional[Path] = None,
@@ -436,6 +438,8 @@ def execute_short_director_run(
             callout_mode=callout_mode,
             verified_numbers=verified_numbers,
             historical_claims=historical_claims,
+            editorial_theme=editorial_theme,
+            curiosity_layer=curiosity_layer,
         )
 
         # NEW STEP 3.5: Plan Narrative Music Score & Grounded SFX BEFORE 4K visual render
@@ -554,6 +558,9 @@ def execute_short_director_run(
                 "word_anchor_confidence": parsed_script.get("voice", {}).get("word_anchor_confidence", "ESTIMATED"),
                 "caption_mode": storyboard.get("caption_mode", caption_mode),
                 "callout_mode": storyboard.get("callout_mode", callout_mode),
+                "editorial_theme": storyboard.get("editorial_theme", editorial_theme),
+                "curiosity_layer": storyboard.get("curiosity_layer", curiosity_layer),
+                "editorial_roles_used": (storyboard.get("editorial_timeline_summary") or {}).get("editorial_roles_used", []),
                 "editorial_finish_status": ed_fin_chk.get("status"),
                 "checks_summary": ed_fin_chk.get("checks_summary", {}),
                 "voice_ab_probe": voice_ab_info,
@@ -614,6 +621,12 @@ def execute_short_director_run(
                 "overlay_coverage_json": str((out_dir / "overlay_coverage.json").resolve()) if (out_dir / "overlay_coverage.json").exists() else None,
                 "editorial_qa_report_json": ed_fin_chk.get("editorial_qa_report"),
                 "editorial_attention_timeline_json": ed_fin_chk.get("editorial_attention_timeline_json"),
+                "editorial_design_tokens_json": str((out_dir / "editorial_design_tokens.json").resolve()) if (out_dir / "editorial_design_tokens.json").exists() else None,
+                "editorial_roles_plan_json": str((out_dir / "editorial_roles_plan.json").resolve()) if (out_dir / "editorial_roles_plan.json").exists() else None,
+                "composition_report_json": str((out_dir / "composition_report.json").resolve()) if (out_dir / "composition_report.json").exists() else None,
+                "pointer_tracking_json": str((out_dir / "pointer_tracking.json").resolve()) if (out_dir / "pointer_tracking.json").exists() else None,
+                "character_performance_telemetry_json": str((out_dir / "character_performance_telemetry.json").resolve()) if (out_dir / "character_performance_telemetry.json").exists() else None,
+                "world_state_telemetry_json": str((out_dir / "world_state_telemetry.json").resolve()) if (out_dir / "world_state_telemetry.json").exists() else None,
                 "stems": {
                     "voice_wav": audio_info["voice_wav_path"],
                     "music_wav": audio_info["music_wav_path"],
@@ -688,6 +701,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--voice-compare-ab", action="store_true", help="Also generate legacy A vs active B voice comparison WAV probe")
     parser.add_argument("--caption-mode", default="kinetic", choices=["plain", "kinetic", "phrase"], help="On-screen caption rendering mode")
     parser.add_argument("--callout-mode", default="smart", choices=["off", "smart"], help="3D world-tracked smart editorial overlays in ZDF")
+    parser.add_argument("--editorial-theme", default="role-aware", choices=["role-aware", "legacy"], help="Multi-theme editorial styling engine (ZDF only)")
+    parser.add_argument("--curiosity-layer", default="auto", choices=["auto", "off"], help="Curiosity hero headlines and smart impact pointers (ZDF only)")
     parser.add_argument("--verified-numbers-json", default=None, help="Optional JSON list of curated verified numeric facts for counters")
     parser.add_argument("--historical-claims-json", default=None, help="Optional JSON path containing verified historical claims & uncertainty metadata")
     parser.add_argument("--factual-sources-note", default=None, help="Optional Markdown file listing factual sources for traceability")
@@ -748,6 +763,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             voice_compare_ab=args.voice_compare_ab,
             caption_mode=args.caption_mode,
             callout_mode=args.callout_mode,
+            editorial_theme=args.editorial_theme,
+            curiosity_layer=args.curiosity_layer,
             verified_numbers=vnums,
             historical_claims=hclaims,
             factual_sources_note=fsources_p,

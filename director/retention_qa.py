@@ -276,7 +276,16 @@ def audit_sfx_editorial_sync(
     overlays = list(editorial_timeline.get("overlays") or [])
     issues: List[str] = []
 
-    editorial_events = {"callout_focus_ring", "callout_tracked_arrow", "callout_verified_counter", "callout_beat_card"}
+    editorial_events = {
+        "callout_focus_ring",
+        "callout_tracked_arrow",
+        "callout_verified_counter",
+        "callout_beat_card",
+        "callout_curiosity_headline",
+        "callout_warning_danger",
+        "callout_pointer_swish",
+        "callout_transition_emphasis",
+    }
     ui_all = sorted([c for c in cues if str(c.get("kind", "")) == "ui"], key=lambda x: float(x["time_sec"]))
     for i in range(len(ui_all) - 1):
         dt = float(ui_all[i + 1]["time_sec"]) - float(ui_all[i]["time_sec"])
@@ -328,6 +337,14 @@ def audit_editorial_fatigue(editorial_timeline: Dict[str, Any]) -> Dict[str, Any
             ]
             if len(conc) > 2:
                 issues.append(f"Crowded simultaneous overlays ({len(conc)} > 2) near {oa['overlay_id']}")
+
+        if str(editorial_timeline.get("editorial_theme") or "") == "role-aware":
+            curios = [o for o in overlays if o.get("role") == "curiosity_headline"]
+            if len(curios) > 2:
+                issues.append(f"Too many curiosity headlines ({len(curios)} > 2)")
+            roles_seen = {str(o.get("role")) for o in overlays if o.get("role")}
+            if len(overlays) >= 3 and len(roles_seen) < 2:
+                issues.append(f"N01: Multi-theme editorial collapsed into uniform styling ({sorted(roles_seen)})")
 
     long_chunks = [c for c in chunks if len(c.get("words") or []) > 4]
     if long_chunks:

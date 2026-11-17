@@ -102,6 +102,29 @@ class TestBostonMolassesScenes(unittest.TestCase):
             self.assertTrue(rup_vals, "Expected tank_panel_rupture shot telemetry")
             self.assertGreater(max(rup_vals) - min(rup_vals), 0.25, f"Tank did not rupture visibly: {rup_vals}")
 
+            # Verify continuous viscous surface & grounded crowd telemetry
+            wave_phys = [
+                (r.get("telemetry") or {}).get("physical_motion")
+                for r in traces
+                if isinstance((r.get("telemetry") or {}).get("physical_motion"), dict)
+            ]
+            self.assertTrue(wave_phys, "Expected Boston continuous viscous wave physical_motion telemetry")
+            self.assertTrue(all(w.get("surface_mode") == "continuous_viscous_heightfield" for w in wave_phys))
+            self.assertGreater(max(float(w.get("vertex_disp_max_m") or 0.0) for w in wave_phys), 0.05)
+
+            char_rows = [
+                {
+                    "shot_id": r.get("shot_id") or (r.get("telemetry") or {}).get("shot_id"),
+                    "time_sec": r["time"],
+                    **(r["telemetry"]["character_performance"]),
+                }
+                for r in traces
+                if isinstance((r.get("telemetry") or {}).get("character_performance"), dict)
+            ]
+            self.assertTrue(char_rows, "Expected Boston grounded character_performance telemetry")
+            from director.character_performance import validate_character_grounding
+            self.assertEqual(validate_character_grounding(char_rows, require_motion=True)["status"], "PASS")
+
             # Render two distinct stills & confirm non-flat distinct geometry (seek determinism + visual variety)
             st_dir = rd / "stills_check"
             t_pick_a = f"{sample_ts[0]:.3f}"

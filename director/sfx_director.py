@@ -30,6 +30,7 @@ from .audio_dsp import (
     _elevator_button_click,
     _footsteps_retreat,
     _glass_tap,
+    _headline_hit_warm,
     _low_sting,
     _lp,
     _marker_ring_draw,
@@ -47,6 +48,8 @@ from .audio_dsp import (
     _sand_thud,
     _sheave_cable_whir,
     _shield_clang,
+    _span_collapse_splash,
+    _steel_cable_groan,
     _step_gravel,
     _street_obstacle_impact,
     _subsea_bubble,
@@ -56,7 +59,9 @@ from .audio_dsp import (
     _thud,
     _tick,
     _ui_pop_soft,
+    _warning_tension_pulse,
     _whoosh,
+    _wind_bridge_gust,
 )
 
 
@@ -160,6 +165,22 @@ def select_procedural_sfx(
         return _marker_ring_draw(rng, 0.16)
     if gen == "counter_emphasis_soft":
         return _reveal_soft(rng, 0.32)
+    if gen == "wind_bridge_gust":
+        return _wind_bridge_gust(rng, 0.68)
+    if gen == "steel_cable_groan":
+        return _steel_cable_groan(rng, 0.58)
+    if gen == "span_collapse_splash":
+        return _span_collapse_splash(rng, 0.78)
+    if gen == "headline_hit_warm":
+        return _headline_hit_warm(rng, 0.22)
+    if gen == "warning_tension_pulse":
+        return _warning_tension_pulse(rng, 0.34)
+    if gen == "pointer_draw_swish":
+        return _arrow_swish(rng, 0.15)
+    if gen == "fact_soft_tick":
+        return _reveal_soft(rng, 0.28)
+    if gen == "transition_whoosh_soft":
+        return _whoosh(rng, dur=0.22, up=True) * 0.72
     return _pop(520.0) * 0.6
 
 

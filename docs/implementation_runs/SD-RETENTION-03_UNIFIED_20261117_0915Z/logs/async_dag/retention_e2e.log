@@ -1,0 +1,14 @@
+TASK: retention_e2e
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_retention_e2e -v
+STATUS: PASS (exit=0, elapsed=12.28s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_airplane_window_3pane_webgl_cutaway_and_seed_determinism (tests.test_retention_e2e.TestRetentionE2E.test_airplane_window_3pane_webgl_cutaway_and_seed_determinism) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 11.000s
+
+OK
+

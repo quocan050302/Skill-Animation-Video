@@ -518,3 +518,62 @@ def _rail_creak(rng: np.random.Generator, dur: float = 0.44) -> np.ndarray:
     beam = np.sin(2.0 * np.pi * (165.0 - 18.0 * t) * t) * np.exp(-t * 3.8) * 0.36
     return _lp((iron + beam) * atk * rel, 1650.0)
 
+
+def _wind_bridge_gust(rng: np.random.Generator, dur: float = 0.68) -> np.ndarray:
+    """Coastal narrows aerodynamic wind gust & deck vortex buffeting."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    u = np.minimum(1.0, t / dur)
+    env = (np.sin(np.pi * u) ** 1.05) * 0.85
+    gust = _bp(rng.standard_normal(n), 115.0, 780.0) * 0.58
+    whistle = _bp(rng.standard_normal(n), 320.0 + 90.0 * u, 680.0 + 140.0 * u) * 0.24
+    return _lp((gust + whistle) * env, 1300.0)
+
+
+def _steel_cable_groan(rng: np.random.Generator, dur: float = 0.58) -> np.ndarray:
+    """Strained suspension cable & steel girder torsion groan."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.018)
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.09)
+    freq = 94.0 + 18.0 * np.sin(2.0 * np.pi * 2.2 * t)
+    groan = np.sin(2.0 * np.pi * np.cumsum(freq) / SR) * 0.46
+    scrap = _bp(rng.standard_normal(n), 240.0, 1120.0) * 0.38
+    return _lp((groan + scrap) * atk * rel, 1500.0)
+
+
+def _span_collapse_splash(rng: np.random.Generator, dur: float = 0.78) -> np.ndarray:
+    """Heavy bridge span fracture impact followed by Puget Sound plunge splash."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.002)
+    snap = _bp(rng.standard_normal(n), 520.0, 2200.0) * np.exp(-t * 24.0) * 0.54
+    thump = np.sin(2.0 * np.pi * (56.0 * np.exp(-t * 4.5) + 26.0) * t) * np.exp(-t * 6.2) * 0.70
+    splash_env = np.minimum(1.0, np.maximum(0.0, t - 0.08) / 0.09) * np.exp(-np.maximum(0.0, t - 0.08) * 2.9)
+    splash = _lp(rng.standard_normal(n), 1400.0) * splash_env * 0.56
+    return (snap + thump + splash) * atk
+
+
+def _headline_hit_warm(rng: np.random.Generator, dur: float = 0.22) -> np.ndarray:
+    """Punchy yet warm editorial hero headline transient (sub + gentle pop)."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.002)
+    sub = np.sin(2.0 * np.pi * (78.0 * np.exp(-t * 6.0) + 42.0) * t) * np.exp(-t * 14.0) * 0.58
+    tick = _bp(rng.standard_normal(n), 420.0, 1450.0) * np.exp(-t * 38.0) * 0.28
+    return (sub + tick) * atk
+
+
+def _warning_tension_pulse(rng: np.random.Generator, dur: float = 0.34) -> np.ndarray:
+    """Controlled warning/danger editorial pulse under dialogue."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.006)
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.07)
+    pulse = (
+        0.46 * np.sin(2.0 * np.pi * 110.0 * t)
+        + 0.24 * np.sin(2.0 * np.pi * 165.0 * t)
+    ) * np.exp(-t * 6.5)
+    air = _bp(rng.standard_normal(n), 160.0, 620.0) * np.exp(-t * 9.0) * 0.26
+    return (pulse + air) * atk * rel
+

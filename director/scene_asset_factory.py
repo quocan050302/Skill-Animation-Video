@@ -243,6 +243,62 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "bounds": {"x_min": -6.8, "x_max": 6.8, "y_min": 0.12, "y_max": 6.8, "z_min": -6.8, "z_max": 7.2},
         "collider_boxes": [],
     },
+    "zach3d:tacoma_hook_telephoto_stage": {
+        "capabilities": ["suspension_bridge_span", "torsion_wobble", "suspender_cables_coupled"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "bridge_midspan_twist", "world_pos": [0.0, 2.50, 0.0], "radius_m": 0.65},
+        "bounds": {"x_min": -10.5, "x_max": 10.5, "y_min": 0.12, "y_max": 8.0, "z_min": -6.0, "z_max": 10.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_wide_establish_stage": {
+        "capabilities": ["puget_sound_shores", "deco_towers", "period_car_1940"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "bridge_midspan_twist", "world_pos": [0.0, 2.60, 0.0], "radius_m": 0.90},
+        "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 10.0, "z_min": -8.0, "z_max": 13.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_roadway_wave_stage": {
+        "capabilities": ["vertical_standing_wave", "period_car_1940", "coupled_suspenders"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "bridge_midspan_twist", "world_pos": [0.0, 2.55, 0.0], "radius_m": 0.70},
+        "bounds": {"x_min": -10.0, "x_max": 10.0, "y_min": 0.12, "y_max": 7.5, "z_min": -6.5, "z_max": 8.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_under_deck_girder_stage": {
+        "capabilities": ["solid_plate_girder_8ft", "illustrative_wind_streams"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "plate_girder_windward", "world_pos": [0.0, 2.38, 0.60], "radius_m": 0.45},
+        "bounds": {"x_min": -9.0, "x_max": 9.0, "y_min": 0.25, "y_max": 6.5, "z_min": -5.5, "z_max": 6.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_torsion_twist_stage": {
+        "capabilities": ["asymmetric_deck_torsion", "coupled_suspender_cables", "period_car_1940"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "deck_twist_edge_l", "world_pos": [0.0, 2.55, 0.60], "radius_m": 0.55},
+        "bounds": {"x_min": -10.5, "x_max": 10.5, "y_min": 0.12, "y_max": 7.5, "z_min": -6.5, "z_max": 8.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_shore_onlooker_stage": {
+        "capabilities": ["grounded_human_1940", "foot_lock_retreat", "background_twisting_bridge"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "shore_onlooker_head", "world_pos": [0.35, 1.55, 0.65], "radius_m": 0.35},
+        "bounds": {"x_min": -11.0, "x_max": 11.0, "y_min": 0.12, "y_max": 7.5, "z_min": -12.0, "z_max": 6.5},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_collapse_plunge_stage": {
+        "capabilities": ["staged_span_collapse", "water_splash_ring", "free_fall_trajectory"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "collapse_break_seam", "world_pos": [-1.2, 2.25, 0.2], "radius_m": 0.70},
+        "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 9.5, "z_min": -8.0, "z_max": 12.0},
+        "collider_boxes": [],
+    },
+    "zach3d:tacoma_aftermath_stage": {
+        "capabilities": ["broken_center_span", "standing_towers", "calm_puget_sound"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "aftermath_broken_gap", "world_pos": [0.0, 2.45, 0.0], "radius_m": 0.90},
+        "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 10.5, "z_min": -8.5, "z_max": 14.0},
+        "collider_boxes": [],
+    },
     "zach3d:studio_demonstrator_stage": {
         "capabilities": ["human_character", "studio_gear_pedestal"],
         "fidelity_mode": "stylized_schematic",
@@ -262,14 +318,29 @@ def build_character_and_prop_registry(
     events = list(event_graph.get("events") or [])
     has_roman = any(ev.get("scene_family") == "roman_historical" for ev in events)
     has_boston = any(str(ev.get("scene_family") or "").startswith("boston_") for ev in events)
-    has_modern_human = (not has_boston) and any(
+    has_tacoma = any(str(ev.get("scene_family") or "").startswith("tacoma_") for ev in events)
+    has_modern_human = (not has_boston and not has_tacoma) and any(
         "human" in str(ev.get("subject", ""))
         or ev.get("scene_family") in ("human_device", "elevator_lobby_button", "elevator_landing_doors", "human_studio")
         for ev in events
     )
 
     characters: Dict[str, Dict[str, Any]] = {}
-    if has_boston:
+    if has_tacoma:
+        characters["char_onlooker_1940_01"] = {
+            "character_id": "char_onlooker_1940_01",
+            "role": "shore_onlooker_1940",
+            "outfit_style": "coat_and_fedora_1940",
+            "height_m": 1.74,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x463D34,
+            "shirt_material_id": "mat_1940_overcoat_463d34",
+            "pants_hex": 0x26292E,
+            "skin_hex": 0xD9A484,
+            "allowed_states": ["notice_gaze", "step_back_brace", "braced_hold"],
+        }
+    elif has_boston:
         characters["char_resident_1919_01"] = {
             "character_id": "char_resident_1919_01",
             "role": "boston_resident_1919",
@@ -458,6 +529,22 @@ def _map_family_to_generator(
             return "zach3d:boston_engineering_cutaway_stage"
         if fam == "boston_harbor_payoff" or prop == "boston_overview_stage":
             return "zach3d:boston_harbor_payoff_stage"
+        if fam == "tacoma_hook_telephoto" or prop == "tacoma_bridge_hook_rig":
+            return "zach3d:tacoma_hook_telephoto_stage"
+        if fam == "tacoma_wide_establish" or prop == "tacoma_wide_establish_rig":
+            return "zach3d:tacoma_wide_establish_stage"
+        if fam == "tacoma_roadway_wave" or prop == "tacoma_roadway_wave_rig":
+            return "zach3d:tacoma_roadway_wave_stage"
+        if fam == "tacoma_under_deck_girder" or prop == "tacoma_girder_wind_rig":
+            return "zach3d:tacoma_under_deck_girder_stage"
+        if fam == "tacoma_torsion_twist" or prop == "tacoma_torsion_span_rig":
+            return "zach3d:tacoma_torsion_twist_stage"
+        if fam == "tacoma_shore_onlooker" or prop == "tacoma_shore_onlooker_rig":
+            return "zach3d:tacoma_shore_onlooker_stage"
+        if fam == "tacoma_collapse_plunge" or prop == "tacoma_collapse_span_rig":
+            return "zach3d:tacoma_collapse_plunge_stage"
+        if fam == "tacoma_aftermath" or prop == "tacoma_aftermath_rig":
+            return "zach3d:tacoma_aftermath_stage"
         if fam == "airplane_window" or prop == "airplane_window_bleed":
             return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":

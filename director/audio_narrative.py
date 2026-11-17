@@ -187,6 +187,28 @@ def extract_sound_events(
         elif proc_gen == "zach3d:boston_harbor_payoff_stage":
             if density == "detailed":
                 _add(min(dur * 0.32, 0.45), "harbor_aftermath_resolve", "reveal_soft", "reveal", -15.5, 0.0, 0.80, 0.55, 3, f"{sid}.boston_overview", depth="far", uncert=0.04)
+        elif proc_gen == "zach3d:tacoma_hook_telephoto_stage":
+            _add(min(dur * 0.28, 0.36), "narrows_wind_gust", "wind_bridge_gust", "foley", -14.5, 0.0, 0.86, 0.65, 2, f"{sid}.tacoma_hook_wind", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:tacoma_wide_establish_stage":
+            _add(min(dur * 0.30, 0.42), "puget_sound_wind", "wind_bridge_gust", "foley", -15.5, -0.10, 0.84, 0.58, 2, f"{sid}.puget_sound_establish", depth="far", uncert=0.03)
+        elif proc_gen == "zach3d:tacoma_roadway_wave_stage":
+            _add(min(dur * 0.34, 0.48), "deck_bounce_strain", "steel_cable_groan", "foley", -13.0, 0.06, 0.88, 0.72, 2, f"{sid}.roadway_bounce_wave", depth="mid", uncert=0.025)
+        elif proc_gen == "zach3d:tacoma_under_deck_girder_stage":
+            _add(min(dur * 0.30, 0.40), "plate_girder_buffet", "wind_bridge_gust", "foley", -12.0, 0.0, 0.90, 0.78, 2, f"{sid}.plate_girder_vortex", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:tacoma_torsion_twist_stage":
+            _add(min(dur * 0.25, 0.36), "torsion_cable_groan", "steel_cable_groan", "foley", -11.5, -0.08, 0.92, 0.82, 1, f"{sid}.torsional_flutter", depth="near", uncert=0.02)
+            if density != "sparse" and dur >= 1.8:
+                _add(round(dur * 0.64, 3), "suspender_snap_strain", "rivet_tension_ping", "foley", -11.5, 0.10, 0.88, 0.74, 2, f"{sid}.suspender_strain", depth="near", uncert=0.02)
+        elif proc_gen == "zach3d:tacoma_shore_onlooker_stage":
+            _add(min(dur * 0.38, 0.55), "shore_gravel_retreat", "footsteps_retreat", "foley", -13.5, 0.14, 0.88, 0.70, 2, f"{sid}.shore_onlooker_step", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:tacoma_collapse_plunge_stage":
+            hit_rel = float(ca.get("hit_time_rel_sec", round(dur * 0.38, 3))) if isinstance(ca, dict) else round(dur * 0.38, 3)
+            if hit_rel > 0.24:
+                _add(round(hit_rel - 0.12, 3), "main_suspender_snap", "rivet_tension_ping", "foley", -9.5, -0.08, 0.95, 0.88, 1, f"{sid}.cable_snap", depth="near", uncert=0.015)
+            _add(hit_rel, "tacoma_span_plunge_splash", "span_collapse_splash", "impact", -7.5, 0.0, 0.98, 0.96, 1, f"{sid}.span_collapse_plunge.hit={hit_rel:.3f}", depth="near", uncert=0.015)
+        elif proc_gen == "zach3d:tacoma_aftermath_stage":
+            # Respectful, calm aftermath framing over unbroken Puget Sound water
+            pass
         elif proc_gen == "zach3d:airplane_window_hole_stage":
             if "exploded" in setup or "layers" in nar or "three" in nar:
                 _add(min(dur * 0.25, 0.30), "window_layers_separate", "reveal_soft", "reveal", -12.0, 0.0, 0.92, 0.80, 2, f"{sid}.3pane_explode", depth="near", uncert=0.025)
@@ -667,18 +689,35 @@ def build_audio_narrative_plan(
                 if any(abs(t_ov - float(e["time_sec"])) < 0.14 for e in all_events):
                     continue
                 otype = str(ov.get("type", "focus_ring"))
+                role_name = str(ov.get("role") or "")
+                sfx_intent = str(ov.get("sfx_intent") or ov.get("sound_intent") or "")
                 intent_map = {
                     "focus_ring": ("callout_focus_ring", "marker_ring_draw", -14.5),
                     "tracked_arrow": ("callout_tracked_arrow", "arrow_swish", -15.0),
                     "verified_counter": ("callout_verified_counter", "ui_pop_soft", -15.5),
                     "beat_card": ("callout_beat_card", "reveal_soft", -14.0),
                 }
+                role_sfx_map = {
+                    "headline_hit_warm": ("callout_curiosity_headline", "headline_hit_warm", -11.5),
+                    "warning_tension_pulse": ("callout_warning_danger", "warning_tension_pulse", -12.0),
+                    "pointer_draw_swish": ("callout_pointer_swish", "arrow_swish", -14.5),
+                    "fact_soft_tick": ("callout_verified_counter", "reveal_soft", -14.5),
+                    "transition_whoosh_soft": ("callout_transition_emphasis", "transition_sweep", -15.0),
+                }
                 sid_ov = str(ov.get("shot_id") or "shot_00")
                 sh_match = next((s for s in shots if s.get("shot_id") == sid_ov), None)
-                # Keep human-cost / aftermath scenes respectful (no bright UI pops/swishes)
-                if sh_match and str(sh_match.get("procedural_generator") or "") == "zach3d:boston_rescue_aftermath_stage":
+                # Keep human-cost / aftermath scenes and quiet editorial roles respectful & noise-free
+                if sh_match and str(sh_match.get("procedural_generator") or "") in (
+                    "zach3d:boston_rescue_aftermath_stage",
+                    "zach3d:tacoma_aftermath_stage",
+                ):
                     continue
-                ev_name, intent_name, g_db = intent_map.get(otype, ("callout_overlay", "ui_pop_soft", -15.0))
+                if sfx_intent in ("silent_context", "silent_sober") or role_name in ("location_time", "aftermath_sober"):
+                    continue
+                if sfx_intent in role_sfx_map:
+                    ev_name, intent_name, g_db = role_sfx_map[sfx_intent]
+                else:
+                    ev_name, intent_name, g_db = intent_map.get(otype, ("callout_overlay", "ui_pop_soft", -15.0))
                 rel_t = round(max(0.0, t_ov - float(sh_match["start"])) if sh_match else t_ov, 3)
                 all_events.append({
                     "time_sec": round(t_ov, 3),
@@ -725,16 +764,29 @@ def build_audio_narrative_plan(
                     "duck_db": -9.5,
                     "reason": f"solemn_human_cost_thinning:{ph.get('phrase_id')}",
                 })
+        for sh_col in shots:
+            if str(sh_col.get("procedural_generator") or "") == "zach3d:tacoma_collapse_plunge_stage":
+                col_dur = max(0.5, float(sh_col["end"]) - float(sh_col["start"]))
+                col_abs = float(sh_col["start"]) + round(col_dur * 0.38, 3)
+                if col_abs > 0.25:
+                    twist_ducks.append({
+                        "start_sec": round(col_abs - 0.22, 3),
+                        "end_sec": round(col_abs + 0.02, 3),
+                        "duck_db": -13.5,
+                        "reason": "pre_collapse_silence_anticipation",
+                    })
+                break
         if twist_ducks:
-            music_plan["twist_duck_windows"] = twist_ducks[:3]
+            music_plan["twist_duck_windows"] = twist_ducks[:4]
 
     # Scene-appropriate ambience
     nar_all_low = joined_nar.lower()
     is_boston_1919 = ("boston" in nar_all_low and "molasses" in nar_all_low)
+    is_tacoma_1940 = ("tacoma" in nar_all_low or "galloping gertie" in nar_all_low or ("bridge" in nar_all_low and "twist" in nar_all_low))
     is_outdoor = any(k in nar_all_low for k in ("rome", "arena", "sand", "bridge", "river", "walk", "outside"))
     amb_kind = (
         "minimal_quiet" if selected_skill == "minimalistic-graphics"
-        else ("period_street_ambience" if is_boston_1919 else ("arena_wind_ambience" if is_outdoor else "studio_room_ambience"))
+        else ("period_street_ambience" if is_boston_1919 else ("coastal_wind_ambience" if is_tacoma_1940 else ("arena_wind_ambience" if is_outdoor else "studio_room_ambience")))
     )
 
     generated_plan: Dict[str, Any] = {

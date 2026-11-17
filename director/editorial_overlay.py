@@ -15,14 +15,31 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .visual_storytelling_director import validate_reveal_order
+from .editorial_design_system import (
+    EditorialRole,
+    derive_editorial_role,
+    emit_design_tokens_json,
+    measure_text_layout,
+    select_overlay_variant,
+    split_curiosity_lines,
+    validate_theme_semantics,
+)
+from .curiosity_director import (
+    bind_pointer_and_headline_timing,
+    find_curiosity_beats,
+    plan_attention_pointer,
+    score_editorial_value,
+    validate_reveal_lock,
+)
+from .assets.editorial_theme_renderer import EDITORIAL_THEME_RENDERER_JS
 
 
 SCHEMA_VERSION = "sd-editorial-timeline-1"
 
-SAFE_X_MIN = 100
-SAFE_X_MAX = 980
-SAFE_Y_MIN = 220
-SAFE_Y_MAX = 1500
+SAFE_X_MIN = 76
+SAFE_X_MAX = 1004
+SAFE_Y_MIN = 165
+SAFE_Y_MAX = 1520
 CAPTION_BAND_Y_MIN = 1335
 CAPTION_BAND_Y_MAX = 1500
 
@@ -129,12 +146,30 @@ def extract_editorial_focus_events(
     storyboard: Dict[str, Any],
     parsed_script: Dict[str, Any],
     verified_numbers: Optional[List[Dict[str, Any]]] = None,
+    editorial_theme: str = "role-aware",
+    curiosity_layer: str = "auto",
 ) -> List[Dict[str, Any]]:
-    """Derive visually grounded editorial callout candidates directly from storyboard anchors & verified facts."""
+    """Derive visually grounded, role-aware editorial callout candidates directly from storyboard anchors & facts."""
     shots = list(storyboard.get("shots", []))
     words = list((parsed_script.get("voice") or {}).get("words", []))
     candidates: List[Dict[str, Any]] = []
     fact_nums = list(verified_numbers or [])
+    story_graph = storyboard.get("story_action_graph") or {}
+    nevs = list(story_graph.get("narrative_events") or [])
+    nev_by_id = {e.get("narrative_event_id"): e for e in nevs if e.get("narrative_event_id")}
+    seed = int(storyboard.get("seed", 42))
+    full_script = " ".join(str(s) for s in (parsed_script.get("sentences") or []))
+    use_role_aware = (editorial_theme or "role-aware").lower() != "legacy"
+
+    curiosity_by_nev: Dict[str, Dict[str, Any]] = {}
+    if use_role_aware and (curiosity_layer or "auto").lower() != "off" and nevs:
+        for hb in find_curiosity_beats(full_script, nevs, max_headlines=2):
+            nid = hb.get("narrative_event_id")
+            if nid:
+                curiosity_by_nev[str(nid)] = hb
+
+    prior_styled: List[Dict[str, Any]] = []
+    seen_location_contexts: set[str] = set()
 
     for si, shot in enumerate(shots):
         st = float(shot["start"])
@@ -149,7 +184,6 @@ def extract_editorial_focus_events(
         anchor = shot.get("focal_anchor") or (shot.get("camera_path") or {}).get("focal_anchor") or {}
         anchor_id = str(anchor.get("anchor_id") or "stage_center")
 
-        # Anchor-timed onset aligned to actual spoken keyword in shot if found
         shot_words = [w for w in words if st - 0.05 <= float(w.get("s", 0.0)) <= en - 0.15]
         anchor_t = round(st + min(0.38, dur * 0.22), 3)
         for sw in shot_words:
@@ -162,16 +196,100 @@ def extract_editorial_focus_events(
         if ov_end - anchor_t < 0.75:
             continue
 
-        # Build concise domain-specific callouts aligned strictly to visible 3D mechanisms
         rev_floor = float(shot.get("reveal_after_sec") or 0.0)
         anchor_t = round(max(anchor_t, rev_floor), 3)
+
+        def _word_t(toks: Tuple[str, ...], fallback: float) -> float:
+            for sw in shot_words:
+                cw = re.sub(r"[^\w\.\-]", "", str(sw["w"]).lower())
+                if any(cw == t or (len(t) >= 4 and t in cw) for t in toks):
+                    return round(max(st + 0.08, rev_floor, float(sw["s"])), 3)
+            return round(max(st + 0.12, rev_floor, fallback), 3)
+
+        nev = nev_by_id.get(shot.get("narrative_event_id"), {})
+        if use_role_aware and gen.startswith("zach3d:tacoma_"):
+            hb = curiosity_by_nev.get(str(shot.get("narrative_event_id") or ""))
+            if hb and gen in ("zach3d:tacoma_hook_telephoto_stage", "zach3d:tacoma_torsion_twist_stage"):
+                t_on = round(max(st + 0.14, rev_floor), 3)
+                if gen == "zach3d:tacoma_torsion_twist_stage":
+                    t_on = _word_t(("pitched", "twist", "skyward", "plunged", "opposite"), st + 0.22)
+                t_off = round(min(en - 0.14, t_on + 2.25), 3)
+                if t_off - t_on >= 0.75:
+                    spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
+                    ptr = plan_attention_pointer({"beat_index": si, "role": spec.role, "target_anchor_id": hb["target_anchor_id"], "narrative_event_id": nev.get("narrative_event_id")})
+                    l1, l2 = split_curiosity_lines(hb["label"])
+                    lay = measure_text_layout(hb["label"], spec, viewport=1080)
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "focus_ring" if gen == "zach3d:tacoma_torsion_twist_stage" else "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": hb.get("why_selected", "High-hierarchy curiosity beat"),
+                        "anchor_id": ptr["anchor_id"], "pointer_shape": ptr["pointer_shape"],
+                        "label": hb["label"], "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": 1, "verified": True, "source_fact_ids": [nev.get("factual_claim_id")] if nev.get("factual_claim_id") else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+                    continue
+
+            role_item: Optional[Tuple[EditorialRole, str, str, str, str, Optional[str], Optional[str]]] = None
+            if gen == "zach3d:tacoma_wide_establish_stage" and "tacoma_1940" not in seen_location_contexts:
+                seen_location_contexts.add("tacoma_1940")
+                role_item = (EditorialRole.LOCATION_TIME, "bridge_midspan_twist", "TACOMA NARROWS", "Washington, 1940", "none", None, None)
+            elif gen == "zach3d:tacoma_roadway_wave_stage":
+                if "2,800" in low or "2800" in low:
+                    role_item = (EditorialRole.VERIFIED_FACT, "bridge_midspan_twist", "2,800 FT MAIN SPAN", "Vertical wave bounce (WSDOT)", "mini_fact_tag", "WSDOT / FHWA Structural Specifications", "claim_galloping_gertie_1940")
+                else:
+                    role_item = (EditorialRole.EXPLANATION, "bridge_midspan_twist", "VERTICAL WAVE MOTION", "Bouncing before torsion", "curved_leader", None, None)
+            elif gen == "zach3d:tacoma_under_deck_girder_stage":
+                role_item = (EditorialRole.EXPLANATION, "plate_girder_windward", "8-FT PLATE GIRDER", "Solid side girder & wind flow", "curved_leader", "FHWA HIF-11-016: 8-ft solid plate stiffening girders", "claim_tacoma_plate_girder")
+            elif gen == "zach3d:tacoma_collapse_plunge_stage":
+                t_on = _word_t(("broke", "plunged", "collapsed", "section"), st + float(dur * 0.36))
+                role_item = (EditorialRole.WARNING_DANGER, "collapse_break_seam", "SPAN BROKE FREE", "Center section plunged (~11:02 a.m.)", "impact_arrow", "WSDOT Nov 7, 1940 (~11:02 a.m.)", "claim_tacoma_collapse_1940_11_07")
+                anchor_t = t_on
+            elif gen == "zach3d:tacoma_aftermath_stage":
+                if any(k in low for k in ("no human", "died", "redesigned", "rethink", "changed the way", "forever")):
+                    role_item = (EditorialRole.AFTERMATH_SOBER, "aftermath_broken_gap", "0 HUMAN FATALITIES", "Aerodynamic trusses mandated worldwide", "none", "WSDOT Historical Archive", "claim_tacoma_witnesses_1940")
+                else:
+                    role_item = (EditorialRole.VERIFIED_FACT, "aftermath_broken_gap", "NOVEMBER 7, 1940", "WSDOT verified collapse date", "mini_fact_tag", "WSDOT Official Tacoma Narrows History", "claim_tacoma_collapse_1940_11_07")
+
+            if role_item is not None:
+                erole, anc_k, lbl_k, sub_k, ptr_k, f_src, f_cid = role_item
+                spec = select_overlay_variant(erole, prior_roles=prior_styled, seed=seed + si)
+                ptr = plan_attention_pointer({"beat_index": si, "role": erole.value, "target_anchor_id": anc_k, "narrative_event_id": nev.get("narrative_event_id")})
+                lay = measure_text_layout(lbl_k, spec, viewport=1080)
+                t_on = round(max(st + 0.18, rev_floor, anchor_t if gen == "zach3d:tacoma_collapse_plunge_stage" else st + 0.28), 3)
+                t_off = round(min(en - 0.14, t_on + spec.max_duration), 3)
+                if t_off - t_on >= 0.85:
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow") else "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": f"Semantic role {spec.role} matched to stage {gen}",
+                        "anchor_id": ptr["anchor_id"], "pointer_shape": ptr_k,
+                        "label": lbl_k, "sublabel": sub_k,
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": spec.semantic_priority, "verified": True,
+                        "fact_source": f_src, "source_fact_ids": [f_cid] if f_cid else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+            continue
+
         if gen.startswith("zach3d:boston_"):
-            def _word_t(toks: Tuple[str, ...], fallback: float) -> float:
-                for sw in shot_words:
-                    cw = re.sub(r"[^\w\.\-]", "", str(sw["w"]).lower())
-                    if any(cw == t or (len(t) >= 4 and t in cw) for t in toks):
-                        return round(max(st + 0.08, rev_floor, float(sw["s"])), 3)
-                return round(max(st + 0.12, rev_floor, fallback), 3)
 
             if gen == "zach3d:boston_street_hook_stage":
                 # Non-spoiler geographical grounding only (never reveals "molasses" early!)
@@ -519,6 +637,22 @@ def plan_3d_callouts(
             "preferred_side": cand.get("preferred_side", "right"),
             "placement_box": [round(float(x), 1) for x in pbox],
             "accent_color": cand.get("accent_color", "#38bdf8"),
+            "role": cand.get("role", "explanation"),
+            "variant_id": cand.get("variant_id", "legacy"),
+            "style_id": cand.get("style_id", "legacy"),
+            "why_role": cand.get("why_role", "Legacy callout candidate"),
+            "pointer_shape": cand.get("pointer_shape", "curved_leader" if ctype == "tracked_arrow" else "focus_circle"),
+            "display_lines": cand.get("display_lines"),
+            "font_size_1080": cand.get("font_size_1080", 32),
+            "stroke_width": cand.get("stroke_width", 0),
+            "bg_shape": cand.get("bg_shape", "capsule"),
+            "primary_color": cand.get("primary_color", "#f8fafc"),
+            "secondary_color": cand.get("secondary_color", cand.get("accent_color", "#38bdf8")),
+            "outline_color": cand.get("outline_color", "#090d16"),
+            "contrast_ratio_min": cand.get("contrast_ratio_min", 4.5),
+            "sfx_intent": cand.get("sfx_intent"),
+            "sound_intent": cand.get("sound_intent"),
+            "source_fact_ids": list(cand.get("source_fact_ids") or []),
             "target_value": cand.get("target_value"),
             "prefix": cand.get("prefix", ""),
             "suffix": cand.get("suffix", ""),
@@ -610,6 +744,8 @@ def build_editorial_timeline(
     callout_mode: str = "smart",
     prosody_plan: Optional[Dict[str, Any]] = None,
     verified_numbers: Optional[List[Dict[str, Any]]] = None,
+    editorial_theme: str = "role-aware",
+    curiosity_layer: str = "auto",
 ) -> Dict[str, Any]:
     """Assemble and persist `editorial_timeline.json`, `overlay_plan.json`, and `overlay_coverage.json`."""
     voice_info = parsed_script.get("voice") or {}
@@ -620,9 +756,83 @@ def build_editorial_timeline(
     word_conf = str(voice_info.get("word_anchor_confidence") or "ESTIMATED")
     captions = plan_kinetic_captions(words, prosody_plan=prosody_plan, caption_mode=caption_mode)
 
-    # Strict scope lock: rich dynamic callouts operate only inside zach-d-films unless explicit
+    # Strict scope lock: rich dynamic callouts & multi-theme editorial engine operate strictly inside zach-d-films
     effective_callout_mode = callout_mode if selected_skill == "zach-d-films" else "off"
-    cands = extract_editorial_focus_events(storyboard, parsed_script, verified_numbers=verified_numbers) if effective_callout_mode != "off" else []
+    effective_theme = editorial_theme if selected_skill == "zach-d-films" else "legacy"
+    cands = (
+        extract_editorial_focus_events(
+            storyboard,
+            parsed_script,
+            verified_numbers=verified_numbers,
+            editorial_theme=effective_theme,
+            curiosity_layer=curiosity_layer,
+        )
+        if effective_callout_mode != "off"
+        else []
+    )
+    # In role-aware mode, upgrade any legacy Boston/generic candidates seamlessly to semantic roles
+    if effective_theme != "legacy" and cands:
+        action_graph_ref = storyboard.get("story_action_graph") or {}
+        nev_map = {e.get("narrative_event_id"): e for e in (action_graph_ref.get("narrative_events") or [])}
+        shots_by_id = {s.get("shot_id"): s for s in (storyboard.get("shots") or [])}
+        seen_locs: set[str] = set()
+        upgraded: List[Dict[str, Any]] = []
+        prior_r: List[Dict[str, Any]] = []
+        seed_v = int(storyboard.get("seed", 42))
+        for idx_c, c in enumerate(cands):
+            if "style_id" in c and c.get("style_id") != "legacy":
+                upgraded.append(c)
+                prior_r.append(c)
+                continue
+            sh_ref = shots_by_id.get(c.get("shot_id"), {})
+            nev_ref = nev_map.get(sh_ref.get("narrative_event_id"), {})
+            c_lbl = str(c.get("label") or "")
+            c_sub = str(c.get("sublabel") or "")
+            c_type = str(c.get("type") or "")
+            c_has_num = bool(c_type == "verified_counter" or c.get("fact_source") or re.search(r"\d", f"{c_lbl} {c_sub}"))
+            beat_ctx = {
+                "editorial_intent": nev_ref.get("editorial_intent"),
+                "physical_action": nev_ref.get("physical_action") or sh_ref.get("physical_action"),
+                "beat_role": nev_ref.get("beat_role") or sh_ref.get("beat_role"),
+                "candidate_type": c_type,
+                "candidate_label": c_lbl,
+                "candidate_sublabel": c_sub,
+                "narration_text": f"{c_lbl} {c_sub}".strip() or sh_ref.get("narration_text"),
+                "factual_claim_id": nev_ref.get("factual_claim_id") if c_has_num else None,
+            }
+            erole, why_r = derive_editorial_role(beat_ctx, action_graph_ref)
+            if "NORTH END" in c_lbl.upper() and "boston_1919" not in seen_locs:
+                seen_locs.add("boston_1919")
+                erole = EditorialRole.LOCATION_TIME
+                why_r = "New historical Boston 1919 street setting establishment"
+            elif erole == EditorialRole.CURIOSITY_HEADLINE and "/" not in c_lbl and len(c_lbl.split()) <= 3:
+                if any(k in c_lbl.lower() for k in ("boston", "1919", "1940", "tacoma", "north end")):
+                    erole = EditorialRole.LOCATION_TIME
+                else:
+                    erole = EditorialRole.EXPLANATION
+            spec = select_overlay_variant(erole, prior_roles=prior_r, seed=seed_v + idx_c)
+            c_up = {
+                **c,
+                "narrative_event_id": sh_ref.get("narrative_event_id"),
+                "role": spec.role,
+                "variant_id": spec.variant_id,
+                "style_id": spec.style_id,
+                "why_role": why_r,
+                "pointer_shape": "none" if erole in (EditorialRole.LOCATION_TIME, EditorialRole.AFTERMATH_SOBER) else spec.pointer_shape,
+                "font_size_1080": max(34, min(62, spec.font_size_1080)),
+                "stroke_width": spec.stroke_width,
+                "bg_shape": spec.bg_shape,
+                "primary_color": spec.primary_color,
+                "secondary_color": spec.secondary_color,
+                "outline_color": spec.outline_color,
+                "contrast_ratio_min": spec.contrast_ratio_min,
+                "sfx_intent": spec.sfx_intent,
+                "sound_intent": spec.sfx_intent,
+            }
+            upgraded.append(c_up)
+            prior_r.append(c_up)
+        cands = upgraded
+
     callouts_res = plan_3d_callouts(
         candidates=cands,
         total_duration=total_dur,
@@ -637,6 +847,8 @@ def build_editorial_timeline(
         "fps": int(storyboard.get("fps", 30)),
         "caption_mode": caption_mode,
         "callout_mode": effective_callout_mode,
+        "editorial_theme": effective_theme,
+        "curiosity_layer": curiosity_layer,
         "word_anchor_confidence": word_conf,
         "word_alignment_method": voice_info.get("alignment_method", "unknown"),
         "voice_phrases": list((prosody_plan or voice_info.get("prosody_plan") or {}).get("phrases", [])),
@@ -648,18 +860,26 @@ def build_editorial_timeline(
     val = validate_overlay_plan(timeline)
     timeline["validation"] = val
 
-    # Enforce chronological reveal-order lock whenever story_action_graph is present
+    # Enforce semantic design tokens & chronological reveal-order lock
     action_graph = storyboard.get("story_action_graph")
     if isinstance(action_graph, dict):
         rev_audit = validate_reveal_order(action_graph, timeline, words=words)
         if rev_audit["status"] == "FAIL":
             raise OverlaySafetyError("; ".join(rev_audit["violations"]))
+        if effective_theme != "legacy" and timeline["overlays"]:
+            rev2 = validate_reveal_lock(timeline["overlays"], action_graph.get("narrative_events") or [], words=words)
+            if rev2["status"] == "FAIL":
+                raise OverlaySafetyError("; ".join(rev2["violations"]))
+
+    if effective_theme != "legacy" and timeline["overlays"]:
+        validate_theme_semantics(timeline["overlays"], story=action_graph if isinstance(action_graph, dict) else None)
 
     coverage = {
         "schema_version": "sd-overlay-coverage-1",
         "selected_skill": selected_skill,
         "caption_mode": caption_mode,
         "callout_mode": effective_callout_mode,
+        "editorial_theme": effective_theme,
         "caption_chunks_count": len(captions),
         "overlays_accepted": len(callouts_res["overlays"]),
         "overlays_rejected": len(callouts_res.get("rejected", [])),
@@ -671,300 +891,28 @@ def build_editorial_timeline(
         (run_dir / "editorial_timeline.json").write_text(json.dumps(timeline, ensure_ascii=False, indent=2), encoding="utf-8")
         (run_dir / "overlay_plan.json").write_text(json.dumps(callouts_res, ensure_ascii=False, indent=2), encoding="utf-8")
         (run_dir / "overlay_coverage.json").write_text(json.dumps(coverage, ensure_ascii=False, indent=2), encoding="utf-8")
+        emit_design_tokens_json(
+            run_dir=run_dir,
+            roles_plan=[
+                {
+                    "overlay_id": o.get("overlay_id"),
+                    "narrative_event_id": o.get("narrative_event_id"),
+                    "role": o.get("role"),
+                    "variant_id": o.get("variant_id"),
+                    "style_id": o.get("style_id"),
+                    "why_role": o.get("why_role"),
+                    "show_from": o.get("start"),
+                    "show_until": o.get("end"),
+                    "source_fact_ids": o.get("source_fact_ids", []),
+                    "target_anchor_id": o.get("anchor_id"),
+                }
+                for o in callouts_res["overlays"]
+            ],
+            selected_skill=selected_skill,
+        )
 
     return timeline
 
 
-EDITORIAL_OVERLAY_RENDERER_JS = r"""
-// Deterministic SVG + Kinetic DOM Editorial Overlay Renderer (ZDF Only).
-// Uses zero wall-clock CSS transitions and hides tracked annotations immediately
-// whenever an anchor goes offscreen or fails 3D line-of-sight occlusion checks.
 
-const NS = 'http://www.w3.org/2000/svg';
-const SAFE = { x0: 100, x1: 980, y0: 220, y1: 1500, capY0: 1335 };
-
-function clamp(x, lo, hi) {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function easeOutCubic(u) {
-  const x = clamp(u, 0, 1);
-  return 1 - Math.pow(1 - x, 3);
-}
-
-function el(tag, attrs = {}) {
-  const node = document.createElementNS(NS, tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
-  return node;
-}
-
-export class EditorialOverlayController {
-  constructor(stageEl, capEl, timeline) {
-    this.stageEl = stageEl;
-    this.capEl = capEl;
-    this.timeline = timeline || { caption_mode: 'plain', callout_mode: 'off', caption_chunks: [], overlays: [] };
-    this.svg = document.createElementNS(NS, 'svg');
-    this.svg.setAttribute('viewBox', '0 0 1080 1920');
-    this.svg.setAttribute('width', '1080');
-    this.svg.setAttribute('height', '1920');
-    this.svg.style.cssText = 'position:absolute;inset:0;width:1080px;height:1920px;pointer-events:none;z-index:12;overflow:visible;';
-    this.stageEl.appendChild(this.svg);
-    this.lastTelemetry = { overlays: [], caption: null, active_count: 0 };
-  }
-
-  renderAtTime(t, anchorsMap = {}) {
-    while (this.svg.firstChild) this.svg.removeChild(this.svg.firstChild);
-
-    const tl = this.timeline || {};
-    const chunks = tl.caption_chunks || [];
-    const capMode = String(tl.caption_mode || 'kinetic');
-
-    // 1. Render kinetic or plain captions deterministically with non-crowded flex layout
-    const activeChunk = chunks.find(c => t >= c.start && t <= c.end) || null;
-    let capTel = { text: '', active_word: '', chunk_id: null, mode: capMode, caption_layout: null };
-    if (this.capEl) {
-      this.capEl.style.display = 'flex';
-      this.capEl.style.flexWrap = 'wrap';
-      this.capEl.style.justifyContent = 'center';
-      this.capEl.style.alignItems = 'baseline';
-      this.capEl.style.columnGap = '0.40em';
-      this.capEl.style.rowGap = '0.20em';
-    }
-    if (activeChunk && this.capEl) {
-      if (capMode === 'plain') {
-        this.capEl.textContent = activeChunk.text || '';
-        capTel.text = activeChunk.text || '';
-        capTel.chunk_id = activeChunk.chunk_id;
-      } else {
-        this.capEl.innerHTML = '';
-        const ws = activeChunk.words || [];
-        let activeW = '';
-        const spanEls = [];
-        ws.forEach((wObj) => {
-          const span = document.createElement('span');
-          span.textContent = String(wObj.w || '');
-          const isCur = t >= wObj.s && t <= (wObj.e + 0.04);
-          const past = t > wObj.e + 0.04;
-          let scale = 1.0;
-          if (isCur) {
-            const p = clamp((t - wObj.s) / Math.max(0.06, wObj.e - wObj.s), 0, 1);
-            scale = 1.0 + 0.05 * Math.sin(Math.min(1, p * 2.0) * Math.PI * 0.5);
-            activeW = wObj.w || '';
-          }
-          const isEmp = Boolean(wObj.is_emphasis);
-          const color = isCur
-            ? (isEmp ? (wObj.accent_color || '#fbbf24') : '#ffffff')
-            : (isEmp ? (wObj.accent_color || '#fbbf24') : (past ? 'rgba(241,245,249,0.92)' : 'rgba(226,232,240,0.82)'));
-          span.style.display = 'inline-block';
-          span.style.transform = `scale(${scale.toFixed(3)})`;
-          span.style.transformOrigin = 'center bottom';
-          span.style.color = color;
-          span.style.margin = '0 2px';
-          span.style.padding = '0 4px';
-          if (isEmp && isCur) {
-            span.style.textDecoration = 'underline';
-            span.style.textDecorationColor = wObj.accent_color || '#fbbf24';
-            span.style.textUnderlineOffset = '8px';
-            span.style.textDecorationThickness = '4px';
-          }
-          this.capEl.appendChild(span);
-          spanEls.push(span);
-        });
-        // Real DOM getBoundingClientRect telemetry proving zero adjacent word collisions
-        const rects = spanEls.map(elNode => elNode.getBoundingClientRect());
-        let minGap = 999.0;
-        let overlaps = 0;
-        const rowYs = [];
-        for (let rIdx = 0; rIdx < rects.length; rIdx++) {
-          const rA = rects[rIdx];
-          if (!rowYs.some(ry => Math.abs(ry - rA.top) < 12)) rowYs.push(rA.top);
-          if (rIdx + 1 < rects.length) {
-            const rB = rects[rIdx + 1];
-            if (Math.abs(rA.top - rB.top) < Math.max(10, rA.height * 0.45)) {
-              const gap = rB.left - rA.right;
-              minGap = Math.min(minGap, gap);
-              if (gap < 1.5) overlaps += 1;
-            }
-          }
-        }
-        const capRect = this.capEl.getBoundingClientRect();
-        capTel.text = activeChunk.text || '';
-        capTel.active_word = activeW;
-        capTel.chunk_id = activeChunk.chunk_id;
-        capTel.caption_layout = {
-          word_count: spanEls.length,
-          min_word_gap_px: minGap < 990 ? Number(minGap.toFixed(2)) : null,
-          word_overlap_count: overlaps,
-          row_count: rowYs.length,
-          in_safe_area: capRect.left >= 80 && capRect.right <= 1000 && capRect.bottom <= 1540,
-        };
-      }
-    } else if (this.capEl) {
-      this.capEl.textContent = '';
-    }
-
-    // 2. Render smart tracked 3D callouts / focus rings / verified counters
-    const overlays = tl.overlays || [];
-    const ovTel = [];
-    let visibleCount = 0;
-
-    if (String(tl.callout_mode || 'smart') !== 'off') {
-      for (const ov of overlays) {
-        if (t < ov.start || t > ov.end) continue;
-        const enter = easeOutCubic((t - ov.start) / 0.22);
-        const exit = easeOutCubic((ov.end - t) / 0.20);
-        const alpha = clamp(Math.min(enter, exit), 0, 1);
-
-        const anc = anchorsMap[ov.anchor_id] || anchorsMap['default'] || null;
-        const requiresTrack = ov.type === 'focus_ring' || ov.type === 'tracked_arrow';
-
-        let anchorPx = null;
-        let visible = true;
-        let hiddenReason = null;
-
-        if (requiresTrack) {
-          if (!anc || !anc.in_front) {
-            visible = false;
-            hiddenReason = 'behind_or_missing_anchor';
-          } else if (anc.occluded) {
-            visible = false;
-            hiddenReason = 'occluded_3d_geometry';
-          } else {
-            const px = anc.u * 1080;
-            const py = anc.v * 1920;
-            if (px < 54 || px > 1026 || py < 120 || py > 1650) {
-              visible = false;
-              hiddenReason = 'offscreen';
-            } else {
-              anchorPx = [Number(px.toFixed(1)), Number(py.toFixed(1))];
-            }
-          }
-        }
-
-        if (!visible || alpha <= 0.02) {
-          ovTel.push({
-            overlay_id: ov.overlay_id,
-            type: ov.type,
-            anchor_id: ov.anchor_id,
-            visible: false,
-            hidden_reason: hiddenReason || 'fade_zero',
-            anchor_px: anchorPx,
-            in_safe_area: true,
-          });
-          continue;
-        }
-
-        visibleCount += 1;
-        const g = el('g', { opacity: alpha.toFixed(3) });
-        const accent = ov.accent_color || '#38bdf8';
-
-        // Box placed cleanly inside safe box and strictly above caption band
-        let [bx0, by0, bx1, by1] = ov.placement_box || [590, 320, 960, 416];
-        // Dynamically steer label away if projected 3D anchor sits near default label box
-        if (anchorPx) {
-          const [ax, ay] = anchorPx;
-          if (ax >= bx0 - 55 && ax <= bx1 + 55 && ay >= by0 - 55 && ay <= by1 + 55) {
-            const w = bx1 - bx0;
-            const h = by1 - by0;
-            bx0 = ax > 540 ? SAFE.x0 + 18 : SAFE.x1 - w - 18;
-            bx1 = bx0 + w;
-            by0 = clamp(ay - 220, SAFE.y0 + 12, SAFE.capY0 - h - 24);
-            by1 = by0 + h;
-          }
-        }
-        const bw = bx1 - bx0;
-        const bh = by1 - by0;
-
-        if (ov.type === 'focus_ring' && anchorPx) {
-          const [ax, ay] = anchorPx;
-          const rOuter = 58 + (1 - enter) * 26;
-          g.appendChild(el('circle', {
-            cx: ax, cy: ay, r: (rOuter * 0.72).toFixed(1),
-            fill: 'none', stroke: accent, 'stroke-width': '5.5',
-            'stroke-dasharray': `${(2 * Math.PI * rOuter * 0.72 * enter).toFixed(1)} 400`,
-          }));
-          g.appendChild(el('circle', {
-            cx: ax, cy: ay, r: (rOuter * 1.02).toFixed(1),
-            fill: 'none', stroke: '#ffffff', 'stroke-width': '2.5', opacity: '0.72',
-          }));
-        }
-
-        if ((ov.type === 'tracked_arrow' || ov.type === 'focus_ring') && anchorPx && ov.label) {
-          const [ax, ay] = anchorPx;
-          const sx = bx0 + bw * 0.5 < ax ? bx1 : bx0;
-          const sy = by0 + bh * 0.5;
-          const dx = ax - sx;
-          const dy = ay - sy;
-          const len = Math.max(1, Math.hypot(dx, dy));
-          const ux = dx / len;
-          const uy = dy / len;
-          const tx = ax - ux * 44;
-          const ty = ay - uy * 44;
-          const mx = (sx + tx) * 0.5;
-          const pathD = `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${sy.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}`;
-          g.appendChild(el('path', {
-            d: pathD, fill: 'none', stroke: accent, 'stroke-width': '5',
-            'stroke-linecap': 'round', opacity: '0.96',
-          }));
-          g.appendChild(el('circle', { cx: tx.toFixed(1), cy: ty.toFixed(1), r: '6.5', fill: accent }));
-        }
-
-        if (ov.label) {
-          g.appendChild(el('rect', {
-            x: bx0, y: by0, width: bw, height: bh, rx: 16,
-            fill: 'rgba(10, 16, 28, 0.88)', stroke: accent, 'stroke-width': '3',
-          }));
-          const bar = el('rect', {
-            x: bx0 + 11, y: by0 + 14, width: 6.5, height: Math.max(20, bh - 28), rx: 3.5, fill: accent,
-          });
-          g.appendChild(bar);
-
-          const titleText = ov.type === 'verified_counter' && ov.target_value != null
-            ? `${ov.prefix || ''}${Math.round(Number(ov.target_value) * enter)}${ov.suffix || ''}`
-            : ov.label;
-          const tEl = el('text', {
-            x: bx0 + 30, y: by0 + (ov.sublabel ? 45 : bh * 0.58),
-            fill: '#f8fafc', 'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '32',
-          });
-          tEl.textContent = titleText;
-          g.appendChild(tEl);
-
-          if (ov.sublabel) {
-            const sEl = el('text', {
-              x: bx0 + 30, y: by0 + 82,
-              fill: '#e2e8f0', 'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '22',
-            });
-            sEl.textContent = ov.sublabel;
-            g.appendChild(sEl);
-          }
-        }
-
-        this.svg.appendChild(g);
-        const inSafe = bx0 >= SAFE.x0 && bx1 <= SAFE.x1 && by0 >= SAFE.y0 && by1 <= SAFE.capY0;
-        const gRect = g.getBoundingClientRect ? g.getBoundingClientRect() : null;
-        const domRendered = Boolean(this.svg.contains(g) && g.childElementCount > 0 && (!gRect || (gRect.width > 1 && gRect.height > 1)));
-        ovTel.push({
-          overlay_id: ov.overlay_id,
-          type: ov.type,
-          anchor_id: ov.anchor_id,
-          label: ov.label || '',
-          visible: true,
-          dom_rendered: domRendered,
-          alpha: Number(alpha.toFixed(3)),
-          hidden_reason: null,
-          anchor_px: anchorPx,
-          label_bbox: [Number(bx0.toFixed(1)), Number(by0.toFixed(1)), Number(bx1.toFixed(1)), Number(by1.toFixed(1))],
-          in_safe_area: inSafe,
-        });
-      }
-    }
-
-    this.lastTelemetry = { overlays: ovTel, caption: capTel, active_count: visibleCount };
-    return this.lastTelemetry;
-  }
-
-  getOverlayTelemetry() {
-    return this.lastTelemetry;
-  }
-}
-"""
+EDITORIAL_OVERLAY_RENDERER_JS = EDITORIAL_THEME_RENDERER_JS

@@ -1,0 +1,57 @@
+{
+  "schema_version": "sd-historical-claims-1",
+  "title": "The Bridge That Twisted Itself Apart",
+  "topic": "1940 Tacoma Narrows Bridge Collapse (Galloping Gertie)",
+  "period_year": 1940,
+  "fidelity_disclosure": "stylized_illustrative",
+  "claims": [
+    {
+      "claim_id": "claim_tacoma_open_1940",
+      "display_token": "JULY 1, 1940",
+      "canonical_value": "1940-07-01",
+      "uncertainty": "documented",
+      "source": "WSDOT / FHWA Tacoma Narrows Bridge History",
+      "note": "Opened to traffic July 1, 1940 spanning The Narrows of Puget Sound, Washington."
+    },
+    {
+      "claim_id": "claim_galloping_gertie_1940",
+      "display_token": "2,800 FT SPAN",
+      "canonical_value": "2800",
+      "uncertainty": "documented",
+      "source": "WSDOT / FHWA structural specifications",
+      "note": "Center suspension main span measured 2,800 ft (total structure length 5,939 ft, deck width 39 ft)."
+    },
+    {
+      "claim_id": "claim_tacoma_plate_girder",
+      "display_token": "8 FT PLATE GIRDERS",
+      "canonical_value": "8",
+      "uncertainty": "documented",
+      "source": "WSDOT / FHWA engineering post-collapse report",
+      "note": "Used solid 8-ft plate stiffening girders along a narrow 39-ft two-lane roadway."
+    },
+    {
+      "claim_id": "claim_tacoma_flutter_mechanism",
+      "display_token": "~10:03 A.M. TORSION",
+      "canonical_value": "10:03",
+      "uncertainty": "documented",
+      "source": "FHWA / University of Washington wind-tunnel investigation",
+      "note": "Motion transitioned from vertical undulation to self-exciting aeroelastic torsional flutter around 10:03 a.m. on Nov 7, 1940."
+    },
+    {
+      "claim_id": "claim_tacoma_collapse_1940_11_07",
+      "display_token": "~600 FT SPAN / 11:02 A.M.",
+      "canonical_value": "600",
+      "uncertainty": "approximate",
+      "source": "WSDOT historical archive",
+      "note": "Approximately 600 ft of the center roadway span tore free and plunged into Puget Sound at ~11:02 a.m., Nov 7, 1940."
+    },
+    {
+      "claim_id": "claim_tacoma_witnesses_1940",
+      "display_token": "0 HUMAN FATALITIES",
+      "canonical_value": "0",
+      "uncertainty": "documented",
+      "source": "WSDOT historical record",
+      "note": "No human deaths occurred; engineers and motorists evacuated safely before span separation."
+    }
+  ]
+}

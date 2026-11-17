@@ -21,6 +21,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .character_performance import validate_character_grounding
+from .physical_motion import plan_physics_telemetry
 from .visual_storytelling_director import (
     score_story_diversity,
     validate_narrative_causality,
@@ -42,7 +44,7 @@ def audit_story_action_coverage(
 
     period_year = action_graph.get("period_year")
     is_historical = period_year is not None or any(
-        str(s.get("scene_family") or "").startswith("boston_") for s in shots
+        str(s.get("scene_family") or "").startswith(("boston_", "tacoma_")) for s in shots
     )
     if is_historical and len(shots) >= 6:
         if div["distinct_locations_count"] < 4:
@@ -257,6 +259,148 @@ def audit_motion_dynamics(
     }
 
 
+def audit_physical_and_character_telemetry(
+    storyboard: Dict[str, Any],
+    raw_traces: Optional[List[Dict[str, Any]]] = None,
+    run_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Verify decoded physical deformation telemetry (N13-N15, N21) & foot-grounded character motion (N17-N19)."""
+    shots = list(storyboard.get("shots") or [])
+    shots_by_id = {str(s.get("shot_id")): s for s in shots}
+    issues: List[str] = []
+
+    traces = list(raw_traces or [])
+    phys_summary = plan_physics_telemetry(traces) if traces else {
+        "max_vertex_disp_m": 0.0,
+        "max_deck_roll_span_rad": 0.0,
+        "collapse_onset_observed_sec": None,
+        "cables_attached_all": True,
+        "nan_detected": False,
+    }
+    if phys_summary["nan_detected"]:
+        issues.append("N21: Non-finite NaN/Inf physical_motion value detected in telemetry")
+    if not phys_summary["cables_attached_all"]:
+        issues.append("N22: Bridge suspender cables disconnected (dist <= 0 or non-finite)")
+
+    by_shot_phys: Dict[str, List[Dict[str, Any]]] = {}
+    char_samples: List[Dict[str, Any]] = []
+    torsion_seen_t: Optional[float] = None
+
+    for rec in traces:
+        tel = rec.get("telemetry") or {}
+        sid = str(rec.get("shot_id") or tel.get("shot_id") or "")
+        t_rec = float(rec.get("time_sec", rec.get("time", 0.0)))
+        ph = tel.get("physical_motion")
+        if isinstance(ph, dict):
+            by_shot_phys.setdefault(sid, []).append(ph)
+            if float(ph.get("deck_roll_span_rad") or 0.0) >= 0.05 and torsion_seen_t is None:
+                torsion_seen_t = t_rec
+            if ph.get("collapse_active") and ("collapse" not in str(shots_by_id.get(sid, {}).get("procedural_generator") or "")):
+                issues.append(f"N15: Unexpected collapse_active inside non-collapse shot {sid} at t={t_rec:.2f}s")
+        cp = tel.get("character_performance")
+        if isinstance(cp, dict):
+            char_samples.append({"time_sec": t_rec, "shot_id": sid, **cp})
+
+    for sid, recs in by_shot_phys.items():
+        sh = shots_by_id.get(sid, {})
+        gen = str(sh.get("procedural_generator") or "").lower()
+        act = str(sh.get("physical_action") or "").lower()
+        dur = float(sh.get("duration") or 0.0)
+        is_aftermath = ("aftermath" in gen) or ("aftermath" in act)
+        needs_deform = (not is_aftermath) and any(k in gen or k in act for k in ("wave", "torsion", "twist", "collapse"))
+        if needs_deform and dur >= 1.2:
+            vmax = max(float(r.get("vertex_disp_max_m") or 0.0) for r in recs)
+            if vmax < 0.03:
+                issues.append(f"N13/N14: Claimed deforming stage '{gen}' ({sid}) had negligible displacement {vmax:.4f}m")
+
+    if phys_summary["collapse_onset_observed_sec"] is not None and torsion_seen_t is not None:
+        if phys_summary["collapse_onset_observed_sec"] < torsion_seen_t:
+            issues.append(
+                f"N15: Observed collapse onset ({phys_summary['collapse_onset_observed_sec']:.2f}s) before torsion buildup ({torsion_seen_t:.2f}s)"
+            )
+
+    char_audit = validate_character_grounding(char_samples, require_motion=bool(char_samples))
+    if char_audit["status"] == "FAIL":
+        issues.extend(char_audit["issues"])
+
+    out_world = {
+        "schema_version": "sd-world-state-telemetry-1",
+        "status": "FAIL" if issues else "PASS",
+        "physics_summary": phys_summary,
+        "shot_physics_counts": {k: len(v) for k, v in by_shot_phys.items()},
+        "issues": issues,
+    }
+    if run_dir is not None:
+        (run_dir / "world_state_telemetry.json").write_text(json.dumps(out_world, indent=2), encoding="utf-8")
+        char_doc = {
+            "schema_version": "sd-char-perf-telemetry-1",
+            **char_audit,
+            "samples": char_samples[:120],
+        }
+        (run_dir / "character_performance_telemetry.json").write_text(json.dumps(char_doc, indent=2), encoding="utf-8")
+
+    return {
+        "status": "FAIL" if issues else "PASS",
+        "physics_summary": phys_summary,
+        "character_grounding": char_audit,
+        "issues": issues,
+    }
+
+
+def audit_pointer_tracking(
+    raw_traces: Optional[List[Dict[str, Any]]],
+    editorial_timeline: Dict[str, Any],
+    max_tip_error_px: float = 36.0,
+    run_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Audit rendered pointer tip accuracy against 3D projected anchor on settled frames (`alpha >= 0.85`)."""
+    ov_mode = str(editorial_timeline.get("callout_mode", "off"))
+    issues: List[str] = []
+    worst_err_px = 0.0
+    checked_tips = 0
+    rows: List[Dict[str, Any]] = []
+
+    if ov_mode != "off" and raw_traces:
+        for rec in raw_traces:
+            rt = float(rec.get("time_sec", rec.get("time", 0.0)))
+            ov_list = (((rec.get("telemetry") or {}).get("overlay") or {}).get("overlays")) or []
+            for item in ov_list:
+                if not item.get("visible"):
+                    continue
+                err = item.get("tip_target_error_px")
+                alpha = float(item.get("alpha") or 0.0)
+                if err is not None:
+                    err_f = float(err)
+                    if alpha >= 0.85:
+                        checked_tips += 1
+                        worst_err_px = max(worst_err_px, err_f)
+                        rows.append({
+                            "time_sec": round(rt, 3),
+                            "overlay_id": item.get("overlay_id"),
+                            "role": item.get("role"),
+                            "anchor_px": item.get("anchor_projected_xy"),
+                            "tip_xy": item.get("tip_xy"),
+                            "tip_target_error_px": err_f,
+                        })
+                        if err_f > max_tip_error_px:
+                            issues.append(
+                                f"N29: Pointer tip misaligned for {item.get('overlay_id')} at t={rt:.2f}s (error={err_f:.1f}px > {max_tip_error_px:.0f}px)"
+                            )
+
+    rep = {
+        "schema_version": "sd-pointer-tracking-1",
+        "status": "FAIL" if issues else "PASS",
+        "checked_settled_tips": checked_tips,
+        "worst_tip_target_error_px": round(worst_err_px, 2),
+        "max_allowed_error_px": max_tip_error_px,
+        "samples": rows[:80],
+        "issues": issues,
+    }
+    if run_dir is not None:
+        (run_dir / "pointer_tracking.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
+    return rep
+
+
 def audit_caption_layout(
     raw_traces: Optional[List[Dict[str, Any]]] = None,
     editorial_timeline: Optional[Dict[str, Any]] = None,
@@ -391,8 +535,8 @@ def build_ab_alignment(
         txt_a = " ".join(json.loads(sc_a_p.read_text(encoding="utf-8"))).lower()
         txt_b = " ".join(json.loads(sc_b_p.read_text(encoding="utf-8"))).lower()
         script_sim = round(float(SequenceMatcher(None, txt_a, txt_b).ratio()), 4)
-        if script_sim < 0.45:
-            issues.append(f"A/B script mismatch: similarity={script_sim:.3f} < 0.45")
+        if script_sim < 0.85:
+            issues.append(f"N25: A/B script mismatch: similarity={script_sim:.3f} < 0.85")
 
     pairs: List[Dict[str, Any]] = []
     sb_a = json.loads(sb_a_p.read_text(encoding="utf-8")) if sb_a_p.exists() else {}
@@ -404,22 +548,25 @@ def build_ab_alignment(
         by_nev_a = {s.get("narrative_event_id"): s for s in shots_a if s.get("narrative_event_id")}
         by_beat_a = {}
         for s in shots_a:
-            by_beat_a.setdefault(s.get("beat_id"), s)
+            if s.get("beat_id") is not None:
+                by_beat_a.setdefault(s.get("beat_id"), s)
 
         for idx, sb in enumerate(shots_b):
             sa = None
-            align_key = "normalized_shot_index"
+            align_key = ""
             nev = sb.get("narrative_event_id")
             bid = sb.get("beat_id")
             if nev and nev in by_nev_a:
                 sa = by_nev_a[nev]
                 align_key = f"narrative_event_id:{nev}"
-            elif bid and bid in by_beat_a:
+            elif bid is not None and bid in by_beat_a:
                 sa = by_beat_a[bid]
                 align_key = f"beat_id:{bid}"
             else:
-                mapped_idx = min(len(shots_a) - 1, int(round((idx / max(1, len(shots_b) - 1)) * max(0, len(shots_a) - 1))))
-                sa = shots_a[mapped_idx]
+                issues.append(
+                    f"N25: Shot {sb.get('shot_id')} (nev={nev!r}, beat={bid!r}) has no matching event in run_a"
+                )
+                continue
 
             ta = round(0.5 * (float(sa["start"]) + float(sa["end"])), 3)
             tb = round(0.5 * (float(sb["start"]) + float(sb["end"])), 3)
@@ -482,6 +629,8 @@ def run_visual_storytelling_qa(
     c_causality = audit_world_state_causality(action_graph, storyboard, raw_traces=raw_traces)
     c_period = audit_period_integrity(storyboard, action_graph, audio_plan=audio_plan)
     c_motion = audit_motion_dynamics(storyboard, scene_diversity_report=scene_diversity_report, raw_traces=raw_traces)
+    c_phys_char = audit_physical_and_character_telemetry(storyboard, raw_traces=raw_traces, run_dir=run_dir)
+    c_pointer = audit_pointer_tracking(raw_traces, editorial_timeline, run_dir=run_dir)
     c_caption = audit_caption_layout(raw_traces=raw_traces, editorial_timeline=editorial_timeline)
     c_claims = audit_historical_claims(historical_claims, editorial_timeline)
 
@@ -492,6 +641,8 @@ def run_visual_storytelling_qa(
         "world_state_causality": c_causality,
         "period_integrity": c_period,
         "motion_dynamics": c_motion,
+        "physical_and_character_telemetry": c_phys_char,
+        "pointer_tracking": c_pointer,
         "caption_layout": c_caption,
         "historical_claims": c_claims,
     }
