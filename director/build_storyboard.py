@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from .assets.style_params import build_style_params
 from .camera_choreographer import build_camera_plan
+from .editorial_overlay import build_editorial_timeline
 from .scene_asset_factory import (
     compile_scene_entities,
     materialize_engine_scene,
@@ -100,6 +101,9 @@ def build_storyboard_and_bible(
     transition_policy: str = "motivated",
     max_static_hold_sec: Optional[float] = None,
     existing_visual_plan: Optional[Dict[str, Any]] = None,
+    caption_mode: str = "kinetic",
+    callout_mode: str = "smart",
+    verified_numbers: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Produce STEP 3 `storyboard.json`, `art_bible.md`, and visual direction artifacts."""
     selected_skill = style_decisions["selected_skill"]
@@ -211,6 +215,7 @@ def build_storyboard_and_bible(
     entity_check = validate_entity_continuity(shots, entity_inventory, selected_skill=selected_skill)
     total_duration = float(visual_events["total_duration_sec"])
 
+    effective_callout_mode = callout_mode if selected_skill == "zach-d-films" else "off"
     storyboard: Dict[str, Any] = {
         "schema_version": "0.5.0",
         "selection_mode": style_decisions["selection_mode"],
@@ -223,6 +228,8 @@ def build_storyboard_and_bible(
         "preview_resolution": [1080, 1920],
         "final_resolution": [2160, 3840],
         "total_duration_sec": round(total_duration, 3),
+        "caption_mode": caption_mode,
+        "callout_mode": effective_callout_mode,
         "edit_energy": coverage["edit_energy"],
         "scene_novelty": scene_novelty,
         "transition_policy": transition_policy,
@@ -244,6 +251,25 @@ def build_storyboard_and_bible(
         },
         "visual_assets": visual_assets,
         "shots": shots,
+    }
+
+    ed_timeline = build_editorial_timeline(
+        parsed_script=parsed_script,
+        storyboard=storyboard,
+        run_dir=run_dir,
+        caption_mode=caption_mode,
+        callout_mode=effective_callout_mode,
+        prosody_plan=(parsed_script.get("voice") or {}).get("prosody_plan"),
+        verified_numbers=verified_numbers,
+    )
+    storyboard["editorial_timeline_summary"] = {
+        "schema_version": ed_timeline["schema_version"],
+        "caption_mode": ed_timeline["caption_mode"],
+        "callout_mode": ed_timeline["callout_mode"],
+        "word_anchor_confidence": ed_timeline["word_anchor_confidence"],
+        "caption_chunks_count": len(ed_timeline["caption_chunks"]),
+        "overlays_count": len(ed_timeline["overlays"]),
+        "free_screen_ratio": ed_timeline["free_screen_ratio"],
     }
 
     (run_dir / "storyboard.json").write_text(json.dumps(storyboard, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -158,6 +158,13 @@ def render_stills_and_shots(
     cam_trace_doc: Optional[Dict[str, Any]] = None
     if style_decisions.get("selected_skill") == "zach-d-films":
         trace_times = set(collect_camera_trace_samples(storyboard, fps=fps))
+        ed_tl_p = run_dir / "editorial_timeline.json"
+        if ed_tl_p.exists():
+            ed_doc = json.loads(ed_tl_p.read_text(encoding="utf-8"))
+            for ov in ed_doc.get("overlays", []):
+                ov_mid = 0.5 * (float(ov.get("start", 0.0)) + float(ov.get("end", 0.0)))
+                if 0.02 < ov_mid < total_dur - 0.02:
+                    trace_times.add(round(ov_mid, 4))
         for tr in (transition_edl or {}).get("transitions", []):
             d_tr = float(tr.get("duration_sec") or 0.0)
             if str(tr.get("actual_method") or "cut") not in ("cut", "cut_on_action") and d_tr > 0.0:

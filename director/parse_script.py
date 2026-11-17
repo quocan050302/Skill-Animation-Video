@@ -17,6 +17,11 @@ import soundfile as sf
 from scipy import signal
 
 from .preflight import verify_language_voice_support, KOKORO_VERIFIED_LANGS
+from .voice_prosody import (
+    build_prosody_plan,
+    measure_voice_delivery,
+    write_prosody_artifacts,
+)
 
 
 BEAT_ROLES = [
@@ -352,6 +357,30 @@ def _trim_silence(samples: np.ndarray, sr: int, threshold: float = 0.008) -> np.
     return samples[i0:i1]
 
 
+def _aggregate_lines_from_phrases(
+    sentences: List[str],
+    phrase_spans: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Aggregate contiguous sentence `[start, end]` spans from synthesized phrase timing."""
+    out: List[Dict[str, Any]] = []
+    for li, sent in enumerate(sentences):
+        phs = [p for p in phrase_spans if int(p.get("sentence_index", -1)) == li]
+        if phs:
+            s0 = float(phs[0]["start"])
+            e0 = float(phs[-1]["end"])
+        else:
+            s0 = out[-1]["end"] if out else 0.0
+            e0 = s0 + 0.5
+        out.append({
+            "index": li,
+            "text": sent,
+            "start": round(s0, 3),
+            "end": round(e0, 3),
+            "duration": round(max(0.0, e0 - s0), 3),
+        })
+    return out
+
+
 def synthesize_and_align_voice(
     sentences: List[str],
     audio_dir: Path,
@@ -359,10 +388,17 @@ def synthesize_and_align_voice(
     lang: str = "en",
     user_voice_file: Optional[Path] = None,
     target_sr: int = 44100,
+    voice_style: str = "cinematic",
+    voice_backend: str = "auto",
+    voice_pause_strength: float = 1.0,
+    override_prosody_plan: Optional[Dict[str, Any]] = None,
+    domain_terms: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Synthesize or ingest voiceover and produce word-level timings + beat spans."""
+    """Synthesize or ingest expressive phrase-paced voiceover, align words, and audit delivery."""
     audio_dir.mkdir(parents=True, exist_ok=True)
-    ok, backend, voice_id, note = verify_language_voice_support(lang, kit_dir, user_voice_file)
+    ok, backend, voice_id, note = verify_language_voice_support(
+        lang, kit_dir, user_voice_file, requested_backend=voice_backend
+    )
     if not ok:
         raise RuntimeError(note)
 
@@ -370,7 +406,19 @@ def synthesize_and_align_voice(
     words_json_path = audio_dir / "words.json"
     lines_meta: List[Dict[str, Any]] = []
     all_words: List[Dict[str, Any]] = []
+    phrase_spans: List[Dict[str, Any]] = []
     alignment_method = "sentence_vocal_energy_cdf"
+
+    prosody_plan = build_prosody_plan(
+        sentences=sentences,
+        voice_style=voice_style,
+        backend=backend,
+        voice_id=voice_id,
+        voice_pause_strength=voice_pause_strength,
+        domain_terms=domain_terms,
+        override_plan=override_prosody_plan,
+    )
+    phrases = list(prosody_plan["phrases"])
 
     if backend == "user_file":
         assert user_voice_file is not None
@@ -384,7 +432,6 @@ def synthesize_and_align_voice(
         samples = _trim_silence(samples, sr)
         sf.write(str(vo_wav_path), samples, sr)
 
-        # Use Parakeet ASR in kit/words.py if installed and English/European
         parakeet_dirs = glob.glob(str(kit_dir / "models" / "sherpa-onnx-nemo-parakeet*"))
         venv_py = kit_dir / ".venv" / "bin" / "python"
         if parakeet_dirs and venv_py.exists() and not lang.lower().startswith("vi"):
@@ -399,7 +446,6 @@ def synthesize_and_align_voice(
             all_words = _align_words_in_waveform_segment(samples, sr, flat_words, 0.0, 0)
             alignment_method = "full_take_vocal_energy_cdf"
 
-        # Map sentences onto word spans
         idx = 0
         for li, sent in enumerate(sentences):
             n_w = len(sent.split())
@@ -410,6 +456,14 @@ def synthesize_and_align_voice(
             e0 = chunk[-1]["e"] if chunk else float(len(samples) / sr)
             lines_meta.append({"index": li, "text": sent, "start": round(s0, 3), "end": round(e0, 3), "duration": round(e0 - s0, 3)})
             idx += n_w
+        p_idx = 0
+        for ph in phrases:
+            nw = int(ph["word_count"])
+            chunk = all_words[p_idx : p_idx + nw] if p_idx < len(all_words) else []
+            s0 = chunk[0]["s"] if chunk else 0.0
+            e0 = chunk[-1]["e"] if chunk else float(len(samples) / sr)
+            phrase_spans.append({**ph, "start": round(s0, 3), "end": round(e0, 3), "duration_sec": round(e0 - s0, 3)})
+            p_idx += nw
 
     elif backend == "kokoro":
         from kokoro_onnx import Kokoro, EspeakConfig  # type: ignore
@@ -430,59 +484,80 @@ def synthesize_and_align_voice(
         )
         k_lang = KOKORO_VERIFIED_LANGS.get(lang.lower(), "en-us")
         segments: List[np.ndarray] = []
-        cursor = 0.0
-        for li, sent in enumerate(sentences):
-            raw_s, sr = kokoro.create(sent, voice=voice_id, speed=1.10, lang=k_lang)
+        sample_cursor = 0
+        for pi, ph in enumerate(phrases):
+            if ph["pause_before_ms"] > 0:
+                pre_n = int(round((ph["pause_before_ms"] / 1000.0) * target_sr))
+                segments.append(np.zeros(pre_n, dtype=np.float32))
+                sample_cursor += pre_n
+            spd = round(max(0.82, min(1.25, 1.08 * float(ph["rate_multiplier"]))), 3)
+            raw_s, sr = kokoro.create(ph["text"], voice=voice_id, speed=spd, lang=k_lang)
             if sr != target_sr:
                 raw_s = signal.resample_poly(raw_s, target_sr, sr).astype(np.float32)
             trimmed = _trim_silence(raw_s.astype(np.float32), target_sr)
+            trimmed = trimmed * (10.0 ** (float(ph.get("volume_trim_db", 0.0)) / 20.0))
+            pk = float(np.max(np.abs(trimmed)))
+            if pk > 0.88:
+                trimmed = trimmed * (0.88 / pk)
+            start_s = sample_cursor / float(target_sr)
             seg_dur = len(trimmed) / float(target_sr)
-            sent_words = _align_words_in_waveform_segment(trimmed, target_sr, sent.split(), cursor, li)
-            all_words.extend(sent_words)
-            lines_meta.append({
-                "index": li,
-                "text": sent,
-                "start": round(cursor, 3),
-                "end": round(cursor + seg_dur, 3),
-                "duration": round(seg_dur, 3),
-            })
-            segments.append(trimmed)
-            gap = 0.18 if sent.endswith(("?", "!")) or li == 0 else 0.14
-            segments.append(np.zeros(int(gap * target_sr), dtype=np.float32))
-            cursor += seg_dur + gap
+            ph_words = _align_words_in_waveform_segment(trimmed, target_sr, ph["text"].split(), start_s, int(ph["sentence_index"]))
+            all_words.extend(ph_words)
+            phrase_spans.append({**ph, "start": round(start_s, 3), "end": round(start_s + seg_dur, 3), "duration_sec": round(seg_dur, 3)})
+            segments.append(trimmed.astype(np.float32))
+            sample_cursor += len(trimmed)
+            gap_n = int(round((int(ph.get("pause_after_ms", 0)) / 1000.0) * target_sr))
+            if gap_n > 0:
+                segments.append(np.zeros(gap_n, dtype=np.float32))
+                sample_cursor += gap_n
 
         full_vo = np.concatenate(segments) if segments else np.zeros(target_sr, dtype=np.float32)
         sf.write(str(vo_wav_path), full_vo, target_sr)
-        alignment_method = "kokoro_sentence_exact_plus_vocal_energy_cdf"
+        lines_meta = _aggregate_lines_from_phrases(sentences, phrase_spans)
+        alignment_method = "kokoro_phrase_exact_plus_vocal_energy_cdf"
 
     elif backend in ("macos_say", "windows_sapi"):
         import base64
         segments = []
-        cursor = 0.0
-        rate = "184" if not lang.lower().startswith("vi") else "178"
-        sapi_rate = 1
+        sample_cursor = 0
+        base_say_rate = 184.0 if not lang.lower().startswith("vi") else 178.0
         ps_bin = shutil.which("powershell") or "powershell"
-        for li, sent in enumerate(sentences):
-            raw_tmp = audio_dir / f"_line_{li:02d}_raw.{'aiff' if backend == 'macos_say' else 'wav'}"
-            wav_tmp = audio_dir / f"_line_{li:02d}.wav"
-            if backend == "macos_say":
-                subprocess.run(["say", "-v", voice_id, "-r", rate, "-o", str(raw_tmp), sent], check=True)
-            else:
-                v_esc = voice_id.replace("'", "''")
-                s_esc = sent.replace("'", "''")
+        use_ssml = (backend == "windows_sapi") and (voice_style != "legacy")
+
+        raw_files: List[Path] = []
+        if backend == "windows_sapi":
+            # Synthesize all phrases cleanly in ONE SpeechSynthesizer process to prevent per-phrase startup overhead
+            v_esc = voice_id.replace("'", "''")
+            ps_lines = [
+                "$ProgressPreference = 'SilentlyContinue'",
+                "Add-Type -AssemblyName System.Speech",
+                "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer",
+                f"$s.SelectVoice('{v_esc}')",
+                "$s.Rate = 1",
+            ]
+            for pi, ph in enumerate(phrases):
+                raw_tmp = audio_dir / f"_phrase_{pi:02d}_raw.wav"
+                raw_files.append(raw_tmp)
                 w_esc = str(raw_tmp).replace("'", "''")
-                ps_script = (
-                    "$ProgressPreference = 'SilentlyContinue'\n"
-                    "Add-Type -AssemblyName System.Speech\n"
-                    "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer\n"
-                    f"$s.SelectVoice('{v_esc}')\n"
-                    f"$s.Rate = {sapi_rate}\n"
-                    f"$s.SetOutputToWaveFile('{w_esc}')\n"
-                    f"$s.Speak('{s_esc}')\n"
-                    "$s.Dispose()\n"
-                )
-                enc = base64.b64encode(ps_script.encode("utf-16le")).decode("ascii")
-                subprocess.run([ps_bin, "-NoProfile", "-EncodedCommand", enc], check=True, capture_output=True)
+                ps_lines.append(f"$s.SetOutputToWaveFile('{w_esc}')")
+                if use_ssml:
+                    ssml_b64 = base64.b64encode(ph["ssml_markup"].encode("utf-8")).decode("ascii")
+                    ps_lines.append(f"$ssml_{pi} = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{ssml_b64}'))")
+                    ps_lines.append(f"$s.SpeakSsml($ssml_{pi})")
+                else:
+                    s_esc = ph["text"].replace("'", "''")
+                    ps_lines.append(f"$s.Speak('{s_esc}')")
+            ps_lines.append("$s.Dispose()")
+            enc = base64.b64encode("\n".join(ps_lines).encode("utf-16le")).decode("ascii")
+            subprocess.run([ps_bin, "-NoProfile", "-EncodedCommand", enc], check=True, capture_output=True)
+
+        for pi, ph in enumerate(phrases):
+            raw_tmp = raw_files[pi] if backend == "windows_sapi" else (audio_dir / f"_phrase_{pi:02d}_raw.aiff")
+            wav_tmp = audio_dir / f"_phrase_{pi:02d}.wav"
+            if backend == "macos_say":
+                r_say = str(int(round(base_say_rate * float(ph["rate_multiplier"]))))
+                subprocess.run(["say", "-v", voice_id, "-r", r_say, "-o", str(raw_tmp), ph["text"]], check=True)
+
             subprocess.run(
                 ["ffmpeg", "-v", "error", "-y", "-i", str(raw_tmp), "-ac", "1", "-ar", str(target_sr), str(wav_tmp)],
                 check=True,
@@ -492,25 +567,35 @@ def synthesize_and_align_voice(
             wav_tmp.unlink(missing_ok=True)
             if raw_s.ndim > 1:
                 raw_s = raw_s.mean(axis=1)
+
+            if ph["pause_before_ms"] > 0:
+                pre_n = int(round((ph["pause_before_ms"] / 1000.0) * target_sr))
+                segments.append(np.zeros(pre_n, dtype=np.float32))
+                sample_cursor += pre_n
+
             trimmed = _trim_silence(raw_s, target_sr)
+            trimmed = trimmed * (10.0 ** (float(ph.get("volume_trim_db", 0.0)) / 20.0))
+            pk = float(np.max(np.abs(trimmed)))
+            if pk > 0.88:
+                trimmed = trimmed * (0.88 / pk)
+
+            start_s = sample_cursor / float(target_sr)
             seg_dur = len(trimmed) / float(target_sr)
-            sent_words = _align_words_in_waveform_segment(trimmed, target_sr, sent.split(), cursor, li)
-            all_words.extend(sent_words)
-            lines_meta.append({
-                "index": li,
-                "text": sent,
-                "start": round(cursor, 3),
-                "end": round(cursor + seg_dur, 3),
-                "duration": round(seg_dur, 3),
-            })
-            segments.append(trimmed)
-            gap = 0.18 if sent.endswith(("?", "!")) or li == 0 else 0.14
-            segments.append(np.zeros(int(gap * target_sr), dtype=np.float32))
-            cursor += seg_dur + gap
+            ph_words = _align_words_in_waveform_segment(trimmed, target_sr, ph["text"].split(), start_s, int(ph["sentence_index"]))
+            all_words.extend(ph_words)
+            phrase_spans.append({**ph, "start": round(start_s, 3), "end": round(start_s + seg_dur, 3), "duration_sec": round(seg_dur, 3)})
+            segments.append(trimmed.astype(np.float32))
+            sample_cursor += len(trimmed)
+
+            gap_n = int(round((int(ph.get("pause_after_ms", 0)) / 1000.0) * target_sr))
+            if gap_n > 0:
+                segments.append(np.zeros(gap_n, dtype=np.float32))
+                sample_cursor += gap_n
 
         full_vo = np.concatenate(segments) if segments else np.zeros(target_sr, dtype=np.float32)
         sf.write(str(vo_wav_path), full_vo, target_sr)
-        alignment_method = f"{backend}_sentence_exact_plus_vocal_energy_cdf"
+        lines_meta = _aggregate_lines_from_phrases(sentences, phrase_spans)
+        alignment_method = f"{backend}_{'ssml_' if use_ssml else ''}phrase_exact_plus_vocal_energy_cdf"
 
     else:
         raise RuntimeError(f"Unsupported voice backend: {backend}")
@@ -520,17 +605,31 @@ def synthesize_and_align_voice(
     words_json_path.write_text(json.dumps(all_words, ensure_ascii=False, indent=2), encoding="utf-8")
     (audio_dir / "lines.json").write_text(json.dumps(lines_meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    word_anchor_conf = "EXACT_FORCED" if alignment_method == "sherpa_parakeet_asr" else "ESTIMATED"
+    delivery_report = measure_voice_delivery(vo_wav_path, phrase_spans, prosody_plan, all_words)
+    prosody_artifacts = write_prosody_artifacts(audio_dir, prosody_plan, delivery_report)
+    if voice_style != "legacy" and delivery_report["algorithmic_prosody_execution_status"] != "PASS":
+        raise RuntimeError(
+            f"Expressive voice prosody delivery FAILED execution checks: {delivery_report['problems']}"
+        )
+
     return {
         "backend": backend,
         "voice_id": voice_id,
+        "voice_style": voice_style,
         "language": lang,
         "language_coverage_note": note,
         "alignment_method": alignment_method,
+        "word_anchor_confidence": word_anchor_conf,
         "vo_wav_path": str(vo_wav_path),
         "words_json_path": str(words_json_path),
         "vo_duration_sec": vo_duration,
         "lines": lines_meta,
+        "phrases": phrase_spans,
         "words": all_words,
+        "prosody_plan": prosody_plan,
+        "voice_delivery_report": delivery_report,
+        "prosody_artifacts": prosody_artifacts,
     }
 
 
@@ -590,8 +689,12 @@ def parse_script_and_build_voice(
     lang: str = "en",
     user_voice_file: Optional[Path] = None,
     voice_mode: str = "auto",
+    voice_style: Optional[str] = None,
+    voice_backend: str = "auto",
+    voice_prosody_in: Optional[Path] = None,
+    voice_pause_strength: float = 1.0,
 ) -> Dict[str, Any]:
-    """Full STEP 1 implementation: script -> beats + fact check + voice + per-word timings."""
+    """Full STEP 1 implementation: script -> beats + fact check + expressive voice + per-word timings."""
     raw_sentences = _split_sentences(raw_script)
     expansion_notes: List[Dict[str, Any]] = []
 
@@ -605,8 +708,15 @@ def parse_script_and_build_voice(
     analysis = analyze_facts_and_entities(raw_script, sentences, selected_skill)
     all_fact_checks = expansion_notes + analysis["fact_checks"]
 
+    effective_style = voice_style or ("natural" if selected_skill == "minimalistic-graphics" else "cinematic")
+    override_plan: Optional[Dict[str, Any]] = None
+    if voice_prosody_in is not None:
+        override_plan = json.loads(Path(voice_prosody_in).read_text(encoding="utf-8"))
+
     if voice_mode == "off":
         voice_info = _allocate_silent_voice_timings(sentences=sentences, audio_dir=run_dir / "audio", lang=lang)
+        voice_info["voice_style"] = effective_style
+        voice_info["word_anchor_confidence"] = "ESTIMATED"
     else:
         voice_info = synthesize_and_align_voice(
             sentences=sentences,
@@ -614,6 +724,11 @@ def parse_script_and_build_voice(
             kit_dir=kit_dir,
             lang=lang,
             user_voice_file=user_voice_file,
+            voice_style=effective_style,
+            voice_backend=voice_backend,
+            voice_pause_strength=voice_pause_strength,
+            override_prosody_plan=override_plan,
+            domain_terms=analysis.get("detected_motifs"),
         )
 
     beats: List[Dict[str, Any]] = []

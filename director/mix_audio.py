@@ -272,6 +272,21 @@ def mix_stems(
     else:
         ducked_music = mus_st
 
+    # Optional twist-beat silence/ducking window for contrast transitions (smooth 25ms cosine ramp)
+    for twin in cfg.get("twist_duck_windows", []):
+        if float(np.max(np.abs(ducked_music))) <= 1e-6:
+            break
+        w0 = max(0, int(round(float(twin.get("start_sec", 0.0)) * sr)))
+        w1 = min(n_total, int(round(float(twin.get("end_sec", 0.0)) * sr)))
+        if w1 > w0 + 16:
+            depth = 10.0 ** (float(twin.get("duck_db", -11.0)) / 20.0)
+            ramp = min((w1 - w0) // 3, int(0.025 * sr))
+            env = np.full(w1 - w0, depth, dtype=np.float64)
+            if ramp > 0:
+                env[:ramp] = 1.0 - (1.0 - depth) * 0.5 * (1.0 - np.cos(np.pi * np.arange(ramp) / ramp))
+                env[-ramp:] = depth + (1.0 - depth) * 0.5 * (1.0 - np.cos(np.pi * np.arange(ramp) / ramp))
+            ducked_music[w0:w1] *= env[:, None]
+
     # Voice-protecting pocket on SFX bus (gently dips colliding dense SFX under speech without muting impacts)
     if has_vo and float(np.max(np.abs(sfx_st))) > 1e-6:
         sfx_pocket = 1.0 - 0.28 * vo_act[:, None]
@@ -526,6 +541,7 @@ def mix_production_audio(
     mix_cfg = {
         **(audio_plan.get("voice") or {}),
         "intentional_silences": audio_plan.get("intentional_silences", []),
+        "twist_duck_windows": (audio_plan.get("music") or {}).get("twist_duck_windows", []),
     }
     stems = mix_stems(
         voice=vo_clean,

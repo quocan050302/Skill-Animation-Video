@@ -18,6 +18,8 @@ from scipy import signal
 from .audio_catalog import AudioAsset, LicensePolicy, ValidationResult, resolve_audio_asset
 from .audio_dsp import (
     SR,
+    _airflow_hiss,
+    _arrow_swish,
     _blade_ring,
     _chime,
     _coin_cascade,
@@ -27,13 +29,16 @@ from .audio_dsp import (
     _elevator_arrival_chime,
     _elevator_button_click,
     _glass_tap,
+    _low_sting,
     _lp,
+    _marker_ring_draw,
     _mechanical_click,
     _motor_drive_hum,
     _pin_drop,
     _place,
     _pop,
     _relay_cabinet_click,
+    _reveal_soft,
     _riser,
     _sand_thud,
     _sheave_cable_whir,
@@ -43,6 +48,7 @@ from .audio_dsp import (
     _sword_draw,
     _thud,
     _tick,
+    _ui_pop_soft,
     _whoosh,
 )
 
@@ -115,6 +121,18 @@ def select_procedural_sfx(
         return _door_slide_open(rng, 0.42)
     if gen == "elevator_arrival_chime":
         return _elevator_arrival_chime(880.0, 0.62)
+    if gen == "ui_pop_soft":
+        return _ui_pop_soft(rng, 520.0)
+    if gen == "marker_ring_draw":
+        return _marker_ring_draw(rng, 0.16)
+    if gen == "arrow_swish":
+        return _arrow_swish(rng, 0.15)
+    if gen == "reveal_soft":
+        return _reveal_soft(rng, 0.34)
+    if gen == "low_sting":
+        return _low_sting(rng, 0.32)
+    if gen == "airflow_hiss":
+        return _airflow_hiss(rng, 0.48)
     return _pop(520.0) * 0.6
 
 

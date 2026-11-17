@@ -359,3 +359,76 @@ def _elevator_arrival_chime(freq: float = 880.0, dur: float = 0.62) -> np.ndarra
     active2 = (t >= 0.14).astype(np.float64) * np.minimum(1.0, shift / 0.0015)
     note2 = np.sin(2.0 * np.pi * freq * shift) * np.exp(-shift * 4.8) * 0.52 * active2
     return note1 + note2
+
+
+def _ui_pop_soft(rng: np.random.Generator, base_hz: float = 520.0) -> np.ndarray:
+    """Warm non-fatiguing editorial pop with subtle seeded harmonic variation."""
+    n = int(0.08 * SR)
+    t = _t(n)
+    detune = 1.0 + rng.uniform(-0.045, 0.045)
+    f0 = base_hz * detune
+    atk = np.minimum(1.0, t / 0.002)
+    env = np.exp(-t * 48.0) * atk
+    sweep = np.sin(2.0 * np.pi * (f0 * (1.0 + 0.18 * np.exp(-t * 60.0))) * t)
+    warm = 0.35 * np.sin(2.0 * np.pi * (f0 * 0.5) * t)
+    return _lp((sweep * 0.72 + warm) * env, 2600.0)
+
+
+def _marker_ring_draw(rng: np.random.Generator, dur: float = 0.16) -> np.ndarray:
+    """Delicate vector marker arc draw + restrained harmonic ping for focus rings."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.004)
+    fade = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.04)
+    glide = _bp(rng.standard_normal(n), 950.0, 2900.0) * np.exp(-t * 14.0) * 0.28
+    tone_hz = 1120.0 * (1.0 + rng.uniform(-0.03, 0.03))
+    shimmer = np.sin(2.0 * np.pi * tone_hz * t) * np.exp(-t * 22.0) * 0.34
+    return (glide + shimmer) * atk * fade
+
+
+def _arrow_swish(rng: np.random.Generator, dur: float = 0.15) -> np.ndarray:
+    """Silky low-hiss vector leader-arrow swish synced to tracked label entrances."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    u = t / dur
+    env = np.sin(np.pi * np.minimum(1.0, u)) ** 1.6
+    noise = _bp(rng.standard_normal(n), 380.0, 2100.0)
+    body = 0.16 * np.sin(2.0 * np.pi * (260.0 + 180.0 * u) * t)
+    return (noise * 0.45 + body) * env
+
+
+def _reveal_soft(rng: np.random.Generator, dur: float = 0.34) -> np.ndarray:
+    """Warm clean chordal bloom for multi-layer cutaway reveals and verified counters."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.008)
+    env = np.exp(-t * 6.5) * atk
+    f0 = 587.33 * (1.0 + rng.uniform(-0.02, 0.02))
+    c = (
+        0.48 * np.sin(2.0 * np.pi * f0 * t)
+        + 0.32 * np.sin(2.0 * np.pi * (f0 * 1.25) * t)
+        + 0.24 * np.sin(2.0 * np.pi * (f0 * 1.50) * t)
+    )
+    return _lp(c * env, 4200.0)
+
+
+def _low_sting(rng: np.random.Generator, dur: float = 0.32) -> np.ndarray:
+    """Controlled chest-warmth contrast sting for failure / structural alert beats."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.004)
+    freq = 62.0 - 16.0 * np.minimum(1.0, t / dur)
+    sub = np.sin(2.0 * np.pi * np.cumsum(freq) / SR) * np.exp(-t * 7.2) * 0.65
+    click = _bp(rng.standard_normal(n), 420.0, 1400.0) * np.exp(-t * 44.0) * 0.26
+    return (sub + click) * atk
+
+
+def _airflow_hiss(rng: np.random.Generator, dur: float = 0.48) -> np.ndarray:
+    """Smooth aerodynamic bleed/Equalization vent hush without fatiguing high-end hiss."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    u = t / dur
+    env = np.sin(np.pi * np.minimum(1.0, u)) ** 1.3
+    air = _bp(rng.standard_normal(n), 420.0, 2350.0) * 0.42
+    whistle = 0.10 * np.sin(2.0 * np.pi * (740.0 + 120.0 * np.sin(np.pi * u)) * t)
+    return (air + whistle) * env

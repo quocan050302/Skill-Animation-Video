@@ -316,55 +316,68 @@ def verify_language_voice_support(
     lang: str,
     kit_dir: Path,
     user_voice_file: Optional[Path] = None,
+    requested_backend: str = "auto",
 ) -> Tuple[bool, str, str, str]:
     """Return (supported, backend, voice_id, explanation) truthfully."""
     norm = lang.strip().lower().replace("_", "-")
     base = norm.split("-")[0]
+    req_b = (requested_backend or "auto").lower()
 
     if user_voice_file is not None:
         if user_voice_file.exists():
             return (True, "user_file", str(user_voice_file), f"Verified user-supplied audio file ({user_voice_file.name}).")
         return (False, "none", "", f"User voice file does not exist: {user_voice_file}")
 
-    # Check Kokoro first ONLY if models exist AND language is verified in Kokoro v1.0
-    kokoro_model = kit_dir / "models" / "kokoro-v1.0.onnx"
-    kokoro_voices = kit_dir / "models" / "voices-v1.0.bin"
-    if kokoro_model.exists() and kokoro_voices.exists():
-        if norm in KOKORO_VERIFIED_LANGS or base in KOKORO_VERIFIED_LANGS:
+    if req_b in ("auto", "kokoro"):
+        kokoro_model = kit_dir / "models" / "kokoro-v1.0.onnx"
+        kokoro_voices = kit_dir / "models" / "voices-v1.0.bin"
+        if kokoro_model.exists() and kokoro_voices.exists():
+            if norm in KOKORO_VERIFIED_LANGS or base in KOKORO_VERIFIED_LANGS:
+                return (
+                    True,
+                    "kokoro",
+                    "am_michael",
+                    f"Kokoro v1.0 ONNX verified for language '{norm}'.",
+                )
+        if req_b == "kokoro":
             return (
-                True,
-                "kokoro",
-                "am_michael",
-                f"Kokoro v1.0 ONNX verified for language '{norm}'.",
+                False,
+                "none",
+                "",
+                f"Requested --voice-backend kokoro unavailable: missing {kokoro_model.name} or unsupported language '{norm}'.",
             )
 
-    # Check macOS `say` voices actually installed on this host
-    say_voices = probe_macos_say_voices()
-    if say_voices:
-        candidates = say_voices.get(norm) or say_voices.get(base) or []
-        if candidates:
-            preferred_order = {
-                "en": ["Samantha", "Daniel", "Reed (English (US))", "Eddy (English (US))", "Karen"],
-                "vi": ["Linh"],
-            }.get(base, [])
-            chosen = next((p for p in preferred_order if p in candidates), candidates[0])
-            note = f"macOS Speech Synthesis (`say`) verified installed voice '{chosen}' for '{norm}'."
-            if base == "vi":
-                note += " (Note: Kokoro v1.0 does NOT support Vietnamese; verified host macOS voice 'Linh' vi_VN is used.)"
-            return (True, "macos_say", chosen, note)
+    if req_b in ("auto", "macos_say"):
+        say_voices = probe_macos_say_voices()
+        if say_voices:
+            candidates = say_voices.get(norm) or say_voices.get(base) or []
+            if candidates:
+                preferred_order = {
+                    "en": ["Samantha", "Daniel", "Reed (English (US))", "Eddy (English (US))", "Karen"],
+                    "vi": ["Linh"],
+                }.get(base, [])
+                chosen = next((p for p in preferred_order if p in candidates), candidates[0])
+                note = f"macOS Speech Synthesis (`say`) verified installed voice '{chosen}' for '{norm}'."
+                if base == "vi":
+                    note += " (Note: Kokoro v1.0 does NOT support Vietnamese; verified host macOS voice 'Linh' vi_VN is used.)"
+                return (True, "macos_say", chosen, note)
+        if req_b == "macos_say":
+            return (False, "none", "", f"Requested --voice-backend macos_say unavailable for '{norm}'.")
 
-    # Check Windows SAPI installed voices when on Windows
-    win_voices = probe_windows_sapi_voices()
-    if win_voices:
-        candidates = win_voices.get(norm) or win_voices.get(base) or []
-        if candidates:
-            preferred_order = {
-                "en": ["Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Mark"],
-                "vi": ["Microsoft An"],
-            }.get(base, [])
-            chosen = next((p for p in preferred_order if p in candidates), candidates[0])
-            note = f"Windows System.Speech SAPI verified installed voice '{chosen}' for '{norm}'."
-            return (True, "windows_sapi", chosen, note)
+    if req_b in ("auto", "windows_sapi", "sapi"):
+        win_voices = probe_windows_sapi_voices()
+        if win_voices:
+            candidates = win_voices.get(norm) or win_voices.get(base) or []
+            if candidates:
+                preferred_order = {
+                    "en": ["Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Mark"],
+                    "vi": ["Microsoft An"],
+                }.get(base, [])
+                chosen = next((p for p in preferred_order if p in candidates), candidates[0])
+                note = f"Windows System.Speech SAPI verified installed voice '{chosen}' for '{norm}'."
+                return (True, "windows_sapi", chosen, note)
+        if req_b in ("windows_sapi", "sapi"):
+            return (False, "none", "", f"Requested --voice-backend windows_sapi unavailable for '{norm}'.")
 
     if base == "vi":
         return (
@@ -427,6 +440,13 @@ class DiskBudgetGuard:
         stems_and_stills = 120 * 1024 * 1024 + max(1, workers) * 32 * 1024 * 1024
         return stream_bytes + stems_and_stills
 
+    @staticmethod
+    def estimate_ab_demo_bytes(duration_sec: float, workers: int = 2) -> int:
+        """Forecast disk usage for Baseline A (1080p) + Enhanced B (1080p preview + native 4K master)."""
+        a_1080 = DiskBudgetGuard.estimate_render_bytes(duration_sec, native_4k=False, workers=workers)
+        b_full = DiskBudgetGuard.estimate_render_bytes(duration_sec, native_4k=True, workers=workers)
+        return a_1080 + b_full + 96 * 1024 * 1024
+
     def check(self, required_bytes: int, headroom_bytes: Optional[int] = None) -> Dict[str, Any]:
         usage = shutil.disk_usage(str(self.target_dir))
         free_b = int(usage.free)
@@ -461,6 +481,7 @@ def run_preflight(
     requested_workers: Optional[int] = None,
     qa_audio_root: Optional[Path] = None,
     voice_mode: str = "auto",
+    voice_backend: str = "auto",
 ) -> PreflightResult:
     errors: List[str] = []
     notes: List[str] = []
@@ -535,7 +556,9 @@ def run_preflight(
     if voice_mode == "off":
         v_ok, v_backend, v_id, v_note = True, "off", "", "Voiceover intentionally disabled via --voice-mode off."
     else:
-        v_ok, v_backend, v_id, v_note = verify_language_voice_support(lang, kit_dir, user_voice_file)
+        v_ok, v_backend, v_id, v_note = verify_language_voice_support(
+            lang, kit_dir, user_voice_file, requested_backend=voice_backend
+        )
     notes.append(v_note)
     if not v_ok:
         errors.append(v_note)
@@ -543,15 +566,22 @@ def run_preflight(
     qa_root_res, qa_status, qa_note = resolve_qa_audio_root(project_root, qa_audio_root)
     notes.append(qa_note)
 
+    from .voice_prosody import get_backend_capabilities
+
     say_map = probe_macos_say_voices()
+    win_map = probe_windows_sapi_voices()
     voice_backends = {
         "requested_lang": lang,
+        "requested_backend": voice_backend,
         "selected_backend": v_backend,
         "selected_voice": v_id,
+        "backend_capabilities": get_backend_capabilities(v_backend, v_id),
         "kokoro_installed": (kit_dir / "models" / "kokoro-v1.0.onnx").exists(),
         "kokoro_supports_vietnamese": False,
         "macos_say_en_available": bool(say_map.get("en")),
         "macos_say_vi_available": bool(say_map.get("vi")),
+        "windows_sapi_en_available": bool(win_map.get("en")),
+        "windows_sapi_voices": win_map,
         "parakeet_asr_installed": bool(glob.glob(str(kit_dir / "models" / "sherpa-onnx-nemo-parakeet*"))),
     }
 

@@ -86,6 +86,40 @@ def _zdf_keyframes_for_generator(
             {"t_norm": 1.0, "pos": [round(0.24 * sx, 3), 1.16, 3.02], "look": [0.0, 0.96, 0.08], "fov": 39, "roll": 0.0, "ease": "cubic"},
         ]
 
+    if gen == "zach3d:airplane_window_hole_stage":
+        if setup == "airplane_window_layers_exploded":
+            return [
+                {"t_norm": 0.0, "pos": [-1.36, 1.48, 2.04], "look": [0.0, 1.20, 0.0], "fov": 38, "roll": -0.01, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [-0.58, 1.38, 2.12], "look": [0.0, 1.20, 0.0], "fov": 37, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [1.18, 1.32, 2.02], "look": [0.0, 1.18, 0.0], "fov": 36, "roll": 0.01, "ease": "quintic"},
+            ]
+        if setup == "airplane_window_pressure_equalize":
+            return [
+                {"t_norm": 0.0, "pos": [-0.88, 1.34, 1.98], "look": [0.0, 1.18, 0.0], "fov": 36, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.5, "pos": [0.08, 1.26, 1.76], "look": [0.0, 1.14, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [0.78, 1.20, 1.88], "look": [0.0, 1.10, 0.0], "fov": 34, "roll": 0.008, "ease": "quintic"},
+            ]
+        if setup == "airplane_window_failsafe_cutaway":
+            return [
+                {"t_norm": 0.0, "pos": [1.18, 1.46, 1.66], "look": [0.0, 1.20, -0.02], "fov": 36, "roll": 0.01, "ease": "quintic"},
+                {"t_norm": 0.55, "pos": [0.84, 1.32, 1.52], "look": [0.0, 1.16, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [0.42, 1.22, 1.62], "look": [0.0, 1.12, 0.0], "fov": 33, "roll": -0.008, "ease": "quintic"},
+            ]
+        if setup == "airplane_window_moisture_vent":
+            return [
+                {"t_norm": 0.0, "pos": [0.38, 1.10, 1.18], "look": [0.0, 1.065, 0.0], "fov": 31, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.55, "pos": [-0.22, 1.18, 1.46], "look": [0.0, 1.16, 0.0], "fov": 34, "roll": -0.006, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.52, 1.32, 1.88], "look": [0.0, 1.22, 0.0], "fov": 37, "roll": 0.0, "ease": "quintic"},
+            ]
+        # Default / hook macro focus on lower bleed hole orifice [0.0, 1.065, 0.0] with full oval bezel framing
+        side_sign = -1.0 if (idx % 2 == 1) else 1.0
+        z_shift = 0.16 if idx >= 4 else 0.0
+        return [
+            {"t_norm": 0.0, "pos": [round(0.40 * side_sign, 3), 1.26 + (0.08 if idx >= 4 else 0.0), round(1.66 + z_shift, 3)], "look": [0.0, 1.14, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [round(-0.16 * side_sign, 3), 1.15, round(1.30 + z_shift, 3)], "look": [0.0, 1.08, 0.0], "fov": 32, "roll": round(-0.006 * side_sign, 3), "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [round(-0.42 * side_sign, 3), 1.11, round(1.14 + z_shift, 3)], "look": [0.0, 1.065, 0.0], "fov": 30, "roll": 0.0, "ease": "quintic"},
+        ]
+
     if gen == "zach3d:elevator_lobby_button_stage":
         # Frame hero + reaching forearm cleanly pressing the illuminated hall plunger inside portrait safe box
         return [

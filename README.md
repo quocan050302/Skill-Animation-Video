@@ -56,6 +56,13 @@ python3 -m director.run \
   "Your fresh script or question here"
 ```
 
+## Expressive Editorial Upgrade (`SD-RETENTION-01`)
+- **Semantic Voice Prosody & Capability Truth (`voice_prosody.py`, `parse_script.py`, `preflight.py`)**: Decomposes sentences into expressive phrase units with emphasis keyword scoring, token conservation guards, controlled pauses, SAPI5 SSML `<prosody>/<emphasis>/<break>` (or Kokoro/macOS speed+silence), waveform prosody verification (`voice_delivery_report.json`), honest `neural_prosody` / `word_anchor_confidence="ESTIMATED"` disclosures, and `--voice-compare-ab` side-by-side probes (`voice_ab_probe.wav`).
+- **Kinetic Typography & Smart 3D Callouts (`editorial_overlay.py`, `zach_d_films_adapter.py`)**: Unifies captions, overlays, and SFX timing onto `editorial_timeline.json`; renders word-synced emphasis pops/underlines plus `THREE.Raycaster`-occluded & `camera.project`-tracked focus rings, leader arrows, and fact-grounded counters strictly inside the portrait safe margin in `zach-d-films` without bleeding into the other 5 visual engines.
+- **Motivated Editorial Audio Sync (`audio_dsp.py`, `audio_narrative.py`, `mix_audio.py`)**: Warm non-fatiguing DSP cues (`ui_pop_soft`, `marker_ring_draw`, `arrow_swish`, `reveal_soft`, `low_sting`, `airflow_hiss`), overlay timestamp locking, anti-double-pop guards, and twist-beat music contrast ducking.
+- **Evidence-Based Retention QA (`retention_qa.py`, `quality_gate.py`)**: Audits voice delivery waves, tracking telemetry, decoded overlay pixel deltas, SFX sync, and fatigue bounds into `editorial_qa_report.json` while keeping `subjective_visual_review`, `subjective_editorial_listening`, `subjective_voice_quality_status`, and `viewer_retention_status` explicitly labeled `NOT_VERIFIED` without human review.
+- **New CLI Flags**: `--voice-style legacy|natural|cinematic`, `--voice-backend auto|kokoro|windows_sapi|macos_say`, `--voice-prosody-in PATH`, `--voice-pause-strength FLOAT`, `--voice-compare-ab`, `--caption-mode plain|kinetic|phrase`, `--callout-mode off|smart`, `--verified-numbers-json PATH`.
+
 ## Continuous Shot Direction & Scene Novelty (`v0.4.0` Changelog)
 - **Semantic Visual Event Graph (`visual_event_graph.py`)**: Extracts subjects, verbs, props, causality, scale shifts, and word-anchored event windows (`visual_events.json`) directly from narration + verified audio timing.
 - **Anti-Repetition Coverage Planner (`shot_director.py`)**: Replaces cyclic shot templates and duplicated split text with candidate generation, rolling 3-shot diversity scoring, justified transformed callbacks, intra-shot transformation schedules, and non-overlapping narration spans (`shot_coverage.json`).
@@ -76,8 +83,9 @@ Every completed run writes verified artifacts to `<out-dir>/`:
 - `style_decisions.json` — Immutable `selection_mode`, `selected_skill`, `style_lock`, and upstream commit provenance
 - `visual_events.json`, `shot_coverage.json`, `camera_paths.json`, `transition_edl.json` — Semantic event graph, anti-repetition shot coverage, camera keyframe traces, and frame-verified transition EDL
 - `storyboard.json` & `art_bible.md` — Per-shot camera blocking, setups, transitions, style parameters, and `visual_assets` inventory
+- `editorial_timeline.json`, `overlay_plan.json`, `overlay_coverage.json`, `editorial_qa_report.json`, `editorial_attention_timeline.json` — Unified editorial timing, safe-area smart callout telemetry, and objective finish QA
 - `scene_diversity_report.json` & `style_lock_audit.json` — Caption-masked SSIM/dHash diversity QA plus recursive source & `sys.addaudithook` single-skill provenance audit
-- `audio/` — `audio_plan.json`, `audio_director_notes.md`, `music_cue_sheet.json`, `sfx_cue_sheet.json`, `audio_asset_manifest.json`, `audio_mix_report.json`, `audio_qc_report.json`, `credits_audio.txt`, and 48 kHz stereo stems (`voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`)
+- `audio/` — `audio_plan.json`, `voice_prosody_plan.json`, `prosody_script.md`, `voice_delivery_report.json`, `audio_director_notes.md`, `music_cue_sheet.json`, `sfx_cue_sheet.json`, `audio_asset_manifest.json`, `audio_mix_report.json`, `audio_qc_report.json`, `credits_audio.txt`, and 48 kHz stereo stems (`voice.wav`, `music.wav`, `sfx.wav`, `ambience.wav`, `master_pre.wav`, `mix.wav`)
 - `stills/` & `contact_sheet.jpg` — First, busiest, and end frames of every shot plus 9:16 safe-area sheet
 - `preview_1080.mp4` — `1080x1920` H.264 + single-pass `-14 LUFS` AAC stereo preview
 - `final_4k.mp4` — `2160x3840` H.264 + single-pass `-14 LUFS` AAC stereo master (with truthful `native_4k` vs `upscaled` declaration)

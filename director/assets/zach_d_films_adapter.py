@@ -17,8 +17,10 @@ from typing import Any, Dict, List
 
 from . import link_kit_node_modules
 from ..camera_execution import CAMERA_EXECUTOR_JS
+from ..editorial_overlay import EDITORIAL_OVERLAY_RENDERER_JS, build_editorial_timeline
 from .zdf_rigs import CHARACTER_ACTION_RIG_JS, LAYERED_CUTAWAY_JS
 from .zdf_mechanical_scenes import MECHANICAL_SYSTEMS_JS
+from .zdf_aircraft_window_scenes import AIRCRAFT_WINDOW_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -887,6 +889,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SHOTS, CAPTIONS, DURATION, FADES, TRANSITIONS } from './shots.js';
+import { EDITORIAL_TIMELINE } from './editorial_timeline.js';
+import { EditorialOverlayController } from './editorial_overlay_renderer.js';
 
 const params = new URLSearchParams(location.search);
 const SCALE = Math.max(1, Number(params.get('scale') || 1));
@@ -1071,6 +1075,7 @@ composer.addPass(grade);
 
 const capEl = document.getElementById('cap');
 const fadeEl = document.getElementById('fade');
+const overlayCtrl = new EditorialOverlayController(document.getElementById('stage'), capEl, EDITORIAL_TIMELINE);
 const built = new Map();
 function getShot(i) {
   if (!built.has(i)) built.set(i, SHOTS[i].build({ makeStage, W, H }));
@@ -1111,6 +1116,7 @@ window.renderAtTime = (rawT) => {
   let camTel = null;
   let contactTel = null;
   let cutawayTel = null;
+  let shotAnchors = {};
   let trTel = { active: false, method: def.tr || 'cut', alpha: 0.0, from_shot: def.id, to_shot: null };
 
   if (activeTr && trCode > 0 && activeTr.from_idx < SHOTS.length - 1) {
@@ -1160,6 +1166,7 @@ window.renderAtTime = (rawT) => {
     camTel = rMain.camTel || null;
     contactTel = rMain.contact || null;
     cutawayTel = rMain.cutaway || null;
+    shotAnchors = { ...(rMain.anchors || {}), default: camTel?.focal_anchor_uv || null };
     bloom.strength = ((rMain.bloom ?? 0.30) * 0.52);
     renderer.toneMappingExposure = rMain.exposure ?? 1.03;
     composer.render();
@@ -1186,7 +1193,10 @@ window.renderAtTime = (rawT) => {
     camTel = r.camTel || null;
     contactTel = r.contact || null;
     cutawayTel = r.cutaway || null;
+    shotAnchors = { ...(r.anchors || {}), default: camTel?.focal_anchor_uv || null };
   }
+
+  const ovTel = overlayCtrl.renderAtTime(t, shotAnchors);
 
   window.__LAST_RENDER_TELEMETRY__ = {
     time_sec: Number(t.toFixed(4)),
@@ -1196,10 +1206,10 @@ window.renderAtTime = (rawT) => {
     transition: trTel,
     contact: contactTel,
     cutaway: cutawayTel,
+    anchors: shotAnchors,
+    overlay: ovTel,
   };
 
-  const c = CAPTIONS.filter(c => t >= c[0]).pop();
-  capEl.textContent = c && (c[2] == null || t < c[2]) ? c[1] : '';
   let f = 0;
   for (const [a, b, c2, d] of FADES) {
     if (t >= a && t < d) f = Math.max(f, t < b ? (t - a) / (b - a) : t < c2 ? 1 : (d - t) / (d - c2));
@@ -1466,6 +1476,44 @@ def _build_non_roman_scene_shot_code(
         "target_radius_m": 0.028,
         "button_depress_m": 0.008,
     })
+
+    if gen == "zach3d:airplane_window_hole_stage":
+        setup = str(s.get("setup_type") or "")
+        is_failsafe = (setup == "airplane_window_failsafe_cutaway") or any(k in nar_low for k in ("fails", "failure", "backup", "crack"))
+        is_moisture = (setup == "airplane_window_moisture_vent") or any(k in nar_low for k in ("moisture", "fog", "frost", "condensation", "clear"))
+        is_exploded = (setup == "airplane_window_layers_exploded") or any(k in nar_low for k in ("three layers", "outer pane", "middle pane", "scratch", "layers"))
+        is_pressure = (setup == "airplane_window_pressure_equalize") or any(k in nar_low for k in ("pressure", "cruise", "equalizes", "equalize", "outward", "carries"))
+        exp_target = 0.85 if is_exploded else (0.55 if is_pressure else (0.48 if is_failsafe else (0.35 if is_moisture else 0.14)))
+        cut_target = 0.72 if (is_exploded or is_failsafe) else (0.42 if is_pressure else 0.08)
+        show_press = "true" if (is_pressure or is_failsafe) else "false"
+        outer_dmg = "true" if (is_failsafe and ("fails" in nar_low or "backup" in nar_low or setup == "airplane_window_failsafe_cutaway")) else "false"
+        moist_flg = "true" if is_moisture else "false"
+        sky_theme = "dusk" if is_failsafe else ("lab_studio" if (is_exploded or is_pressure) else "datacenter_dark")
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.6, skyTheme: '{sky_theme}' }});
+  const aw = makeAircraftWindowAssemblyRig({{ mode: {json.dumps(setup)}, outerDamaged: {outer_dmg}, moistureDemo: {moist_flg} }});
+  scene.add(aw.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 32);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const rev = smooth(clamp(u * 1.45, 0, 1));
+      aw.updateAssembly(lt, {dur}, {{
+        explodeAmount: lerp({exp_target * 0.25:.3f}, {exp_target:.3f}, rev),
+        cutawayAmount: lerp(0.0, {cut_target:.3f}, rev),
+        showPressure: {show_press},
+      }});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = aw.getAnchorsTelemetry(c);
+      return {{ bloom: {outer_dmg} ? 0.50 : 0.38, camTel, cutaway: aw.getTelemetry(), anchors }};
+    }}
+  }};
+}}"""
 
     if gen == "zach3d:elevator_lobby_button_stage":
         return f"""
@@ -1946,7 +1994,8 @@ def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]
         """import {
   makePushButtonPanelRig, makeControllerCabinetRig, makeTractionDriveMachineRig,
   makeElevatorShaftRig, makeLandingDoorsRig, makeSchematicMechanismStage
-} from './mechanical_systems.js';"""
+} from './mechanical_systems.js';
+import { makeAircraftWindowAssemblyRig } from './aircraft_window_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -2009,8 +2058,28 @@ def generate_engine_project(
     mech_p = src_dst / "mechanical_systems.js"
     mech_p.write_text(MECHANICAL_SYSTEMS_JS, encoding="utf-8")
 
+    aw_p = src_dst / "aircraft_window_scenes.js"
+    aw_p.write_text(AIRCRAFT_WINDOW_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
+
+    tl_json_p = run_dir / "editorial_timeline.json"
+    if tl_json_p.exists():
+        ed_timeline = json.loads(tl_json_p.read_text(encoding="utf-8"))
+    else:
+        ed_timeline = build_editorial_timeline(
+            parsed_script=parsed_script,
+            storyboard=storyboard,
+            run_dir=None,
+            caption_mode=str(storyboard.get("caption_mode", "kinetic")),
+            callout_mode=str(storyboard.get("callout_mode", "off")),
+        )
+    ed_tl_p = src_dst / "editorial_timeline.js"
+    ed_tl_p.write_text("export const EDITORIAL_TIMELINE = " + json.dumps(ed_timeline, ensure_ascii=False) + ";\n", encoding="utf-8")
+
+    ed_ov_p = src_dst / "editorial_overlay_renderer.js"
+    ed_ov_p.write_text(EDITORIAL_OVERLAY_RENDERER_JS, encoding="utf-8")
 
     shots_p = src_dst / "shots.js"
     shots_p.write_text(_build_zach_shots_js(storyboard, parsed_script["voice"]["words"]), encoding="utf-8")
@@ -2022,16 +2091,18 @@ def generate_engine_project(
 <html lang="en"><head><meta charset="utf-8">
 <style>
   @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
+  @font-face { font-family: 'Cap'; src: url('node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2') format('woff2'); font-weight: 800; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1080px; height: 1920px; background: #000; overflow: hidden; }
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
   canvas { display: block; width: 1080px; height: 1920px; }
   #cap {
     position: absolute; left: 100px; width: 880px; top: 1410px; text-align: center;
-    font: 700 64px/1.1 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
+    font: 700 64px/1.12 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
     text-shadow: 0 0 4px rgba(0,0,0,.78), 0 4px 16px rgba(0,0,0,.72);
+    z-index: 15; pointer-events: none;
   }
-  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 20; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -2053,7 +2124,10 @@ def generate_engine_project(
         str(char_rig_p.resolve()),
         str(cutaway_p.resolve()),
         str(mech_p.resolve()),
+        str(aw_p.resolve()),
         str(novel_p.resolve()),
+        str(ed_tl_p.resolve()),
+        str(ed_ov_p.resolve()),
         str(shots_p.resolve()),
         str(main_p.resolve()),
         str(index_p.resolve()),

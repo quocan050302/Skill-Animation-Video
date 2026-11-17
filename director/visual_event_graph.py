@@ -19,6 +19,12 @@ from . import VALID_SKILLS
 # Concrete domain prop lexicons -> strictly derived from explicit words in narration
 DOMAIN_PROP_RULES: List[Tuple[str, str, str, Tuple[str, ...]]] = [
     # (prop_id, scene_family, default_scale, trigger keywords)
+    ("airplane_window_bleed", "airplane_window", "macro_object", (
+        "airplane window", "cabin window", "bleed hole", "breather hole", "outer pane",
+        "middle pane", "scratch cover", "scratch pane", "fogging", "trapped moisture",
+        "outer glass", "cabin air", "fail-safe", "failsafe", "cabin pressure", "window fails",
+        "crack", "vents", "frost", "cruise", "aircraft",
+    )),
     ("elevator_button", "elevator_lobby_button", "macro_hand", ("elevator button", "call button", "lobby button", "press an elevator", "tiny elevator", "hall panel")),
     ("controller_pcb", "controller_cabinet_cutaway", "micro_circuit", ("controller cabinet", "control cabinet", "relay", "relays", "inverter", "tracks where", "decides when", "sends a request", "controller")),
     ("traction_motor_sheave", "traction_machine_room", "industrial_scale", ("machine room", "traction motor", "traction sheave", "brake caliper", "brake calipers", "calipers", "caliper", "sheave", "traction elevator", "above the shaft", "motor turns", "motor slows", "motor")),
@@ -242,6 +248,13 @@ def classify_visual_clause(
                     scales.append(sc)
 
     is_elevator_story = any(k in full_script_low for k in ("elevator", "sheave", "counterweight", "traction"))
+    is_airplane_window_story = any(k in full_script_low for k in ("airplane window", "cabin window", "bleed hole", "breather hole"))
+
+    # Disambiguate aircraft window anaphoric clauses cleanly without unrelated fallback props
+    if is_airplane_window_story and not matched_props:
+        matched_props = ["airplane_window_bleed"]
+        families = ["airplane_window"]
+        scales = ["macro_object"]
 
     # Disambiguate elevator story hardware & short anaphoric phrases without pulling unrelated smartphone/chip templates
     if is_elevator_story:

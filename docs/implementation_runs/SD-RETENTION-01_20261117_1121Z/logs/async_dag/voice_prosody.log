@@ -1,0 +1,16 @@
+TASK: voice_prosody
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_voice_prosody -v
+STATUS: PASS (exit=0, elapsed=4.31s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_cinematic_vs_legacy_real_waveform_and_ab_probe (tests.test_voice_prosody.TestVoiceProsody.test_cinematic_vs_legacy_real_waveform_and_ab_probe) ... ok
+test_honest_capability_disclosure_and_lexicon_token_conservation (tests.test_voice_prosody.TestVoiceProsody.test_honest_capability_disclosure_and_lexicon_token_conservation) ... ok
+test_negative_traps_n1_n2_n3_n15_fail_closed (tests.test_voice_prosody.TestVoiceProsody.test_negative_traps_n1_n2_n3_n15_fail_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.924s
+
+OK
+

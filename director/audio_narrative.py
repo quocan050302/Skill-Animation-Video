@@ -159,7 +159,16 @@ def extract_sound_events(
             or "roman" in setup
             or (("roman_gladiator" in ev["global_motifs"] or "roman_ledger_50x" in ev["global_motifs"]) and not ev["domain"] and not strict_props)
         )
-        if proc_gen == "zach3d:elevator_lobby_button_stage":
+        if proc_gen == "zach3d:airplane_window_hole_stage":
+            if "exploded" in setup or "layers" in nar or "three" in nar:
+                _add(min(dur * 0.25, 0.30), "window_layers_separate", "reveal_soft", "reveal", -12.0, 0.0, 0.92, 0.80, 2, f"{sid}.3pane_explode", depth="near", uncert=0.025)
+            elif "failsafe" in setup or "fails" in nar or "backup" in nar:
+                _add(min(dur * 0.28, 0.36), "outer_pane_failure_sting", "low_sting", "impact", -11.5, 0.0, 0.94, 0.86, 1, f"{sid}.failsafe_sting", depth="near", uncert=0.02)
+            elif "pressure" in setup or "moisture" in setup or any(k in nar for k in ("equalize", "equalizes", "pressure", "moisture", "vents")):
+                _add(min(dur * 0.30, 0.40), "bleed_hole_airflow_vent", "airflow_hiss", "foley", -13.5, 0.06, 0.90, 0.72, 2, f"{sid}.bleed_hole_vent", depth="near", uncert=0.03)
+            else:
+                _add(min(dur * 0.28, 0.34), "window_bezel_focus", "mechanical_click", "foley", -12.5, 0.0, 0.88, 0.70, 2, f"{sid}.bezel_macro", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:elevator_lobby_button_stage":
             # Sync strictly to exact physical fingertip contact timestamp `hit_time_rel_sec` (<= 1 frame tolerance)
             hit_rel = float(ca.get("hit_time_rel_sec", dur * 0.44)) if isinstance(ca, dict) else dur * 0.44
             _add(hit_rel, "elevator_call_button_press", "elevator_button_click", "impact", -8.0, 0.06, 0.98, 0.94, 1, f"{sid}.finger_button_contact.hit={hit_rel:.3f}", depth="near", uncert=0.015)
@@ -567,6 +576,7 @@ def build_audio_narrative_plan(
     existing_plan: Optional[Dict[str, Any]] = None,
     music_gain_db: float = 0.0,
     sfx_gain_db: float = 0.0,
+    editorial_timeline: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Analyze storyboard + script -> validated `audio/audio_plan.json` + `audio_director_notes.md`."""
     selected_skill = storyboard["selected_skill"]
@@ -612,6 +622,73 @@ def build_audio_narrative_plan(
                 density=sfx_density,
             )
             all_events.extend(evs)
+
+        # Synchronize non-fatiguing UI / marker SFX directly from single authoritative `editorial_timeline.json`
+        ed_tl = editorial_timeline
+        if ed_tl is None and run_dir is not None and (run_dir / "editorial_timeline.json").exists():
+            ed_tl = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8"))
+        if isinstance(ed_tl, dict) and ed_tl.get("callout_mode", "off") != "off":
+            last_ui_t = -9.0
+            for oi, ov in enumerate(ed_tl.get("overlays", [])):
+                t_ov = float(ov.get("start", 0.0))
+                if t_ov < 0.0 or t_ov >= total_dur - 0.10:
+                    continue
+                # Anti-double-pop guard against recent UI pops or close transition/foley spikes
+                if (t_ov - last_ui_t) < 0.16:
+                    continue
+                if any(abs(t_ov - float(e["time_sec"])) < 0.14 for e in all_events):
+                    continue
+                otype = str(ov.get("type", "focus_ring"))
+                intent_map = {
+                    "focus_ring": ("callout_focus_ring", "marker_ring_draw", -14.5),
+                    "tracked_arrow": ("callout_tracked_arrow", "arrow_swish", -15.0),
+                    "verified_counter": ("callout_verified_counter", "ui_pop_soft", -15.5),
+                    "beat_card": ("callout_beat_card", "reveal_soft", -14.0),
+                }
+                ev_name, intent_name, g_db = intent_map.get(otype, ("callout_overlay", "ui_pop_soft", -15.0))
+                sid_ov = str(ov.get("shot_id") or "shot_00")
+                sh_match = next((s for s in shots if s.get("shot_id") == sid_ov), None)
+                rel_t = round(max(0.0, t_ov - float(sh_match["start"])) if sh_match else t_ov, 3)
+                all_events.append({
+                    "time_sec": round(t_ov, 3),
+                    "frame_index": int(round(t_ov * fps)),
+                    "shot_relative_sec": rel_t,
+                    "shot_id": sid_ov,
+                    "event": ev_name,
+                    "intent": intent_name,
+                    "kind": "ui",
+                    "gain_db": g_db,
+                    "pan": 0.12 if ov.get("preferred_side") == "right" else -0.12,
+                    "confidence": 0.95,
+                    "emphasis": 0.72,
+                    "priority": 2,
+                    "depth": "near",
+                    "manual": False,
+                    "evidence": f"editorial_timeline.{ov.get('overlay_id')}.start={t_ov:.3f}",
+                    "uncertainty_sec": 0.02,
+                })
+                last_ui_t = t_ov
+
+        # Optional twist contrast music duck window before dramatic reveal question
+        if isinstance(ed_tl, dict):
+            phrases_tl = list(ed_tl.get("voice_phrases") or [])
+        else:
+            phrases_tl = list((parsed_script.get("voice") or {}).get("phrases") or [])
+        twist_ducks: List[Dict[str, Any]] = []
+        for pi, ph in enumerate(phrases_tl):
+            if ph.get("intent") == "twist_question" and pi > 0:
+                prev_end = float(phrases_tl[pi - 1].get("end", 0.0))
+                cur_start = float(ph.get("start", prev_end))
+                if cur_start - prev_end >= 0.14:
+                    twist_ducks.append({
+                        "start_sec": round(max(0.0, prev_end - 0.02), 3),
+                        "end_sec": round(cur_start + 0.05, 3),
+                        "duck_db": -12.0,
+                        "reason": f"twist_contrast_gap:{ph.get('phrase_id')}",
+                    })
+                    break
+        if twist_ducks:
+            music_plan["twist_duck_windows"] = twist_ducks
 
     # Scene-appropriate ambience
     is_outdoor = any(k in joined_nar.lower() for k in ("rome", "arena", "sand", "bridge", "river", "walk", "outside"))

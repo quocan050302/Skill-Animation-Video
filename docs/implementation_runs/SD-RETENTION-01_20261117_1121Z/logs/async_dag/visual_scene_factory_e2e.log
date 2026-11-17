@@ -1,0 +1,16 @@
+TASK: visual_scene_factory_e2e
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_visual_scene_factory_and_diversity -v
+STATUS: PASS (exit=0, elapsed=126.38s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_f_c_zach_3d_device_cutaway_pixels_and_determinism (tests.test_visual_scene_factory_and_diversity.TestVisualSceneFactoryAndDiversity.test_f_c_zach_3d_device_cutaway_pixels_and_determinism)
+Render non-Roman 3D device cutaway + ocean fiber + cosmos stills via Metal/WebGL; verify genuine separation & seed hash parity. ... ok
+test_g_l_full_e2e_non_roman_zach_with_diversity_qa_and_transitions (tests.test_visual_scene_factory_and_diversity.TestVisualSceneFactoryAndDiversity.test_g_l_full_e2e_non_roman_zach_with_diversity_qa_and_transitions) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 123.481s
+
+OK
+

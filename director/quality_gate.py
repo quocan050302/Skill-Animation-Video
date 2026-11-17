@@ -561,6 +561,31 @@ def run_final_quality_gate(
         checks["scene_diversity_and_retention"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
         checks["camera_execution"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
+    # 6b. Editorial Finish, Voice Prosody & Overlay Tracking QA (`retention_qa.py`)
+    editorial_qa_doc: Optional[Dict[str, Any]] = None
+    if (run_dir / "editorial_timeline.json").exists():
+        from .retention_qa import run_retention_editorial_qa
+        raw_tel_p2 = run_dir / "logs" / "raw_render_telemetry.json"
+        raw_traces2 = list((json.loads(raw_tel_p2.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p2.exists() else None
+        target_vid = final_4k_mp4 if final_4k_mp4.exists() else preview_mp4
+        if target_vid.exists():
+            editorial_qa_doc = run_retention_editorial_qa(
+                run_dir=run_dir,
+                video_mp4=target_vid,
+                storyboard=storyboard,
+                raw_traces=raw_traces2,
+            )
+            checks["editorial_retention_finish"] = {
+                "status": editorial_qa_doc["overall_status"],
+                "editorial_qa_report": str((run_dir / "editorial_qa_report.json").resolve()),
+                "editorial_attention_timeline_json": editorial_qa_doc.get("editorial_attention_timeline_json"),
+                "subjective_voice_quality_status": editorial_qa_doc.get("subjective_voice_quality_status", "NOT_VERIFIED"),
+                "viewer_retention_status": editorial_qa_doc.get("viewer_retention_status", "NOT_VERIFIED"),
+                "checks_summary": {k: v["status"] for k, v in (editorial_qa_doc.get("checks") or {}).items()},
+            }
+        else:
+            checks["editorial_retention_finish"] = {"status": "NOT_RUN", "reason": "Deliverable MP4 missing"}
+
     # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])
     has_warn = any("WARN" in str(fc.get("status", "")) for fc in fact_checks)
@@ -580,6 +605,8 @@ def run_final_quality_gate(
         "release_status": release_status,
         "subjective_visual_review": "NOT_VERIFIED",
         "subjective_editorial_listening": subj_audio,
+        "subjective_voice_quality_status": (editorial_qa_doc or {}).get("subjective_voice_quality_status", "NOT_VERIFIED"),
+        "viewer_retention_status": "NOT_VERIFIED",
         "selected_skill": style_decisions["selected_skill"],
         "selection_mode": style_decisions["selection_mode"],
         "checks": checks,

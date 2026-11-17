@@ -255,6 +255,12 @@ def discover_native_audio_assets(root: Path) -> List[AudioAsset]:
         ("nat_sfx_cable_whir", "sheave_cable_whir", 0.44, "foley", ["cable", "counterweight", "shaft", "pulley"]),
         ("nat_sfx_door_slide", "door_slide_open", 0.42, "foley", ["door", "doors", "slide", "landing"]),
         ("nat_sfx_arrival_chime", "elevator_arrival_chime", 0.62, "emphasis", ["arrival", "ding", "chime", "elevator"]),
+        ("nat_sfx_ui_pop_soft", "ui_pop_soft", 0.08, "ui", ["ui_pop_soft", "verified_counter", "callout_pop"]),
+        ("nat_sfx_marker_ring", "marker_ring_draw", 0.16, "ui", ["marker_ring_draw", "focus_ring", "spotlight", "callout_ring"]),
+        ("nat_sfx_arrow_swish", "arrow_swish", 0.15, "ui", ["arrow_swish", "tracked_arrow", "leader_label", "callout_arrow"]),
+        ("nat_sfx_reveal_soft", "reveal_soft", 0.34, "reveal", ["reveal_soft", "exploded_panes", "layer_reveal", "callout_reveal"]),
+        ("nat_sfx_low_sting", "low_sting", 0.32, "impact", ["low_sting", "twist_alert", "outer_failure", "contrast_sting"]),
+        ("nat_sfx_airflow_hiss", "airflow_hiss", 0.48, "foley", ["airflow_hiss", "bleed_hole", "pressure_vent", "moisture_vent"]),
     ]
 
     for aid, gen, dur, mood, tags in sfx_defs:

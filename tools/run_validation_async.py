@@ -61,18 +61,53 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             timeout_sec=420.0,
             description="T01-T20 ZDF-MOTION-01 contracts, IK, cutaway, transition & QA tamper traps",
         ),
+        ValidationTask(
+            task_id="audio_catalog_licenses",
+            cmd=[py, "-m", "unittest", "tests.test_audio_catalog_and_licenses", "-v"],
+            deps=[],
+            timeout_sec=120.0,
+            description="Audio catalog, license policy & Windows portable traversal guard",
+        ),
+        ValidationTask(
+            task_id="voice_prosody",
+            cmd=[py, "-m", "unittest", "tests.test_voice_prosody", "-v"],
+            deps=[],
+            timeout_sec=120.0,
+            description="R1 semantic voice prosody, capability disclosure & traps N1-N3/N15",
+        ),
+        ValidationTask(
+            task_id="editorial_overlays",
+            cmd=[py, "-m", "unittest", "tests.test_editorial_overlays", "-v"],
+            deps=["voice_prosody"],
+            timeout_sec=240.0,
+            description="R2/R3 kinetic captions, WebGL 3D tracking, occlusion hide & traps N4-N9/N16",
+        ),
+        ValidationTask(
+            task_id="retention_audio_sync",
+            cmd=[py, "-m", "unittest", "tests.test_retention_audio_sync", "-v"],
+            deps=["audio_determinism", "editorial_overlays"],
+            timeout_sec=180.0,
+            description="R4 SFX editorial timeline sync, isolation & traps N10-N12/N14",
+        ),
     ]
 
     if mode in ("focused", "full"):
-        tasks.append(
+        tasks.extend([
             ValidationTask(
                 task_id="visual_scene_factory_e2e",
                 cmd=[py, "-m", "unittest", "tests.test_visual_scene_factory_and_diversity", "-v"],
                 deps=["zdf_motion01_matrix"],
                 timeout_sec=420.0,
                 description="ZDF non-Roman cutaway stills, determinism hashes & E2E pipeline",
-            )
-        )
+            ),
+            ValidationTask(
+                task_id="retention_e2e",
+                cmd=[py, "-m", "unittest", "tests.test_retention_e2e", "-v"],
+                deps=["editorial_overlays", "retention_audio_sync"],
+                timeout_sec=240.0,
+                description="3-pane aircraft window WebGL cutaway, determinism & trap N13",
+            ),
+        ])
     if mode == "full":
         tasks.extend([
             ValidationTask(

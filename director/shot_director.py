@@ -20,6 +20,66 @@ from .visual_event_graph import classify_visual_clause
 ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
     "zach-d-films": [
         {
+            "setup": "airplane_window_hole_macro",
+            "families": ("airplane_window",),
+            "framing": "CU_BleedHole",
+            "angle": "lower_bezel_macro",
+            "move": "macro_push_in",
+            "focal_mm": 55,
+            "placement": "centered_window_hole",
+            "silhouette": "oval_bezel_bleed_hole",
+            "pose": "focus_bleed_orifice",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "airplane_window_layers_exploded",
+            "families": ("airplane_window",),
+            "framing": "MS_ExplodedPanes",
+            "angle": "exploded_oblique_35deg",
+            "move": "peel_orbit_reveal",
+            "focal_mm": 40,
+            "placement": "oblique_three_panes",
+            "silhouette": "three_separated_acrylic_panes",
+            "pose": "exploded_layer_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "airplane_window_pressure_equalize",
+            "families": ("airplane_window",),
+            "framing": "MS_PressureFlow",
+            "angle": "left_cabin_three_quarter",
+            "move": "arc_around_window",
+            "focal_mm": 36,
+            "placement": "left_pressure_vectors",
+            "silhouette": "cabin_pressure_arrow_stream",
+            "pose": "pressure_equalization",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "airplane_window_failsafe_cutaway",
+            "families": ("airplane_window",),
+            "framing": "MCU_FailSafeCore",
+            "angle": "right_cutaway_profile",
+            "move": "focus_glide_failsafe",
+            "focal_mm": 48,
+            "placement": "right_backup_pane",
+            "silhouette": "outer_crack_middle_hold",
+            "pose": "failsafe_load_transfer",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "airplane_window_moisture_vent",
+            "families": ("airplane_window",),
+            "framing": "MCU_MoistureVent",
+            "angle": "right_lower_breather",
+            "move": "pull_back_crane",
+            "focal_mm": 50,
+            "placement": "lower_vent_clearance",
+            "silhouette": "frost_clear_bleed_stream",
+            "pose": "moisture_defog_payoff",
+            "novel_non_template": True,
+        },
+        {
             "setup": "elevator_lobby_button_macro",
             "families": ("elevator_lobby_button",),
             "framing": "CU_HandContact",
@@ -396,8 +456,8 @@ def split_long_visual_beats_by_actions(
                 skill_s = str(ev.get("selected_skill") or "zach-d-films")
                 meta_a = classify_visual_clause(span_a, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 0, None, [], skill_s, full_script_low=full_script_low)
                 meta_b = classify_visual_clause(span_b, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 1, meta_a["scene_family"], [], skill_s, full_script_low=full_script_low)
-                fam_a = meta_a["scene_family"] if meta_a["relevant_prop"] != "idea_spark" else ev.get("scene_family")
-                fam_b = meta_b["scene_family"] if meta_b["relevant_prop"] != "idea_spark" else ev.get("scene_family")
+                fam_a = meta_a["scene_family"] if meta_a["relevant_prop"] not in ("idea_spark", "atom_crystal") else ev.get("scene_family")
+                fam_b = meta_b["scene_family"] if meta_b["relevant_prop"] not in ("idea_spark", "atom_crystal") else ev.get("scene_family")
                 allow_same_fam_split = (skill_s != "zach-d-films") or (dur > 5.2)
                 if allow_same_fam_split or (fam_b != fam_a):
                     u_a = dict(ev)
@@ -408,7 +468,7 @@ def split_long_visual_beats_by_actions(
                     u_a["narration_text"] = span_a
                     u_a["narration_span_start"] = 0
                     u_a["narration_span_end"] = split_idx
-                    if meta_a["relevant_prop"] != "idea_spark":
+                    if meta_a["relevant_prop"] not in ("idea_spark", "atom_crystal"):
                         u_a.update({k: meta_a[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
                     u_a["visual_objective"] = f"Establish {u_a['subject']} acting on {u_a['relevant_prop']}"
                     u_a["desired_novelty_axis"] = "subject_action_setup"
@@ -421,7 +481,7 @@ def split_long_visual_beats_by_actions(
                     u_b["narration_text"] = span_b
                     u_b["narration_span_start"] = split_idx
                     u_b["narration_span_end"] = len(toks)
-                    if meta_b["relevant_prop"] != "idea_spark":
+                    if meta_b["relevant_prop"] not in ("idea_spark", "atom_crystal"):
                         u_b.update({k: meta_b[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
                     u_b["visual_objective"] = f"Reveal consequence {u_b['verb_action']} ({u_b['relevant_prop']})"
                     u_b["desired_novelty_axis"] = "internal_reveal_escalation" if meta_b["scene_family"] == u_a["scene_family"] else "environment_and_scale_shift"

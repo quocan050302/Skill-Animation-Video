@@ -56,6 +56,15 @@ ENTITY_BOUNDS_M: Dict[str, Tuple[float, float, float]] = {
 
 # Explicit per-generator capabilities, real world focal anchors, scene bounds & colliders for ZDF 3D stages
 ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
+    "zach3d:airplane_window_hole_stage": {
+        "capabilities": ["layered_cutaway", "multi_pane_window", "pierced_bleed_hole", "schematic_pressure_flow"],
+        "fidelity_mode": "exact_archetype",
+        "focal_anchor": {"anchor_id": "middle_bleed_hole", "world_pos": [0.0, 1.065, 0.0], "radius_m": 0.032},
+        "bounds": {"x_min": -2.4, "x_max": 2.4, "y_min": 0.12, "y_max": 3.2, "z_min": -1.8, "z_max": 3.8},
+        "collider_boxes": [
+            {"id": "fuselage_bulkhead_wall", "min": [-0.72, 0.30, -0.22], "max": [0.72, 2.20, -0.02]},
+        ],
+    },
     "zach3d:elevator_lobby_button_stage": {
         "capabilities": ["human_character", "arm_ik_contact", "physical_button_plunger"],
         "fidelity_mode": "exact_archetype",
@@ -327,6 +336,8 @@ def _map_family_to_generator(
             return "zach3d:schematic_mechanism_stage"
         if fam in ("roman_historical",) or prop in ("roman_arena", "roman_ledger"):
             return "zach3d:roman_historical_stage"
+        if fam == "airplane_window" or prop == "airplane_window_bleed":
+            return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":
             return "zach3d:elevator_lobby_button_stage"
         if fam == "controller_cabinet_cutaway" or prop == "controller_pcb":

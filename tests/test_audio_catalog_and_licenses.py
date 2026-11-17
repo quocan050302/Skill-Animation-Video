@@ -191,16 +191,39 @@ class TestAudioCatalogAndLicenses(unittest.TestCase):
             self.assertFalse(v_sha.ok)
             self.assertIn("SHA-256 mismatch", v_sha.reason)
 
-            # 4. Path traversal (`..`) & symlink escape outside allowed root
+            # 4. Path traversal (`..`), nested escape, direct outside-root & symlink escape rejected
             a_trav = AudioAsset("trav", "qa_real_sfx", "sfx", file_path=str(qa / ".." / "secret_outside.wav"), license_type="cc0")
             self.assertFalse(validate_audio_asset(a_trav, LicensePolicy(), [qa]).ok)
 
+            a_nested_trav = AudioAsset("trav2", "qa_real_sfx", "sfx", file_path=str(qa / "sub" / ".." / ".." / "secret_outside.wav"), license_type="cc0")
+            v_nested = validate_audio_asset(a_nested_trav, LicensePolicy(), [qa])
+            self.assertFalse(v_nested.ok)
+            self.assertIn("..", v_nested.reason)
+
+            a_outside = AudioAsset("out_direct", "qa_real_sfx", "sfx", file_path=str(outside), license_type="cc0", expected_sha256=sha_out)
+            v_out = validate_audio_asset(a_outside, LicensePolicy(), [qa])
+            self.assertFalse(v_out.ok)
+            self.assertIn("escapes", v_out.reason)
+
             sym = qa / "escape_link.wav"
-            sym.symlink_to(outside)
-            a_sym = AudioAsset("sym", "qa_real_sfx", "sfx", file_path=str(sym), license_type="cc0", expected_sha256=sha_out)
-            v_sym = validate_audio_asset(a_sym, LicensePolicy(), [qa])
-            self.assertFalse(v_sym.ok)
-            self.assertIn("escapes", v_sym.reason)
+            try:
+                sym.symlink_to(outside)
+                a_sym = AudioAsset("sym", "qa_real_sfx", "sfx", file_path=str(sym), license_type="cc0", expected_sha256=sha_out)
+                v_sym = validate_audio_asset(a_sym, LicensePolicy(), [qa])
+                self.assertFalse(v_sym.ok)
+                self.assertIn("escapes", v_sym.reason)
+            except OSError as exc:
+                # Unprivileged Windows accounts lack SeCreateSymbolicLinkPrivilege (WinError 1314)
+                if getattr(exc, "winerror", None) != 1314:
+                    raise
+                sibling = qa.parent / "QAEscapeSibling"
+                sibling.mkdir(exist_ok=True)
+                sib_wav = sibling / "leak.wav"
+                sib_wav.write_bytes(outside.read_bytes())
+                a_sib = AudioAsset("sib_prefix", "qa_real_sfx", "sfx", file_path=str(sib_wav), license_type="cc0")
+                v_sib = validate_audio_asset(a_sib, LicensePolicy(), [qa])
+                self.assertFalse(v_sib.ok)
+                self.assertIn("escapes", v_sib.reason)
 
     def test_a19_a20_qa_mode_fails_early_and_low_disk_fails_closed(self) -> None:
         # --music-mode qa-library with no QA library must fail preflight early!

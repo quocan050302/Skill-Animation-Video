@@ -27,6 +27,7 @@ from .preflight import preflight_audio_assets, resolve_qa_audio_root, run_prefli
 from .provenance_guard import ProvenanceGuard, StyleLockViolationError
 from .quality_gate import run_audio_quality_gate, run_final_quality_gate
 from .route_styles import parse_skill_request, route_and_lock_style
+from .voice_prosody import render_voice_ab_probe
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -266,6 +267,14 @@ def execute_short_director_run(
     transition_policy: str = "motivated",
     max_static_hold_sec: Optional[float] = None,
     visual_plan_in: Optional[Path] = None,
+    voice_style: Optional[str] = None,
+    voice_backend: str = "auto",
+    voice_prosody_in: Optional[Path] = None,
+    voice_pause_strength: float = 1.0,
+    voice_compare_ab: bool = False,
+    caption_mode: str = "kinetic",
+    callout_mode: str = "smart",
+    verified_numbers: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Run STEP 0 -> STEP 9 end-to-end (or --audio-only lossless remix) and return `run_manifest`."""
     if audio_only:
@@ -309,6 +318,7 @@ def execute_short_director_run(
             requested_workers=workers,
             qa_audio_root=qa_audio_root,
             voice_mode=voice_mode,
+            voice_backend=voice_backend,
         )
         (out_dir / "logs" / "preflight.json").write_text(json.dumps(pf.to_dict(), indent=2), encoding="utf-8")
         if not pf.ok:
@@ -344,7 +354,7 @@ def execute_short_director_run(
         (out_dir / "style_decisions.json").write_text(json.dumps(style_decisions, ensure_ascii=False, indent=2), encoding="utf-8")
         selected_skill = style_decisions["selected_skill"]
 
-        # STEP 1: Parse script into beats, check facts, synthesize/ingest voice & align word timings
+        # STEP 1: Parse script into beats, check facts, synthesize/ingest expressive voice & align word timings
         kit_dir = PROJECT_ROOT / "vendor" / "claude-animation-skills" / "kit"
         parsed_script = parse_script_and_build_voice(
             raw_script=cleaned_script,
@@ -354,7 +364,38 @@ def execute_short_director_run(
             lang=lang,
             user_voice_file=voice_file,
             voice_mode=voice_mode,
+            voice_style=voice_style,
+            voice_backend=voice_backend,
+            voice_prosody_in=voice_prosody_in,
+            voice_pause_strength=voice_pause_strength,
         )
+        voice_ab_info: Optional[Dict[str, Any]] = None
+        if voice_compare_ab and voice_mode != "off" and voice_file is None:
+            import shutil as _shutil
+            probe_dir = out_dir / "_tmp_voice_ab_a"
+            try:
+                probe_a = parse_script_and_build_voice(
+                    raw_script=cleaned_script,
+                    selected_skill=selected_skill,
+                    run_dir=probe_dir,
+                    kit_dir=kit_dir,
+                    lang=lang,
+                    voice_mode=voice_mode,
+                    voice_style="legacy",
+                    voice_backend=voice_backend,
+                )
+                voice_ab_info = render_voice_ab_probe(
+                    legacy_wav=Path(probe_a["voice"]["vo_wav_path"]),
+                    enhanced_wav=Path(parsed_script["voice"]["vo_wav_path"]),
+                    out_wav=out_dir / "ab_comparison" / "voice_ab_probe.wav",
+                    report_a=probe_a["voice"]["voice_delivery_report"],
+                    report_b=parsed_script["voice"]["voice_delivery_report"],
+                )
+                (out_dir / "ab_comparison" / "voice_ab_metrics.json").write_text(
+                    json.dumps(voice_ab_info, indent=2), encoding="utf-8"
+                )
+            finally:
+                _shutil.rmtree(probe_dir, ignore_errors=True)
 
         # STEP 3: Build semantic visual event graph, novel shot coverage, camera paths, transitions & entity inventory
         existing_visual_plan: Optional[Dict[str, Any]] = None
@@ -377,6 +418,9 @@ def execute_short_director_run(
             transition_policy=transition_policy,
             max_static_hold_sec=max_static_hold_sec,
             existing_visual_plan=existing_visual_plan,
+            caption_mode=caption_mode,
+            callout_mode=callout_mode,
+            verified_numbers=verified_numbers,
         )
 
         # NEW STEP 3.5: Plan Narrative Music Score & Grounded SFX BEFORE 4K visual render
@@ -472,6 +516,7 @@ def execute_short_director_run(
         audio_manifest_fields = _build_manifest_audio_fields(audio_info, audio_plan, aqc_report, music_mode, sfx_mode)
 
         # STEP 9: Truthful Run Manifest
+        ed_fin_chk = (qc_report.get("checks", {}).get("editorial_retention_finish") or {})
         manifest: Dict[str, Any] = {
             "schema_version": __version__,
             "delivered": delivered,
@@ -479,6 +524,8 @@ def execute_short_director_run(
             "release_status": qc_report.get("release_status", "TECHNICAL_ACCEPTANCE_PASS" if delivered else "FAIL"),
             "subjective_visual_review": qc_report.get("subjective_visual_review", "NOT_VERIFIED"),
             "subjective_editorial_listening": aqc_report.get("subjective_editorial_listening", "NOT_VERIFIED"),
+            "subjective_voice_quality_status": qc_report.get("subjective_voice_quality_status", "NOT_VERIFIED"),
+            "viewer_retention_status": qc_report.get("viewer_retention_status", "NOT_VERIFIED"),
             "selection_mode": style_decisions["selection_mode"],
             "selected_skill": selected_skill,
             "style_lock": style_decisions["style_lock"],
@@ -486,6 +533,15 @@ def execute_short_director_run(
             "upstream_commit_sha": pf.upstream_sha,
             "upstream_clean_unmodified": pf.upstream_clean,
             **audio_manifest_fields,
+            "editorial_finish": {
+                "voice_style": parsed_script.get("voice", {}).get("voice_style"),
+                "word_anchor_confidence": parsed_script.get("voice", {}).get("word_anchor_confidence", "ESTIMATED"),
+                "caption_mode": storyboard.get("caption_mode", caption_mode),
+                "callout_mode": storyboard.get("callout_mode", callout_mode),
+                "editorial_finish_status": ed_fin_chk.get("status"),
+                "checks_summary": ed_fin_chk.get("checks_summary", {}),
+                "voice_ab_probe": voice_ab_info,
+            },
             "scene_diversity": {
                 "edit_energy": storyboard.get("edit_energy", edit_energy),
                 "scene_novelty": scene_novelty,
@@ -532,6 +588,14 @@ def execute_short_director_run(
                 "audio_mix_report_json": str((out_dir / "audio" / "audio_mix_report.json").resolve()),
                 "audio_qc_report_json": str((out_dir / "audio" / "audio_qc_report.json").resolve()),
                 "credits_audio_txt": audio_info["credits_audio_txt_path"],
+                "voice_prosody_plan_json": (parsed_script.get("voice", {}).get("prosody_artifacts") or {}).get("voice_prosody_plan_json"),
+                "voice_delivery_report_json": (parsed_script.get("voice", {}).get("prosody_artifacts") or {}).get("voice_delivery_report_json"),
+                "prosody_script_md": (parsed_script.get("voice", {}).get("prosody_artifacts") or {}).get("prosody_script_md"),
+                "editorial_timeline_json": str((out_dir / "editorial_timeline.json").resolve()) if (out_dir / "editorial_timeline.json").exists() else None,
+                "overlay_plan_json": str((out_dir / "overlay_plan.json").resolve()) if (out_dir / "overlay_plan.json").exists() else None,
+                "overlay_coverage_json": str((out_dir / "overlay_coverage.json").resolve()) if (out_dir / "overlay_coverage.json").exists() else None,
+                "editorial_qa_report_json": ed_fin_chk.get("editorial_qa_report"),
+                "editorial_attention_timeline_json": ed_fin_chk.get("editorial_attention_timeline_json"),
                 "stems": {
                     "voice_wav": audio_info["voice_wav_path"],
                     "music_wav": audio_info["music_wav_path"],
@@ -597,6 +661,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--prepare-qa-audio-library", action="store_true", help="Explicit opt-in acknowledgement for optional QA audio preparation")
     parser.add_argument("--preserve-original-on-remix", action="store_true", help="Write *_remixed.mp4 leaving source MP4 files intact")
 
+    # Expressive Editorial Options (`SD-RETENTION-01`)
+    parser.add_argument("--voice-style", default=None, choices=["legacy", "natural", "cinematic"], help="Semantic voice prosody mode")
+    parser.add_argument("--voice-backend", default="auto", choices=["auto", "kokoro", "windows_sapi", "macos_say"], help="Local voice synthesis backend")
+    parser.add_argument("--voice-prosody-in", default=None, help="Optional JSON path overriding planned phrase prosody")
+    parser.add_argument("--voice-pause-strength", type=float, default=1.0, help="Multiplier for inter-phrase pause breaks (0.35..2.0)")
+    parser.add_argument("--voice-compare-ab", action="store_true", help="Also generate legacy A vs active B voice comparison WAV probe")
+    parser.add_argument("--caption-mode", default="kinetic", choices=["plain", "kinetic", "phrase"], help="On-screen caption rendering mode")
+    parser.add_argument("--callout-mode", default="smart", choices=["off", "smart"], help="3D world-tracked smart editorial overlays in ZDF")
+    parser.add_argument("--verified-numbers-json", default=None, help="Optional JSON list of curated verified numeric facts for counters")
+
     args = parser.parse_args(argv)
     if not args.audio_only and not str(args.prompt).strip():
         parser.error("prompt is required unless --audio-only is passed")
@@ -608,6 +682,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     mus_p = Path(args.music_file).resolve() if args.music_file else None
     plan_in_p = Path(args.audio_plan_in).resolve() if args.audio_plan_in else None
     vis_in_p = Path(args.visual_plan_in).resolve() if args.visual_plan_in else None
+    vpros_p = Path(args.voice_prosody_in).resolve() if args.voice_prosody_in else None
+    vnums = json.loads(Path(args.verified_numbers_json).read_text(encoding="utf-8")) if args.verified_numbers_json else None
 
     try:
         manifest = execute_short_director_run(
@@ -641,6 +717,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             transition_policy=args.transition_policy,
             max_static_hold_sec=args.max_static_hold_sec,
             visual_plan_in=vis_in_p,
+            voice_style=args.voice_style,
+            voice_backend=args.voice_backend,
+            voice_prosody_in=vpros_p,
+            voice_pause_strength=args.voice_pause_strength,
+            voice_compare_ab=args.voice_compare_ab,
+            caption_mode=args.caption_mode,
+            callout_mode=args.callout_mode,
+            verified_numbers=vnums,
         )
         print(json.dumps(manifest, indent=2))
         return 0

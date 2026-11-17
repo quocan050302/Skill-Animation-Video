@@ -1,0 +1,43 @@
+{
+  "schema_version": "sd-retention-baseline-1",
+  "captured_at_utc": "2026-11-17T04:33:38Z",
+  "repo_root": "D:/Project_github/Skill-animations/short-director/Skill-Animation-Video",
+  "base_branch": "master",
+  "base_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "feature_branch": "feat/sd-retention-01-expressive-editorial",
+  "submodule_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "baseline_unittest": {
+    "command": "python -m unittest discover -s tests -v",
+    "ran": 42,
+    "passed": 41,
+    "failures": 0,
+    "errors": 1,
+    "duration_sec": 493.433,
+    "error_details": "test_a4_corrupt_zero_wrong_hash_and_path_traversal_rejected failed with Windows unprivileged WinError 1314 on sym.symlink_to(outside)",
+    "log_path": "docs/implementation_runs/SD-RETENTION-01_20261117_1121Z/logs/baseline_unittest.log"
+  },
+  "baseline_voice_engine": {
+    "active_backend": "windows_sapi",
+    "voice_id": "Microsoft David Desktop",
+    "rate_setting": "Rate = 1 (flat per-sentence synthesis)",
+    "alignment_method": "windows_sapi_sentence_exact_plus_vocal_energy_cdf",
+    "kokoro_installed": false,
+    "speak_ssml_probe_supported_controls": ["rate", "pitch", "emphasis", "break_ms", "volume"]
+  },
+  "baseline_captions_and_overlays": {
+    "zdf_caption_mode": "plain_text_replacement",
+    "tracked_3d_callouts": false,
+    "verified_counters": false,
+    "editorial_timeline_json_present": false
+  },
+  "baseline_audio_sfx": {
+    "native_sfx_generators_count": 24,
+    "editorial_overlay_sfx_sync": false
+  },
+  "subjective_statuses": {
+    "subjective_visual_review": "NOT_VERIFIED",
+    "subjective_editorial_listening": "NOT_VERIFIED",
+    "subjective_voice_quality_status": "NOT_VERIFIED",
+    "viewer_retention_status": "NOT_VERIFIED"
+  }
+}
