@@ -353,20 +353,42 @@ def audit_pointer_tracking(
     max_tip_error_px: float = 36.0,
     run_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    """Audit rendered pointer tip accuracy against 3D projected anchor on settled frames (`alpha >= 0.85`)."""
+    """Audit rendered pointer tip accuracy, settled coverage, and semantic feature intersection.
+
+    Fail-closed rules (R2.1 / R2.5):
+    - When `callout_mode != 'off'` and `editorial_timeline` schedules pointer overlays,
+      `checked_settled_tips == 0` MUST NEVER return PASS.
+    - Pointer tip must meet `<= max_tip_error_px` AND reference a valid causal semantic anchor
+      (not generic `stage_center` / wrong feature ID).
+    """
     ov_mode = str(editorial_timeline.get("callout_mode", "off"))
+    planned_overlays = list(editorial_timeline.get("overlays") or [])
+    ov_plan_by_id = {str(o.get("overlay_id")): o for o in planned_overlays if o.get("overlay_id")}
+    planned_pointers = [
+        o for o in planned_overlays
+        if str(o.get("pointer_shape") or "").lower() not in ("none", "")
+        or (not o.get("pointer_shape") and o.get("type") in ("focus_ring", "tracked_arrow"))
+    ]
+
     issues: List[str] = []
     worst_err_px = 0.0
     checked_tips = 0
     rows: List[Dict[str, Any]] = []
+    justified_skips: List[Dict[str, Any]] = []
 
     if ov_mode != "off" and raw_traces:
         for rec in raw_traces:
             rt = float(rec.get("time_sec", rec.get("time", 0.0)))
             ov_list = (((rec.get("telemetry") or {}).get("overlay") or {}).get("overlays")) or []
             for item in ov_list:
+                oid = str(item.get("overlay_id") or "")
+                plan_ov = ov_plan_by_id.get(oid, {})
                 if not item.get("visible"):
+                    hr = str(item.get("hidden_reason") or "")
+                    if hr in ("occluded_3d_geometry", "offscreen", "behind_or_missing_anchor"):
+                        justified_skips.append({"time_sec": round(rt, 3), "overlay_id": oid, "reason": hr})
                     continue
+
                 err = item.get("tip_target_error_px")
                 alpha = float(item.get("alpha") or 0.0)
                 if err is not None:
@@ -374,23 +396,61 @@ def audit_pointer_tracking(
                     if alpha >= 0.85:
                         checked_tips += 1
                         worst_err_px = max(worst_err_px, err_f)
+                        t_sem_item = str(item.get("target_semantic_id") or item.get("anchor_id") or "")
+                        t_sem_plan = str(plan_ov.get("target_semantic_id") or plan_ov.get("anchor_id") or "")
                         rows.append({
                             "time_sec": round(rt, 3),
-                            "overlay_id": item.get("overlay_id"),
+                            "overlay_id": oid,
                             "role": item.get("role"),
+                            "target_semantic_id": t_sem_item or None,
                             "anchor_px": item.get("anchor_projected_xy"),
                             "tip_xy": item.get("tip_xy"),
                             "tip_target_error_px": err_f,
+                            "is_feature_visible": item.get("is_feature_visible", True),
                         })
                         if err_f > max_tip_error_px:
                             issues.append(
-                                f"N29: Pointer tip misaligned for {item.get('overlay_id')} at t={rt:.2f}s (error={err_f:.1f}px > {max_tip_error_px:.0f}px)"
+                                f"N29: Pointer tip misaligned for {oid} at t={rt:.2f}s (error={err_f:.1f}px > {max_tip_error_px:.0f}px)"
                             )
+                        if t_sem_item in ("stage_center", "default"):
+                            issues.append(
+                                f"T08: Pointer {oid} targeted generic '{t_sem_item}' instead of specific physical feature"
+                            )
+                        if t_sem_plan and t_sem_item and t_sem_plan != t_sem_item:
+                            issues.append(
+                                f"T08: Pointer {oid} hit '{t_sem_item}' instead of planned causal feature '{t_sem_plan}'"
+                            )
+                        if item.get("pointer_hits_causal_feature") is False:
+                            issues.append(
+                                f"T08: Pointer {oid} tip missed causal feature mask at t={rt:.2f}s"
+                            )
+                        treg = item.get("target_region_screen")
+                        if isinstance(treg, (list, tuple)) and len(treg) == 4:
+                            span_360 = max(abs(float(treg[2]) - float(treg[0])), abs(float(treg[3]) - float(treg[1]))) * (360.0 / 1080.0)
+                            if span_360 < 14.0:
+                                issues.append(
+                                    f"T06/T08: Pointer {oid} target region too tiny on 360px phone ({span_360:.1f}px < 14px)"
+                                )
+
+    status = "FAIL" if issues else "PASS"
+    if ov_mode != "off" and planned_pointers and checked_tips == 0:
+        if justified_skips and len(justified_skips) >= len(planned_pointers):
+            status = "NOT_VERIFIED"
+            issues.append(
+                f"T09: 0 settled pointer tips rendered ({len(justified_skips)} SKIP_JUSTIFIED); technical pointer gate NOT_VERIFIED"
+            )
+        else:
+            status = "FAIL"
+            issues.append(
+                f"T09: {len(planned_pointers)} pointer overlay(s) planned in editorial_timeline, but checked_settled_tips=0"
+            )
 
     rep = {
-        "schema_version": "sd-pointer-tracking-1",
-        "status": "FAIL" if issues else "PASS",
+        "schema_version": "sd-pointer-tracking-2",
+        "status": status,
+        "planned_pointer_overlays": len(planned_pointers),
         "checked_settled_tips": checked_tips,
+        "justified_skips": justified_skips[:40],
         "worst_tip_target_error_px": round(worst_err_px, 2),
         "max_allowed_error_px": max_tip_error_px,
         "samples": rows[:80],
@@ -496,17 +556,26 @@ def audit_historical_claims(
                 if not matched_claim:
                     issues.append(f"Overlay {ov.get('overlay_id')} surfaces ungrounded figure '{num}' absent from historical_claims.json")
                 elif matched_claim in estimated_claims:
-                    # Only require '~' / 'EST.' / 'about' on estimated figures (35 mph, ~2.3M, ~150), not exact '21' in a dual 21/150 card unless '35' or '2.3' or '150' is present without qualifier
-                    needs_q = (
-                        num in ("35", "2.3")
-                        or (num == "150")
-                    )
+                    needs_q = (num in ("35", "2.3", "150"))
                     if needs_q and not any(q in lbl for q in ("~", "est", "about", "approx")):
                         issues.append(
                             f"Estimated claim figure '{num}' in {ov.get('overlay_id')} ('{ov.get('label')}') missing '~', 'about', or 'EST.' uncertainty qualifier"
                         )
-            elif not any(num in kv for kv in known_values):
-                issues.append(f"Overlay {ov.get('overlay_id')} displays unverified number '{num}' ({ov.get('label')})")
+            else:
+                matched_est = next(
+                    (
+                        c for c in estimated_claims
+                        if num == str(c.get("canonical_value", "")).strip()
+                        or num == str(c.get("numeric_value", "")).strip()
+                    ),
+                    None,
+                )
+                if matched_est and not any(q in lbl for q in ("~", "est", "about", "approx")):
+                    issues.append(
+                        f"Estimated claim figure '{num}' in {ov.get('overlay_id')} ('{ov.get('label')}') missing '~', 'about', or 'EST.' uncertainty qualifier"
+                    )
+                elif not any(num in kv for kv in known_values):
+                    issues.append(f"Overlay {ov.get('overlay_id')} displays unverified number '{num}' ({ov.get('label')})")
 
     return {
         "status": "FAIL" if issues else "PASS",

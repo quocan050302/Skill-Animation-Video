@@ -1,0 +1,45 @@
+{
+  "schema_version": "sd-mobile-qa-1",
+  "status": "PASS",
+  "free_screen_ratio": 0.4595,
+  "views": {
+    "320": {
+      "viewport": [
+        320,
+        569
+      ],
+      "ok": true,
+      "min_feature_px_at_view": 118.62,
+      "issues": []
+    },
+    "360": {
+      "viewport": [
+        360,
+        640
+      ],
+      "ok": true,
+      "min_feature_px_at_view": 133.45,
+      "issues": []
+    },
+    "390": {
+      "viewport": [
+        390,
+        693
+      ],
+      "ok": true,
+      "min_feature_px_at_view": 144.57,
+      "issues": []
+    },
+    "1080": {
+      "viewport": [
+        1080,
+        1920
+      ],
+      "ok": true,
+      "min_feature_px_at_view": 400.35,
+      "issues": []
+    }
+  },
+  "warnings": [],
+  "issues": []
+}

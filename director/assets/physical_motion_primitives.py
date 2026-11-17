@@ -80,7 +80,30 @@ export function evaluateCollapseTrajectory(t, onsetT, {
     rotX: Math.min(0.95, dt * pitchRate),
     rotZ: clamp(Math.sin(onsetT * 13.7 + 0.5) * rollRate * dt, -0.85, 0.85),
     splashProgress,
+    hitWaterT,
   };
+}
+
+/**
+ * Pure deterministic cantilever flexural sway + counter-phase tuned mass damper kinematics.
+ * Used for skyscraper wind sway, lateral drift gauge, and TMD counter-phase cutaway.
+ */
+export function evaluateFlexuralTowerSway(t, yNorm, {
+  roofDriftM = 0.42,
+  omega = 2.05,
+  phase = 0.0,
+  dampingFactor = 1.0,
+} = {}) {
+  const yn = clamp(yNorm, 0, 1);
+  // Realistic first-mode cantilever deflection curve (zero slope & displacement at base, smooth curve to roof)
+  const modeShape = Math.pow(yn, 1.68);
+  const wave = Math.sin(t * omega + phase);
+  const dx = roofDriftM * dampingFactor * modeShape * wave;
+  const rotZ = -Math.atan2(roofDriftM * dampingFactor * 1.68 * Math.pow(Math.max(0.01, yn), 0.68) * wave, 6.0);
+  // Counter-phase tuned mass damper lags tower acceleration (~PI phase opposition on pendulum swing)
+  const damperSwingX = -roofDriftM * dampingFactor * 1.35 * wave;
+  const damperRelOffset = damperSwingX - dx;
+  return { dx, rotZ, wave, damperSwingX, damperRelOffset };
 }
 
 export function evaluateSurfaceWave(t, xNorm, zNorm, {

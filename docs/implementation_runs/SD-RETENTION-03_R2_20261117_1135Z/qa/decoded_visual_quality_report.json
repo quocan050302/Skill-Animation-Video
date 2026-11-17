@@ -1,0 +1,40 @@
+{
+  "schema_version": "sd-decoded-visual-quality-1",
+  "status": "PASS",
+  "subjective_visual_quality": "NOT_VERIFIED",
+  "human_preference": "NOT_VERIFIED",
+  "viewer_retention_status": "NOT_VERIFIED",
+  "HUMAN_REVIEW_REQUIRED": true,
+  "analysis_resolution": [
+    270,
+    480
+  ],
+  "phone_reference_width_px": 360,
+  "video_metadata": {
+    "ok": true,
+    "status": "PASS",
+    "path": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/final_4k.mp4",
+    "size_bytes": 46174896,
+    "sha256": "cc4fcab83d07c9ed6d511e93340640ee3527ee9728177b2eafccb8afb6fbd1f5",
+    "width": 2160,
+    "height": 3840,
+    "fps": 30.0,
+    "duration_sec": 38.3,
+    "video_codec": "h264",
+    "pix_fmt": "yuv420p",
+    "video_packets": 1149,
+    "has_audio": true,
+    "audio_codec": "aac",
+    "audio_packets": 1796,
+    "issues": []
+  },
+  "samples_per_shot_count": 9,
+  "contact_sheet_jpg": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/qa/decoded_visual_proof_sheet.jpg",
+  "reports": {
+    "subject_visibility_by_shot": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/subject_visibility_by_shot.json",
+    "camera_compensated_motion_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/camera_compensated_motion_report.json",
+    "mobile_qa_320_360_390_1080": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/mobile_qa_320_360_390_1080.json"
+  },
+  "warnings": [],
+  "issues": []
+}

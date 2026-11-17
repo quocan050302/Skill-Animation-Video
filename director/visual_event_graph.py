@@ -239,25 +239,75 @@ def classify_visual_clause(
         selected_skill == "zach-d-films"
         and ("tacoma" in full_script_low or "galloping gertie" in full_script_low or ("bridge" in full_script_low and "twist" in full_script_low))
     )
+    is_skyscraper_story = (
+        selected_skill == "zach-d-films"
+        and any(k in full_script_low for k in ("skyscraper", "sway in the wind", "tuned mass damper", "mass damper"))
+    )
 
-    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story:
+    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story and not is_skyscraper_story:
         matched_props = ["schematic_mechanism"]
         families = ["schematic_mechanism"]
         scales = ["macro_object"]
+    elif is_skyscraper_story:
+        if any(k in low for k in ("undamped", "side by side", "side-by-side", "comparing", "compare", "without damping", "reduces", "reduced sway", "calms", "calmer")):
+            matched_props = ["skyscraper_before_after_rig"]
+            families = ["skyscraper_before_after"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("opposite phase", "counter-moves", "counterbalance", "pulls back", "hydraulics", "opposes", "inertia absorbs")) or ("as wind pushes" in low and prev_family == "skyscraper_tmd_cutaway"):
+            matched_props = ["skyscraper_counterphase_rig"]
+            families = ["skyscraper_counterphase"]
+            scales = ["macro_object"]
+        elif any(k in low for k in ("mass damper", "pendulum", "giant steel", "suspended counterweight", "top floor sphere", "heavy sphere", "some tall buildings hide", "near the roof")) and "some use dampers" not in low:
+            matched_props = ["skyscraper_tmd_cutaway_rig"]
+            families = ["skyscraper_tmd_cutaway"]
+            scales = ["macro_object"]
+        elif any(k in low for k in ("designed to move", "engineered to flex", "some use dampers", "tame the wind", "some skyscrapers", "swaying safely", "instead of snapping")):
+            matched_props = ["skyscraper_dusk_resolution_rig"]
+            families = ["skyscraper_dusk_resolution"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("office", "inside", "pendant", "coffee cup", "worker", "upper floor", "ceiling light", "steadies a hand", "gently swing")):
+            matched_props = ["skyscraper_office_interior_rig"]
+            families = ["skyscraper_office_interior"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("plumb", "vertical line", "inches", "feet sideways", "cantilever", "frame flexes", "top shifts", "drifts sideways", "reference line")):
+            matched_props = ["skyscraper_plumb_drift_rig"]
+            families = ["skyscraper_plumb_drift"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("crosswind", "wind pushes", "vortex", "vortices", "swirling air", "gusts", "facade")):
+            matched_props = ["skyscraper_wind_vortex_rig"]
+            families = ["skyscraper_wind_vortex"]
+            scales = ["industrial_scale"]
+        elif beat_index == 0 or any(k in low for k in ("looking up", "look up", "pedestrian", "street level", "rooftop is moving", "skyscraper is moving", "above the street")):
+            matched_props = ["skyscraper_street_hook_rig"]
+            families = ["skyscraper_street_hook"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("city streets", "flex gently", "concrete towers", "slender steel")):
+            matched_props = ["skyscraper_skyline_wide_rig"]
+            families = ["skyscraper_skyline_wide"]
+            scales = ["street_aerial"]
+        elif prev_family and prev_family.startswith("skyscraper_"):
+            matched_props = [f"{prev_family}_rig"]
+            families = [prev_family]
+            scales = ["industrial_scale"]
+        else:
+            matched_props = ["skyscraper_skyline_wide_rig"]
+            families = ["skyscraper_skyline_wide"]
+            scales = ["street_aerial"]
+        unsupported_domain = None
     elif is_tacoma_bridge_story:
-        is_aftermath_line = any(k in low for k in ("no human", "forced bridge", "rethink", "changed the way", "forever", "flexible bridges", "redesigned", "worldwide after", "after that collapse", "remained standing", "legacy"))
+        is_aftermath_line = any(k in low for k in ("no human", "forced bridge", "forced engineers", "rethink", "changed the way", "forever", "flexible bridges", "redesigned", "worldwide after", "after that collapse", "remained standing", "legacy", "yet the collapse"))
         if (beat_index == 0 and clause_index == 0 and any(k in low for k in ("heave", "bending", "ribbon", "crossing", "ocean wave", "massive suspension", "1940, drivers"))) or any(k in low for k in ("heave upward", "bending like a ribbon", "swaying", "ocean wave", "moving like a wave", "newly opened")):
             matched_props = ["tacoma_bridge_hook_rig"]
             families = ["tacoma_hook_telephoto"]
             scales = ["industrial_scale"]
-        elif is_aftermath_line and not any(k in low for k in ("broke free", "plunged", "crashed")):
+        elif is_aftermath_line and not any(k in low for k in ("broke free", "plunged into", "crashed into")):
             matched_props = ["tacoma_aftermath_rig"]
             families = ["tacoma_aftermath"]
             scales = ["street_aerial"]
-        elif any(k in low for k in ("broke free", "plunged", "crashed", "section fell", "center section", "11 a.m.", "600-foot", "suspenders")) or ("collapse" in low and not is_aftermath_line):
-            matched_props = ["tacoma_collapse_span_rig"]
-            families = ["tacoma_collapse_plunge"]
-            scales = ["industrial_scale"]
+        elif prev_family == "tacoma_aftermath":
+            matched_props = ["tacoma_aftermath_rig"]
+            families = ["tacoma_aftermath"]
+            scales = ["street_aerial"]
         elif any(k in low for k in ("witness", "onlooker", "shore", "braced", "stepped back", "watching from", "cables whip")):
             matched_props = ["tacoma_shore_onlooker_rig"]
             families = ["tacoma_shore_onlooker"]
@@ -266,18 +316,22 @@ def classify_visual_clause(
             matched_props = ["tacoma_torsion_span_rig"]
             families = ["tacoma_torsion_twist"]
             scales = ["industrial_scale"]
+        elif any(k in low for k in ("broke free", "plunged into", "center span broke", "section fell", "center section", "11 a.m.", "600-foot", "suspenders")) or ("collapse" in low and not is_aftermath_line) or ("plunged" in low and "opposite lane" not in low):
+            matched_props = ["tacoma_collapse_span_rig"]
+            families = ["tacoma_collapse_plunge"]
+            scales = ["industrial_scale"]
         elif any(k in low for k in ("plate girder", "flutter", "aerodynamic", "twisted the", "solid steel", "caught swirling", "winds drove", "side force", "open trusses", "39-foot", "eight-foot")):
             matched_props = ["tacoma_girder_wind_rig"]
             families = ["tacoma_under_deck_girder"]
             scales = ["macro_object"]
+        elif any(k in low for k in ("nicknamed", "opened", "july", "narrow span", "washington", "tacoma narrows bridge", "stretched across", "puget sound")):
+            matched_props = ["tacoma_wide_establish_rig"]
+            families = ["tacoma_wide_establish"]
+            scales = ["street_aerial"]
         elif any(k in low for k in ("bounced", "bouncing", "bounce", "bend upward", "vertical wave", "up and down", "didn't stop", "motion didn't", "main span", "crosswinds", "gallop")):
             matched_props = ["tacoma_roadway_wave_rig"]
             families = ["tacoma_roadway_wave"]
             scales = ["human_environment"]
-        elif any(k in low for k in ("opened", "july", "nicknamed", "narrow span", "washington", "tacoma narrows bridge", "puget sound")):
-            matched_props = ["tacoma_wide_establish_rig"]
-            families = ["tacoma_wide_establish"]
-            scales = ["street_aerial"]
         elif prev_family and prev_family.startswith("tacoma_") and prev_family != "tacoma_aftermath":
             matched_props = ["tacoma_roadway_wave_rig"]
             families = [prev_family]
@@ -288,27 +342,39 @@ def classify_visual_clause(
             scales = ["street_aerial"]
         unsupported_domain = None
     elif is_boston_molasses_story:
-        if any(k in low for k in ("gave way", "walls gave", "rupture", "burst", "afternoon")):
+        if beat_index == 0 and clause_index == 0 and not any(k in low for k in ("gave way", "walls gave", "rupture", "burst")):
+            matched_props = ["north_end_street_1919"]
+            families = ["boston_street_hook"]
+            scales = ["human_environment"]
+        elif any(k in low for k in ("gave way", "walls gave", "rupture", "burst", "afternoon")):
             matched_props = ["rivet_rupture_assembly"]
             families = ["boston_tank_rupture"]
             scales = ["industrial_scale"]
-        elif any(k in low for k in ("investigators", "problems", "construction", "flaw")):
+        elif any(k in low for k in ("investigators", "problems", "construction", "flaw", "kitchen jar", "pours slowly", "escaped at once")) and "milestone" not in low:
             matched_props = ["steel_section_cutaway_rig"]
             families = ["boston_engineering_cutaway"]
+            scales = ["macro_object"]
+        elif "tank" in low and any(k in low for k in ("leaking", "leak", "seep", "years", "held", "stood", "storage tank", "massive tank")) and not any(k in low for k in ("poured", "tore", "escaped", "rushed")):
+            matched_props = ["tank_seam_leak_rig"]
+            families = ["boston_tank_leak_seep"]
             scales = ["macro_object"]
         elif any(k in low for k in ("twenty-one", "21", "died", "injured", "150", "casualt", "rescuer")):
             matched_props = ["rescue_aftermath_rig"]
             families = ["boston_rescue_aftermath"]
             scales = ["human_environment"]
-        elif any(k in low for k in ("smashed", "striking", "buckled", "buildings", "trapped", "railway", "trestle")):
+        elif any(k in low for k in ("smashed", "striking", "buckled", "buildings", "trapped", "railway", "trestle", "wreckage", "horses")):
             matched_props = ["elevated_rail_impact_rig"]
             families = ["boston_elevated_rail_impact"]
             scales = ["industrial_scale"]
-        elif "wasn't water" in low or "was molasses" in low or ("wasn't" in low and "molasses" in low):
+        elif "wasn't water" in low or "was molasses" in low or ("wasn't" in low and "molasses" in low) or any(k in low for k in ("surviving", "first impact", "wasn't enough", "wasn’t enough")):
             matched_props = ["molasses_gravity_wave"]
             families = ["boston_molasses_reveal"]
             scales = ["human_environment"]
-        elif any(k in low for k in ("2.3", "million gallons", "poured", "race", "35 miles", "35 mph", "rushing", "surge", "waterfront", "outran", "crowds and carts")):
+        elif any(k in low for k in ("poisonous", "enough of it")):
+            matched_props = ["tank_seam_leak_rig"]
+            families = ["boston_tank_leak_seep"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("2.3", "million gallons", "poured", "race", "35 miles", "35 mph", "rushing", "surge", "waterfront", "outran", "crowds", "knocked down", "sticky syrup", "debris", "tore through", "neighborhood")):
             matched_props = ["molasses_gravity_current"]
             families = ["boston_wave_street_flow"]
             scales = ["human_environment"]
@@ -316,11 +382,11 @@ def classify_visual_clause(
             matched_props = ["tank_seam_leak_rig"]
             families = ["boston_tank_leak_seep"]
             scales = ["macro_object"]
-        elif beat_index == 0 or any(k in low for k in ("expected", "1919", "normal winter", "nothing like", "unlike anything", "rumble", "north end")):
+        elif (len(low.split()) <= 4 and "boston" in low) or (any(k in low for k in ("expected", "1919", "normal winter", "nothing like", "unlike anything", "rumble", "north end")) and not any(m in low for m in ("great molasses flood", "strangest", "preventable", "milestone"))):
             matched_props = ["north_end_street_1919"]
             families = ["boston_street_hook"]
             scales = ["human_environment"]
-        elif any(k in low for k in ("strangest", "preventable", "milestone", "lesson", "harbor", "boston's")):
+        elif any(k in low for k in ("strangest", "preventable", "milestone", "lesson", "harbor", "boston's", "boston’s", "great molasses flood")):
             matched_props = ["boston_overview_stage"]
             families = ["boston_harbor_payoff"]
             scales = ["street_aerial"]
@@ -452,10 +518,18 @@ def classify_visual_clause(
         subject = primary_prop
     elif primary_prop in ("cell_tower_wave", "subsea_fiber_cable", "datacenter_rack", "power_turbine", "schematic_mechanism"):
         subject = primary_prop
-    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage", "tacoma_bridge_hook_rig", "tacoma_wide_establish_rig", "tacoma_roadway_wave_rig", "tacoma_girder_wind_rig", "tacoma_torsion_span_rig", "tacoma_shore_onlooker_rig", "tacoma_collapse_span_rig", "tacoma_aftermath_rig"):
-        subject = "char_onlooker_1940_01" if primary_prop == "tacoma_shore_onlooker_rig" else primary_prop
+    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage", "tacoma_bridge_hook_rig", "tacoma_wide_establish_rig", "tacoma_roadway_wave_rig", "tacoma_girder_wind_rig", "tacoma_torsion_span_rig", "tacoma_shore_onlooker_rig", "tacoma_collapse_span_rig", "tacoma_aftermath_rig", "skyscraper_street_hook_rig", "skyscraper_skyline_wide_rig", "skyscraper_wind_vortex_rig", "skyscraper_plumb_drift_rig", "skyscraper_office_interior_rig", "skyscraper_tmd_cutaway_rig", "skyscraper_counterphase_rig", "skyscraper_before_after_rig", "skyscraper_dusk_resolution_rig"):
         if primary_prop == "tacoma_shore_onlooker_rig":
+            subject = "char_onlooker_1940_01"
             character_id = "char_onlooker_1940_01"
+        elif primary_prop == "skyscraper_street_hook_rig":
+            subject = "char_street_observer_01"
+            character_id = "char_street_observer_01"
+        elif primary_prop == "skyscraper_office_interior_rig":
+            subject = "char_office_worker_01"
+            character_id = "char_office_worker_01"
+        else:
+            subject = primary_prop
     elif primary_prop in ("cosmic_origin", "atom_crystal", "ocean_nature"):
         subject = primary_prop
     elif primary_prop == "data_chart":
@@ -947,6 +1021,10 @@ def extract_semantic_visual_events(
     if any(str(ev["scene_family"]).startswith("boston_") for ev in bound_events):
         disclosures.append(
             "1919 Boston Molasses Flood reconstruction is a stylized educational 3D depiction; speed (~35 mph) and height reports reflect historical estimates."
+        )
+    if any(str(ev["scene_family"]).startswith("skyscraper_") for ev in bound_events):
+        disclosures.append(
+            "Skyscraper wind sway and tuned mass damper visualization is an illustrative structural dynamics model (non-CFD/non-FEM); tuned mass dampers are installed in select tall buildings, not all structures."
         )
     unsupported_found = sorted({ev["unsupported_exact_domain"] for ev in bound_events if ev.get("unsupported_exact_domain")})
     if unsupported_found:

@@ -626,7 +626,35 @@ def run_final_quality_gate(
         if "physical_and_character_telemetry" in vchecks:
             checks["physical_and_character_telemetry"] = vchecks["physical_and_character_telemetry"]
 
-    # 6d. Multi-Theme Composition & Safe-Margin Runtime Audit
+    # 6d. R2.1 Decoded Visual Quality, Semantic Mattes & Camera-Compensated Motion QA
+    decoded_qa_doc: Optional[Dict[str, Any]] = None
+    target_dec_vid = final_4k_mp4 if final_4k_mp4.exists() else preview_mp4
+    if target_dec_vid.exists():
+        from .decoded_visual_quality import run_decoded_visual_quality_audit
+        ed_tl_dec = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8")) if (run_dir / "editorial_timeline.json").exists() else {}
+        raw_tel_p5 = run_dir / "logs" / "raw_render_telemetry.json"
+        raw_traces5 = list((json.loads(raw_tel_p5.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p5.exists() else None
+        is_zdf_skill = (style_decisions.get("selected_skill") == "zach-d-films")
+        decoded_qa_doc = run_decoded_visual_quality_audit(
+            run_dir=run_dir,
+            video_mp4=target_dec_vid,
+            storyboard=storyboard,
+            editorial_timeline=ed_tl_dec,
+            raw_traces=raw_traces5,
+            require_matte=is_zdf_skill,
+        )
+        checks["decoded_visual_quality"] = {
+            "status": decoded_qa_doc["status"],
+            "subjective_visual_quality": decoded_qa_doc.get("subjective_visual_quality", "NOT_VERIFIED"),
+            "HUMAN_REVIEW_REQUIRED": decoded_qa_doc.get("HUMAN_REVIEW_REQUIRED", True),
+            "decoded_visual_quality_report": str((run_dir / "decoded_visual_quality_report.json").resolve()),
+            "reports": decoded_qa_doc.get("reports", {}),
+            "issues": decoded_qa_doc.get("issues", []),
+        }
+    else:
+        checks["decoded_visual_quality"] = {"status": "NOT_RUN", "reason": "Deliverable MP4 missing"}
+
+    # 6e. Multi-Theme Composition & Safe-Margin Runtime Audit
     if (run_dir / "editorial_timeline.json").exists():
         from .cinematic_composition_qa import audit_cinematic_composition
         ed_tl_comp = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8"))
@@ -637,6 +665,7 @@ def run_final_quality_gate(
             storyboard=storyboard,
             editorial_timeline=ed_tl_comp,
             raw_traces=raw_traces4,
+            decoded_qa_report=decoded_qa_doc,
         )
 
     # 7. Factual & Licensing check summary

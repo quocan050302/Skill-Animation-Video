@@ -120,7 +120,8 @@ const server = http.createServer((req, res) => {{
 }});
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
-const browser = await chromium.launch({{ executablePath: process.env.PLAYWRIGHT_CHROME_PATH, headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=d3d11'] }});
+const angleBackend = process.platform === 'darwin' ? 'metal' : (process.platform === 'win32' ? 'd3d11' : 'swiftshader');
+const browser = await chromium.launch({{ executablePath: process.env.PLAYWRIGHT_CHROME_PATH, headless: true, args: ['--no-sandbox', '--use-gl=angle', `--use-angle=${{angleBackend}}`] }});
 const out = {{}};
 try {{
   const page = await browser.newPage({{ viewport: {{ width: 1080, height: 1920 }} }});

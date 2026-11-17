@@ -216,7 +216,14 @@ def extract_editorial_focus_events(
                 t_off = round(min(en - 0.14, t_on + 2.25), 3)
                 if t_off - t_on >= 0.75:
                     spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
-                    ptr = plan_attention_pointer({"beat_index": si, "role": spec.role, "target_anchor_id": hb["target_anchor_id"], "narrative_event_id": nev.get("narrative_event_id")})
+                    ptr = plan_attention_pointer({
+                        "beat_index": si,
+                        "role": spec.role,
+                        "target_anchor_id": hb["target_anchor_id"],
+                        "secondary_anchor_id": hb.get("secondary_anchor_id"),
+                        "pointer_shape": hb.get("pointer_shape"),
+                        "narrative_event_id": nev.get("narrative_event_id"),
+                    })
                     l1, l2 = split_curiosity_lines(hb["label"])
                     lay = measure_text_layout(hb["label"], spec, viewport=1080)
                     cand = {
@@ -224,7 +231,14 @@ def extract_editorial_focus_events(
                         "type": "focus_ring" if gen == "zach3d:tacoma_torsion_twist_stage" else "tracked_arrow",
                         "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
                         "why_role": hb.get("why_selected", "High-hierarchy curiosity beat"),
-                        "anchor_id": ptr["anchor_id"], "pointer_shape": ptr["pointer_shape"],
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "target_motion_vector": ptr.get("target_motion_vector"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr["pointer_shape"],
                         "label": hb["label"], "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
                         "start": t_on, "end": t_off,
                         "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
@@ -243,6 +257,9 @@ def extract_editorial_focus_events(
             if gen == "zach3d:tacoma_wide_establish_stage" and "tacoma_1940" not in seen_location_contexts:
                 seen_location_contexts.add("tacoma_1940")
                 role_item = (EditorialRole.LOCATION_TIME, "bridge_midspan_twist", "TACOMA NARROWS", "Washington, 1940", "none", None, None)
+            elif gen == "zach3d:tacoma_torsion_twist_stage":
+                t_on = _word_t(("pitched", "twist", "skyward", "plunged", "opposite"), st + 0.22)
+                role_item = (EditorialRole.WARNING_DANGER, "bridge_midspan_twist", "WHOLE DECK TWISTING", "Left & right edges roll opposite", "torsion_bracket", "FHWA HIF-11-016: asymmetric center-span torsional flutter", "claim_tacoma_torsion_1940")
             elif gen == "zach3d:tacoma_roadway_wave_stage":
                 if "2,800" in low or "2800" in low:
                     role_item = (EditorialRole.VERIFIED_FACT, "bridge_midspan_twist", "2,800 FT MAIN SPAN", "Vertical wave bounce (WSDOT)", "mini_fact_tag", "WSDOT / FHWA Structural Specifications", "claim_galloping_gertie_1940")
@@ -263,17 +280,129 @@ def extract_editorial_focus_events(
             if role_item is not None:
                 erole, anc_k, lbl_k, sub_k, ptr_k, f_src, f_cid = role_item
                 spec = select_overlay_variant(erole, prior_roles=prior_styled, seed=seed + si)
-                ptr = plan_attention_pointer({"beat_index": si, "role": erole.value, "target_anchor_id": anc_k, "narrative_event_id": nev.get("narrative_event_id")})
+                ptr = plan_attention_pointer({
+                    "beat_index": si,
+                    "role": erole.value,
+                    "target_anchor_id": anc_k,
+                    "secondary_anchor_id": "deck_twist_edge_r" if ptr_k == "torsion_bracket" else None,
+                    "pointer_shape": ptr_k,
+                    "narrative_event_id": nev.get("narrative_event_id"),
+                })
                 lay = measure_text_layout(lbl_k, spec, viewport=1080)
                 t_on = round(max(st + 0.18, rev_floor, anchor_t if gen == "zach3d:tacoma_collapse_plunge_stage" else st + 0.28), 3)
                 t_off = round(min(en - 0.14, t_on + spec.max_duration), 3)
                 if t_off - t_on >= 0.85:
                     cand = {
                         "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
-                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow") else "tracked_arrow",
+                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow", "torsion_bracket") else "tracked_arrow",
                         "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
                         "why_role": f"Semantic role {spec.role} matched to stage {gen}",
-                        "anchor_id": ptr["anchor_id"], "pointer_shape": ptr_k,
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr_k,
+                        "label": lbl_k, "sublabel": sub_k,
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": spec.semantic_priority, "verified": True,
+                        "fact_source": f_src, "source_fact_ids": [f_cid] if f_cid else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+            continue
+
+        if use_role_aware and gen.startswith("zach3d:skyscraper_"):
+            hb_s = curiosity_by_nev.get(str(shot.get("narrative_event_id") or ""))
+            if hb_s and gen in ("zach3d:skyscraper_street_hook_stage", "zach3d:skyscraper_counterphase_stage"):
+                t_on = round(max(st + 0.14, rev_floor), 3)
+                t_off = round(min(en - 0.14, t_on + 2.25), 3)
+                if t_off - t_on >= 0.75:
+                    spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
+                    ptr = plan_attention_pointer({
+                        "beat_index": si,
+                        "role": spec.role,
+                        "target_anchor_id": hb_s["target_anchor_id"],
+                        "secondary_anchor_id": hb_s.get("secondary_anchor_id"),
+                        "pointer_shape": hb_s.get("pointer_shape"),
+                        "narrative_event_id": nev.get("narrative_event_id"),
+                    })
+                    l1, l2 = split_curiosity_lines(hb_s["label"])
+                    lay = measure_text_layout(hb_s["label"], spec, viewport=1080)
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": hb_s.get("why_selected", "Skyscraper curiosity headline"),
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr["pointer_shape"],
+                        "label": hb_s["label"], "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": 1, "verified": True, "source_fact_ids": [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+                    continue
+
+            sky_item: Optional[Tuple[EditorialRole, str, Optional[str], str, str, str, Optional[str], Optional[str]]] = None
+            if gen == "zach3d:skyscraper_skyline_wide_stage" and "sky_wide" not in seen_location_contexts:
+                seen_location_contexts.add("sky_wide")
+                sky_item = (EditorialRole.LOCATION_TIME, "tower_mid_profile", None, "SLENDER HIGH-RISE", "Flexes cleanly by design", "none", None, None)
+            elif gen == "zach3d:skyscraper_wind_vortex_stage":
+                sky_item = (EditorialRole.EXPLANATION, "windward_facade_vortex", None, "VORTEX SHEDDING", "Alternating wind pressure", "curved_leader", None, None)
+            elif gen == "zach3d:skyscraper_plumb_drift_stage":
+                sky_item = (EditorialRole.EXPLANATION, "plumb_drift_tip", "plumb_static_ref", "LATERAL ROOF DRIFT", "Shifts vs static plumb line", "sway_bracket", None, None)
+            elif gen == "zach3d:skyscraper_tmd_cutaway_stage":
+                sky_item = (EditorialRole.EXPLANATION, "damper_pendulum_sphere", None, "TUNED MASS DAMPER", "Suspended pendulum counterweight", "curved_leader", None, None)
+            elif gen == "zach3d:skyscraper_counterphase_stage":
+                sky_item = (EditorialRole.WARNING_DANGER, "damper_pendulum_sphere", "counterphase_tower_frame", "COUNTER-PHASE SWING", "Weight pulls opposite tower motion", "torsion_bracket", None, None)
+            elif gen == "zach3d:skyscraper_before_after_stage":
+                sky_item = (EditorialRole.VERIFIED_FACT, "damped_tower_top", None, "REDUCED SWAY", "Dampers used in select tall towers", "mini_fact_tag", "ASCE 7 Structural Damping Overview (illustrative model)", "claim_tmd_select_buildings")
+            elif gen == "zach3d:skyscraper_dusk_resolution_stage":
+                sky_item = (EditorialRole.AFTERMATH_SOBER, "rooftop_sway_apex", None, "DESIGNED TO MOVE", "Some tall buildings use dampers", "none", None, None)
+
+            if sky_item is not None:
+                erole, anc_k, sec_k, lbl_k, sub_k, ptr_k, f_src, f_cid = sky_item
+                spec = select_overlay_variant(erole, prior_roles=prior_styled, seed=seed + si)
+                ptr = plan_attention_pointer({
+                    "beat_index": si, "role": erole.value, "target_anchor_id": anc_k,
+                    "secondary_anchor_id": sec_k, "pointer_shape": ptr_k,
+                    "narrative_event_id": nev.get("narrative_event_id"),
+                })
+                lay = measure_text_layout(lbl_k, spec, viewport=1080)
+                t_on = round(max(st + 0.18, rev_floor, st + 0.25), 3)
+                t_off = round(min(en - 0.14, t_on + spec.max_duration), 3)
+                if t_off - t_on >= 0.85:
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow", "torsion_bracket", "sway_bracket") else "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": f"Semantic role {spec.role} matched to stage {gen}",
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr_k,
                         "label": lbl_k, "sublabel": sub_k,
                         "start": t_on, "end": t_off,
                         "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
@@ -290,6 +419,35 @@ def extract_editorial_focus_events(
             continue
 
         if gen.startswith("zach3d:boston_"):
+            hb_b = curiosity_by_nev.get(str(shot.get("narrative_event_id") or "")) if use_role_aware else None
+            if hb_b and gen == "zach3d:boston_street_hook_stage" and si == 0:
+                h_lbl = "A FLOOD / OF SYRUP?" if "syrup" in low else hb_b["label"]
+                t_on = round(max(st + 0.16, rev_floor), 3)
+                t_off = round(min(en - 0.14, t_on + 2.25), 3)
+                if t_off - t_on >= 0.75:
+                    spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
+                    ptr = plan_attention_pointer({"beat_index": si, "role": spec.role, "target_anchor_id": "street_hero_look", "narrative_event_id": nev.get("narrative_event_id")})
+                    l1, l2 = split_curiosity_lines(h_lbl)
+                    lay = measure_text_layout(h_lbl, spec, viewport=1080)
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": hb_b.get("why_selected", "Opening curiosity hook"),
+                        "anchor_id": ptr["anchor_id"], "pointer_shape": ptr["pointer_shape"],
+                        "label": h_lbl, "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": 1, "verified": True, "source_fact_ids": [nev.get("factual_claim_id")] if nev.get("factual_claim_id") else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+                    continue
 
             if gen == "zach3d:boston_street_hook_stage":
                 # Non-spoiler geographical grounding only (never reveals "molasses" early!)
@@ -304,29 +462,34 @@ def extract_editorial_focus_events(
                         "preferred_side": "left", "accent_color": "#fbbf24", "priority": 1, "verified": True,
                     })
             elif gen == "zach3d:boston_molasses_reveal_stage":
-                t_on = _word_t(("molasses",), anchor_t)
+                is_survive_twist = any(k in low for k in ("surviving", "wasn't enough", "wasn’t enough", "first impact")) and "molasses" not in low
+                t_on = _word_t(("surviving", "impact", "enough"), anchor_t) if is_survive_twist else _word_t(("molasses",), anchor_t)
                 if en - t_on >= 0.70:
                     candidates.append({
                         "shot_index": si, "shot_id": shot_id, "type": "focus_ring",
                         "anchor_id": "molasses_reveal_crest",
-                        "label": "RAW MOLASSES SURGE",
-                        "sublabel": "Dense industrial sweetener",
+                        "label": "VISCOUS ENTRAPMENT" if is_survive_twist else "RAW MOLASSES SURGE",
+                        "sublabel": "Cold winter surge fills street" if is_survive_twist else "Dense industrial sweetener",
                         "start": t_on, "end": round(min(en - 0.12, t_on + 2.1), 3),
                         "preferred_side": "right", "accent_color": "#f59e0b", "priority": 1, "verified": True,
                     })
             elif gen == "zach3d:boston_tank_leak_stage":
-                t_on = _word_t(("leaking", "years"), anchor_t)
+                if shot.get("setup_type") == "boston_tank_scale_payoff":
+                    continue
+                has_vol_cap = ("million" in low and "gallons" in low and "leaking" not in low)
+                t_on = _word_t(("million", "gallons", "tank"), anchor_t) if has_vol_cap else _word_t(("leaking", "years"), anchor_t)
                 if en - t_on >= 0.75:
                     candidates.append({
                         "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
                         "anchor_id": "tank_seam_drip",
-                        "label": "CHRONIC SEAM LEAKS",
-                        "sublabel": "Documented prior to failure",
+                        "label": "OVER 2M GALLONS" if has_vol_cap else "CHRONIC SEAM LEAKS",
+                        "sublabel": "North End tank, Jan 15, 1919" if has_vol_cap else "Documented prior to failure",
                         "start": t_on, "end": round(min(en - 0.12, t_on + 2.25), 3),
                         "preferred_side": "left", "accent_color": "#f59e0b", "priority": 1, "verified": True,
+                        **({"fact_source": "Boston.gov / BPL >2M (~2.3M) gallon tank capacity"} if has_vol_cap else {}),
                     })
             elif gen == "zach3d:boston_tank_rupture_stage":
-                t_on = _word_t(("way", "afternoon", "gave", "walls"), anchor_t)
+                t_on = _word_t(("way", "burst", "rupture", "afternoon", "gave", "walls"), anchor_t)
                 if en - t_on >= 0.60:
                     candidates.append({
                         "shot_index": si, "shot_id": shot_id, "type": "focus_ring",
@@ -349,20 +512,32 @@ def extract_editorial_focus_events(
                             "preferred_side": "right", "accent_color": "#f87171", "priority": 1, "verified": True,
                             "fact_source": "Historical eyewitness/engineering speed estimate (~35 mph)",
                         })
-                else:
+                elif "2.3" in low or ("million" in low and "gallons" in low):
+                    has_23 = "2.3" in low
                     t_on = _word_t(("2.3", "million", "gallons"), anchor_t)
                     if en - t_on >= 0.60:
                         candidates.append({
                             "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
                             "anchor_id": "wave_front_crest",
-                            "label": "~2.3M GALLONS",
+                            "label": "~2.3M GALLONS" if has_23 else "MILLIONS OF GALLONS",
                             "sublabel": "Released across North End",
                             "start": t_on, "end": round(min(en - 0.12, t_on + 2.30), 3),
                             "preferred_side": "left", "accent_color": "#fbbf24", "priority": 1, "verified": True,
                             "fact_source": "Boston.gov / BPL ~2.3 million gallon tank volume estimate",
                         })
+                elif any(k in low for k in ("sticky", "debris", "pins", "knocked")):
+                    t_on = _word_t(("sticky", "syrup", "debris", "knocked"), anchor_t)
+                    if en - t_on >= 0.65:
+                        candidates.append({
+                            "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                            "anchor_id": "wave_front_crest",
+                            "label": "THICK STICKY DEBRIS",
+                            "sublabel": "Heavy timber & cold syrup",
+                            "start": t_on, "end": round(min(en - 0.12, t_on + 2.20), 3),
+                            "preferred_side": "left", "accent_color": "#fbbf24", "priority": 1, "verified": True,
+                        })
             elif gen == "zach3d:boston_elevated_rail_impact_stage":
-                t_on = _word_t(("smashed", "buildings", "trapped"), anchor_t)
+                t_on = _word_t(("smashed", "buildings", "trapped", "wreckage"), anchor_t)
                 if en - t_on >= 0.75:
                     candidates.append({
                         "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
@@ -373,25 +548,38 @@ def extract_editorial_focus_events(
                         "preferred_side": "right", "accent_color": "#f87171", "priority": 1, "verified": True,
                     })
             elif gen == "zach3d:boston_rescue_aftermath_stage":
-                t_on = _word_t(("twenty-one", "21", "died", "injured", "150"), anchor_t)
-                if en - t_on >= 0.75:
-                    candidates.append({
-                        "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
-                        "anchor_id": "rescue_aftermath_center",
-                        "label": "21 LIVES LOST",
-                        "sublabel": "About 150 people injured",
-                        "start": t_on, "end": round(min(en - 0.14, t_on + 2.35), 3),
-                        "preferred_side": "left", "accent_color": "#e2e8f0", "priority": 1, "verified": True,
-                        "fact_source": "Boston.gov & BPL official toll: 21 killed, ~150 injured",
-                    })
+                if any(k in low for k in ("twenty-one", "21", "died", "150")):
+                    t_on = _word_t(("twenty-one", "21", "died", "injured", "150"), anchor_t)
+                    if en - t_on >= 0.75:
+                        candidates.append({
+                            "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                            "anchor_id": "rescue_aftermath_center",
+                            "label": "21 LIVES LOST",
+                            "sublabel": "About 150 people injured",
+                            "start": t_on, "end": round(min(en - 0.14, t_on + 2.35), 3),
+                            "preferred_side": "left", "accent_color": "#e2e8f0", "priority": 1, "verified": True,
+                            "fact_source": "Boston.gov & BPL official toll: 21 killed, ~150 injured",
+                        })
+                elif "rescuer" in low:
+                    t_on = _word_t(("rescuer", "rescuers", "struggled"), anchor_t)
+                    if en - t_on >= 0.75:
+                        candidates.append({
+                            "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
+                            "anchor_id": "rescue_aftermath_center",
+                            "label": "RESCUE RESPONSE",
+                            "sublabel": "Crews wading deep molasses",
+                            "start": t_on, "end": round(min(en - 0.14, t_on + 2.15), 3),
+                            "preferred_side": "right", "accent_color": "#cbd5e1", "priority": 2, "verified": True,
+                        })
             elif gen == "zach3d:boston_engineering_cutaway_stage":
-                t_on = _word_t(("construction", "engineers", "steel"), anchor_t)
+                is_hydro_cut = any(k in low for k in ("kitchen jar", "pours slowly", "escaped at once"))
+                t_on = _word_t(("millions", "escaped", "flood"), anchor_t) if is_hydro_cut else _word_t(("construction", "engineers", "steel"), anchor_t)
                 if en - t_on >= 0.75:
                     candidates.append({
                         "shot_index": si, "shot_id": shot_id, "type": "tracked_arrow",
                         "anchor_id": "lap_joint_defect",
-                        "label": "THIN STEEL & RIVETS",
-                        "sublabel": "Post-1919 code overhaul",
+                        "label": "HYDROSTATIC HEAD" if is_hydro_cut else "THIN STEEL & RIVETS",
+                        "sublabel": "Massive column burst at once" if is_hydro_cut else "Post-1919 code overhaul",
                         "start": t_on, "end": round(min(en - 0.14, t_on + 2.25), 3),
                         "preferred_side": "right", "accent_color": "#38bdf8", "priority": 1, "verified": True,
                     })
@@ -630,6 +818,12 @@ def plan_3d_callouts(
             "shot_id": cand.get("shot_id"),
             "type": ctype,
             "anchor_id": str(cand.get("anchor_id") or "stage_center"),
+            "secondary_anchor_id": cand.get("secondary_anchor_id"),
+            "target_semantic_id": cand.get("target_semantic_id") or str(cand.get("anchor_id") or "stage_center"),
+            "target_mesh_ids": list(cand.get("target_mesh_ids") or [str(cand.get("anchor_id") or "stage_center")]),
+            "target_region_world": cand.get("target_region_world"),
+            "target_motion_vector": cand.get("target_motion_vector"),
+            "pointer_reason": cand.get("pointer_reason"),
             "label": str(cand.get("label") or ""),
             "sublabel": str(cand.get("sublabel") or ""),
             "start": st,
@@ -664,22 +858,29 @@ def plan_3d_callouts(
 
     # Ensure >= 20% of timeline frames are overlay-free breathing room for clean visual appreciation
     sample_n = max(10, int(round(total_duration * 2)))
-    free_ticks = 0
-    for k in range(sample_n):
-        t = (k + 0.5) / 2.0
-        active = any(o["start"] <= t <= o["end"] for o in accepted)
-        if not active:
-            free_ticks += 1
-    free_ratio = free_ticks / float(sample_n)
-    if len(accepted) > 2 and free_ratio < 0.18:
-        # Drop lowest-priority tail overlay cleanly rather than suffocating screen
-        accepted = accepted[:-1]
+    def _calc_free_ratio(items: List[Dict[str, Any]]) -> float:
+        free_ticks = 0
+        for k in range(sample_n):
+            t = (k + 0.5) / 2.0
+            if not any(o["start"] <= t <= o["end"] for o in items):
+                free_ticks += 1
+        return free_ticks / float(sample_n)
+
+    free_ratio = _calc_free_ratio(accepted)
+    while len(accepted) > 2 and free_ratio < 0.20:
+        # Drop lowest-priority non-hook item cleanly rather than crowding visuals
+        drop_idx = max(
+            range(1, len(accepted)),
+            key=lambda idx: (int(accepted[idx].get("priority", 2)), -float(accepted[idx].get("start", 0.0))),
+        )
+        rejected.append({**accepted.pop(drop_idx), "reject_reason": "breathing_room_20pct_cap"})
+        free_ratio = _calc_free_ratio(accepted)
 
     return {
         "mode": mode,
         "overlays": accepted,
         "rejected": rejected,
-        "free_screen_ratio": round(free_ticks / float(sample_n), 3),
+        "free_screen_ratio": round(free_ratio, 3),
     }
 
 

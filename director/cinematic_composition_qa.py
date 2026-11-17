@@ -22,8 +22,9 @@ def audit_cinematic_composition(
     storyboard: Dict[str, Any],
     editorial_timeline: Dict[str, Any],
     raw_traces: Optional[List[Dict[str, Any]]] = None,
+    decoded_qa_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Audit storyboard framing variety plus decoded overlay/subject/caption non-collision."""
+    """Audit storyboard framing variety plus decoded occupancy/mobile/caption non-collision."""
     shots = list(storyboard.get("shots") or [])
     overlays = list(editorial_timeline.get("overlays") or [])
 
@@ -53,10 +54,21 @@ def audit_cinematic_composition(
                     f"Rendered overlay {item.get('overlay_id')} left 9:16 safe area at t={rec.get('time')}s"
                 )
 
+    # Fold in independent decoded visual prominence & mobile 360px proof if executed
+    decoded_status = None
+    if isinstance(decoded_qa_report, dict):
+        decoded_status = decoded_qa_report.get("status")
+        if decoded_status == "FAIL":
+            issues.extend(list(decoded_qa_report.get("issues") or [])[:12])
+
+    status = "FAIL" if issues else ("NOT_VERIFIED" if decoded_status == "NOT_VERIFIED" else "PASS")
     report = {
-        "schema_version": "sd-cinematic-composition-qa-1",
-        "status": "FAIL" if issues else "PASS",
+        "schema_version": "sd-cinematic-composition-qa-2",
+        "status": status,
+        "subjective_visual_quality": "NOT_VERIFIED",
+        "HUMAN_REVIEW_REQUIRED": True,
         "checked_runtime_frames": checked_frames,
+        "decoded_visual_evidence_status": decoded_status or "PRE_RENDER_PLAN_ONLY",
         "unique_framings_count": prog["unique_framings_count"],
         "unique_angles_count": prog["unique_angles_count"],
         "unique_moves_count": prog["unique_moves_count"],

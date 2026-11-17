@@ -1,0 +1,21 @@
+test_negative_traps_t01_to_t16 (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_negative_traps_t01_to_t16) ... ok
+test_negative_traps_t17_to_t32 (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_negative_traps_t17_to_t32) ... ok
+test_t27_t29_generalization_and_skyscraper_seek_invariance (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_t27_t29_generalization_and_skyscraper_seek_invariance)
+Positive Matrix + T27 out-of-order WebGL seek invariance + T29 packet parity + neutral third-domain check. ... ok
+test_modular_scenes_render_actions_and_cutaway_in_webgl (tests.test_boston_molasses_scenes.TestBostonMolassesScenes.test_modular_scenes_render_actions_and_cutaway_in_webgl) ... ok
+test_negative_traps_n29_misaligned_pointer_fails (tests.test_retention03_integration.TestRetention03Integration.test_negative_traps_n29_misaligned_pointer_fails) ... ok
+test_single_skill_isolation_stick_figure_and_third_topic_generalization (tests.test_retention03_integration.TestRetention03Integration.test_single_skill_isolation_stick_figure_and_third_topic_generalization) ... ok
+test_tacoma_role_aware_pipeline_audio_sync_and_webgl_trace_mobile (tests.test_retention03_integration.TestRetention03Integration.test_tacoma_role_aware_pipeline_audio_sync_and_webgl_trace_mobile) ... ok
+test_boston_1919_story_action_graph_and_storyboard_routing (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_boston_1919_story_action_graph_and_storyboard_routing) ... ok
+test_generalization_across_mixed_non_boston_topics (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_generalization_across_mixed_non_boston_topics) ... ok
+test_negative_traps_n04_n05_n06_n07 (tests.test_visual_storytelling_director.TestVisualStorytellingDirector.test_negative_traps_n04_n05_n06_n07) ... ok
+test_g12_g13_motion_planner_validation_and_contact_schedule (tests.test_physical_motion.TestPhysicalMotion.test_g12_g13_motion_planner_validation_and_contact_schedule) ... ok
+test_g14_n20_tacoma_webgl_bridge_deformation_and_out_of_order_seek_determinism (tests.test_physical_motion.TestPhysicalMotion.test_g14_n20_tacoma_webgl_bridge_deformation_and_out_of_order_seek_determinism) ... ok
+test_negative_traps_n13_n14_n15_n21_n22 (tests.test_physical_motion.TestPhysicalMotion.test_negative_traps_n13_n14_n15_n21_n22) ... ok
+test_g15_character_planner_and_negative_traps_n17_n18_n19 (tests.test_character_performance.TestCharacterPerformance.test_g15_character_planner_and_negative_traps_n17_n18_n19) ... ok
+test_g16_webgl_foot_contact_non_slide_retreat_and_seek_repeatability (tests.test_character_performance.TestCharacterPerformance.test_g16_webgl_foot_contact_non_slide_retreat_and_seek_repeatability) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 16.674s
+
+OK

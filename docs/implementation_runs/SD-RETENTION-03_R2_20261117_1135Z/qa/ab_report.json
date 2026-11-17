@@ -1,0 +1,80 @@
+{
+  "schema_version": "sd-ab-compare-1",
+  "version_a_dir": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/baseline_A",
+  "version_b_dir": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B",
+  "subjective_preference_status": "NOT_VERIFIED",
+  "viewer_retention_status": "NOT_VERIFIED",
+  "voice_pcm_sha256_a": "291b5c85e641ba5f93258629c935fea3e590a7134aea5e8cded029037df49c9b",
+  "voice_pcm_sha256_b": "291b5c85e641ba5f93258629c935fea3e590a7134aea5e8cded029037df49c9b",
+  "voice_pcm_parity": true,
+  "voice_metrics_comparison": {
+    "version_a": {
+      "phrase_count": 13,
+      "peak_dbfs": -1.11,
+      "wps_dynamic_span_pct": 75.27,
+      "rms_dynamic_span_db": 2.09,
+      "f0_median_span_hz": 15.94,
+      "max_pause_error_ms": 0
+    },
+    "version_b": {
+      "phrase_count": 13,
+      "peak_dbfs": -1.11,
+      "wps_dynamic_span_pct": 55.56,
+      "rms_dynamic_span_db": 1.9,
+      "f0_median_span_hz": 11.12,
+      "max_pause_error_ms": 170
+    }
+  },
+  "sfx_counts": {
+    "version_a_cues": 9,
+    "version_b_cues": 14
+  },
+  "visual_frame_diffs": [
+    {
+      "t_sec": 1.734,
+      "frame_mad": 9.08,
+      "caption_band_mad": 2.87
+    },
+    {
+      "t_sec": 5.3,
+      "frame_mad": 2.72,
+      "caption_band_mad": 3.94
+    },
+    {
+      "t_sec": 9.233,
+      "frame_mad": 3.78,
+      "caption_band_mad": 6.87
+    },
+    {
+      "t_sec": 13.6,
+      "frame_mad": 3.36,
+      "caption_band_mad": 2.46
+    },
+    {
+      "t_sec": 18.1,
+      "frame_mad": 0.6,
+      "caption_band_mad": 2.37
+    },
+    {
+      "t_sec": 22.267,
+      "frame_mad": 1.09,
+      "caption_band_mad": 2.23
+    },
+    {
+      "t_sec": 26.316,
+      "frame_mad": 9.49,
+      "caption_band_mad": 12.38
+    },
+    {
+      "t_sec": 30.683,
+      "frame_mad": 8.25,
+      "caption_band_mad": 3.4
+    },
+    {
+      "t_sec": 35.62,
+      "frame_mad": 6.06,
+      "caption_band_mad": 15.04
+    }
+  ],
+  "has_measurable_visual_diff": true
+}

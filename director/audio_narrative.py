@@ -202,13 +202,34 @@ def extract_sound_events(
         elif proc_gen == "zach3d:tacoma_shore_onlooker_stage":
             _add(min(dur * 0.38, 0.55), "shore_gravel_retreat", "footsteps_retreat", "foley", -13.5, 0.14, 0.88, 0.70, 2, f"{sid}.shore_onlooker_step", depth="mid", uncert=0.03)
         elif proc_gen == "zach3d:tacoma_collapse_plunge_stage":
-            hit_rel = float(ca.get("hit_time_rel_sec", round(dur * 0.38, 3))) if isinstance(ca, dict) else round(dur * 0.38, 3)
-            if hit_rel > 0.24:
-                _add(round(hit_rel - 0.12, 3), "main_suspender_snap", "rivet_tension_ping", "foley", -9.5, -0.08, 0.95, 0.88, 1, f"{sid}.cable_snap", depth="near", uncert=0.015)
-            _add(hit_rel, "tacoma_span_plunge_splash", "span_collapse_splash", "impact", -7.5, 0.0, 0.98, 0.96, 1, f"{sid}.span_collapse_plunge.hit={hit_rel:.3f}", depth="near", uncert=0.015)
+            onset_rel = round(dur * 0.38, 3)
+            drop_t = math.sqrt((2.0 * abs(-0.28 - 2.45)) / (9.81 * 0.62))
+            water_hit_rel = round(min(dur - 0.06, onset_rel + drop_t), 3)
+            hit_rel = float(ca.get("water_impact_rel_sec", water_hit_rel)) if isinstance(ca, dict) else water_hit_rel
+            _add(onset_rel, "main_suspender_snap", "rivet_tension_ping", "foley", -9.5, -0.08, 0.95, 0.88, 1, f"{sid}.cable_snap.onset={onset_rel:.3f}", depth="near", uncert=0.015)
+            _add(hit_rel, "tacoma_span_plunge_splash", "span_collapse_splash", "impact", -7.5, 0.0, 0.98, 0.96, 1, f"{sid}.span_collapse_plunge.water_hit={hit_rel:.3f}", depth="near", uncert=0.015)
         elif proc_gen == "zach3d:tacoma_aftermath_stage":
             # Respectful, calm aftermath framing over unbroken Puget Sound water
             pass
+        elif proc_gen == "zach3d:skyscraper_street_hook_stage":
+            _add(min(dur * 0.26, 0.36), "street_highrise_wind_breeze", "wind_bridge_gust", "foley", -14.5, 0.0, 0.86, 0.64, 2, f"{sid}.skyscraper_street_wind", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:skyscraper_skyline_wide_stage":
+            _add(min(dur * 0.30, 0.42), "skyline_high_wind_air", "wind_bridge_gust", "foley", -15.5, -0.08, 0.82, 0.56, 3, f"{sid}.skyline_wind", depth="far", uncert=0.035)
+        elif proc_gen == "zach3d:skyscraper_wind_vortex_stage":
+            _add(min(dur * 0.28, 0.38), "facade_vortex_buffet", "wind_bridge_gust", "foley", -12.0, 0.06, 0.90, 0.78, 2, f"{sid}.vortex_facade", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:skyscraper_plumb_drift_stage":
+            _add(min(dur * 0.30, 0.40), "cantilever_steel_flex", "steel_cable_groan", "foley", -13.5, 0.0, 0.88, 0.70, 2, f"{sid}.tower_flex_plumb", depth="mid", uncert=0.025)
+        elif proc_gen == "zach3d:skyscraper_office_interior_stage":
+            _add(min(dur * 0.32, 0.45), "office_pendant_creak", "rail_creak", "foley", -14.5, -0.10, 0.86, 0.62, 2, f"{sid}.office_lamp_sway", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:skyscraper_tmd_cutaway_stage":
+            _add(min(dur * 0.26, 0.34), "penthouse_shell_cutaway", "mechanical_click", "foley", -11.5, 0.0, 0.90, 0.76, 2, f"{sid}.tmd_cutaway", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:skyscraper_counterphase_stage":
+            _add(min(dur * 0.30, 0.38), "tmd_hydraulic_counter_pulse", "motor_drive_hum", "foley", -10.5, 0.0, 0.94, 0.86, 1, f"{sid}.tmd_counterphase", depth="near", uncert=0.02)
+        elif proc_gen == "zach3d:skyscraper_before_after_stage":
+            _add(min(dur * 0.30, 0.42), "damping_comparison_tick", "clock_tick", "ui", -12.5, 0.08, 0.88, 0.70, 2, f"{sid}.tmd_before_after", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:skyscraper_dusk_resolution_stage":
+            if density == "detailed":
+                _add(min(dur * 0.30, 0.45), "skyline_evening_resolve", "reveal_soft", "reveal", -15.5, 0.0, 0.80, 0.54, 3, f"{sid}.skyline_resolve", depth="far", uncert=0.04)
         elif proc_gen == "zach3d:airplane_window_hole_stage":
             if "exploded" in setup or "layers" in nar or "three" in nar:
                 _add(min(dur * 0.25, 0.30), "window_layers_separate", "reveal_soft", "reveal", -12.0, 0.0, 0.92, 0.80, 2, f"{sid}.3pane_explode", depth="near", uncert=0.025)

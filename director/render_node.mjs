@@ -66,6 +66,12 @@ function buildLaunchArgs(webglBackend) {
   if (effective === 'metal' && process.platform !== 'darwin') {
     effective = process.platform === 'win32' ? 'd3d11' : 'swiftshader';
   }
+  if (effective === 'd3d11' && process.platform !== 'win32') {
+    effective = process.platform === 'darwin' ? 'metal' : 'swiftshader';
+  }
+  if (effective === 'd3d11' && process.platform !== 'win32') {
+    effective = process.platform === 'darwin' ? 'metal' : 'swiftshader';
+  }
   if (effective === 'metal') {
     return [...base, '--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist'];
   }
@@ -85,13 +91,13 @@ function buildLaunchArgs(webglBackend) {
   const htmlName = path.basename(entryHtml);
 
   const scale = Number(
-    mode === 'stills' ? process.argv[6] :
+    (mode === 'stills' || mode === 'mattes') ? process.argv[6] :
     mode === 'segment' ? process.argv[8] :
     mode === 'trace' ? process.argv[5] :
     process.argv[7]
   ) || 1;
   const webglBackend = (
-    mode === 'stills' ? process.argv[7] :
+    (mode === 'stills' || mode === 'mattes') ? process.argv[7] :
     mode === 'segment' ? process.argv[10] :
     mode === 'trace' ? process.argv[6] :
     process.argv[8]
@@ -216,6 +222,37 @@ function buildLaunchArgs(webglBackend) {
         traces.push(rec);
       }
       console.log(JSON.stringify({ ok: true, traces }));
+    } else if (mode === 'mattes') {
+      const outDir = path.resolve(process.argv[4]);
+      const times = (process.argv[5] || '').split(',').filter(Boolean).map(Number);
+      fs.mkdirSync(outDir, { recursive: true });
+      const hasMatteFn = await page.evaluate(() => typeof window.renderMatteAtTime === 'function');
+      if (!hasMatteFn) {
+        throw new Error('renderMatteAtTime is not exposed on entry page');
+      }
+      const frames = [];
+      for (const t of times) {
+        const res = await page.evaluate(ts => window.renderMatteAtTime(ts), t);
+        const outPath = path.join(outDir, `matte_${t.toFixed(3)}.png`);
+        const b64 = (res.dataUrl || '').split(',')[1];
+        if (!b64) {
+          throw new Error(`Empty matte PNG at t=${t}`);
+        }
+        fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
+        frames.push({
+          t_sec: res.time_sec,
+          shot_index: res.shot_index,
+          shot_id: res.shot_id,
+          matte_path: outPath,
+          overlay_boxes_1080: res.overlay_boxes_1080 || [],
+          camera: res.camera || null,
+          physical_motion: res.physical_motion || null,
+          character_performance: res.character_performance || null,
+        });
+      }
+      const manifestPath = path.join(outDir, 'matte_manifest.json');
+      fs.writeFileSync(manifestPath, JSON.stringify({ schema_version: 'sd-matte-manifest-1', frames }, null, 2), 'utf-8');
+      console.log(JSON.stringify({ ok: true, count: frames.length, manifest: manifestPath }));
     } else {
       throw new Error(`Unknown render_node.mjs mode: ${mode}`);
     }

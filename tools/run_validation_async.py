@@ -191,6 +191,14 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 description="SD-RETENTION-03 Tacoma Narrows WebGL integration, role SFX sync, isolation & N25/N29",
                 resource_class="gpu",
             ),
+            ValidationTask(
+                task_id="r2_decoded_and_traps",
+                cmd=[py, "-m", "unittest", "tests.test_r2_decoded_and_traps", "-v"],
+                deps=["editorial_design_system", "curiosity_director", "cinematic_composition", "physical_motion", "character_performance", "storytelling_qa"],
+                timeout_sec=420.0,
+                description="SD-RETENTION-03.R2 decoded visual QA, Skyscraper E2E, third-domain generalization & T01-T32 traps",
+                resource_class="gpu",
+            ),
         ])
     if mode == "full":
         tasks.extend([
@@ -203,6 +211,30 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 resource_class="cpu",
             ),
             ValidationTask(
+                task_id="audio_narrative_planning",
+                cmd=[py, "-m", "unittest", "tests.test_audio_narrative_planning", "-v"],
+                deps=["audio_catalog_licenses"],
+                timeout_sec=180.0,
+                description="Narrative beat/music/SFX alignment planning suite",
+                resource_class="cpu",
+            ),
+            ValidationTask(
+                task_id="audio_integration_smoke",
+                cmd=[py, "-m", "unittest", "tests.test_audio_integration_smoke", "-v"],
+                deps=["audio_narrative_planning", "audio_determinism"],
+                timeout_sec=240.0,
+                description="Audio pipeline integration smoke test",
+                resource_class="cpu",
+            ),
+            ValidationTask(
+                task_id="audio_only_remux",
+                cmd=[py, "-m", "unittest", "tests.test_audio_only_remux", "-v"],
+                deps=["audio_integration_smoke"],
+                timeout_sec=240.0,
+                description="--audio-only lossless video-packet preservation remix suite",
+                resource_class="cpu",
+            ),
+            ValidationTask(
                 task_id="smoke_all_engines",
                 cmd=[py, "-m", "unittest", "tests.test_smoke_all_engines", "-v"],
                 deps=["zdf_motion01_matrix"],
@@ -212,6 +244,26 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             ),
         ])
     return tasks
+
+
+def verify_test_suite_coverage(tests_dir: Path, tasks: List[ValidationTask]) -> Dict[str, object]:
+    """Fail closed (T28) if any `tests/test_*.py` file is omitted from the full DAG."""
+    discovered = sorted(f"tests.{p.stem}" for p in Path(tests_dir).glob("test_*.py"))
+    covered = set()
+    for t in tasks:
+        for tok in t.cmd:
+            if isinstance(tok, str) and tok.startswith("tests.test_"):
+                covered.add(tok)
+    missing = [m for m in discovered if m not in covered]
+    return {
+        "ok": len(missing) == 0,
+        "status": "PASS" if len(missing) == 0 else "FAIL",
+        "discovered_count": len(discovered),
+        "covered_count": len(covered),
+        "discovered_modules": discovered,
+        "covered_modules": sorted(covered),
+        "missing_modules": missing,
+    }
 
 
 async def _terminate_proc(proc: asyncio.subprocess.Process) -> None:
@@ -304,6 +356,9 @@ async def run_dag(mode: str, workers: int, log_dir: Path, timeout_override: Opti
         raise RuntimeError(f"Insufficient free disk ({free_gb} GiB < 1.5 GiB) before running async validation DAG.")
 
     tasks = build_task_graph(mode)
+    coverage = verify_test_suite_coverage(REPO_ROOT / "tests", tasks)
+    if mode == "full" and not coverage["ok"]:
+        raise RuntimeError(f"T28 full DAG test coverage incomplete: missing {coverage['missing_modules']}")
     task_map = {t.task_id: t for t in tasks}
     cpu_sem = asyncio.Semaphore(max(1, min(4, workers)))
     gpu_sem = asyncio.Semaphore(1)
@@ -363,7 +418,8 @@ async def run_dag(mode: str, workers: int, log_dir: Path, timeout_override: Opti
         "schema_version": "sd-async-validation-1",
         "mode": mode,
         "workers": max(1, min(4, workers)),
-        "overall_status": "PASS" if all_pass else "FAIL",
+        "overall_status": "PASS" if (all_pass and (mode != "full" or coverage["ok"])) else "FAIL",
+        "test_suite_coverage": coverage,
         "total_elapsed_sec": round(time.monotonic() - t_all, 2),
         "tasks": ordered,
     }

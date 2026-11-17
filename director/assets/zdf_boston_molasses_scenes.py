@@ -35,6 +35,13 @@ function shadow(o) {
   return o;
 }
 
+function tagSemantic(obj, role) {
+  if (!obj) return obj;
+  obj.userData = obj.userData || {};
+  obj.userData.semanticRole = role;
+  return obj;
+}
+
 function addFlatCap1919(human, hex = 0x3a322c) {
   const capMat = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.88, metalness: 0.04 });
   const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.125, 0.068, 18), capMat);
@@ -130,6 +137,7 @@ function makeMolassesMaterial() {
  */
 export function makeNorthEndStreet1919({ streetLength = 14.0, streetWidth = 4.6, includeCart = true } = {}) {
   const root = new THREE.Group();
+  tagSemantic(root, 'environment');
 
   const cobbleBaseMat = new THREE.MeshStandardMaterial({ color: 0x45494e, roughness: 0.86, metalness: 0.06 });
   const road = new THREE.Mesh(new THREE.BoxGeometry(streetWidth, 0.12, streetLength), cobbleBaseMat);
@@ -270,6 +278,7 @@ export function makeNorthEndStreet1919({ streetLength = 14.0, streetWidth = 4.6,
  */
 export function makeMolassesStorageTank1919({ radius = 1.65, height = 3.25 } = {}) {
   const root = new THREE.Group();
+  tagSemantic(root, 'subject');
   const steelMat = new THREE.MeshStandardMaterial({ color: 0x4f433b, roughness: 0.62, metalness: 0.48 });
   const darkBandMat = new THREE.MeshStandardMaterial({ color: 0x3b322c, roughness: 0.55, metalness: 0.58 });
   const concreteMat = new THREE.MeshStandardMaterial({ color: 0x707274, roughness: 0.90 });
@@ -340,6 +349,7 @@ export function makeMolassesStorageTank1919({ radius = 1.65, height = 3.25 } = {
  */
 export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
   const root = new THREE.Group();
+  tagSemantic(root, 'subject');
   const M = materials();
   const molMat = makeMolassesMaterial();
   const plateMat = new THREE.MeshStandardMaterial({ color: 0x4e423a, roughness: 0.58, metalness: 0.50 });
@@ -358,6 +368,7 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
 
   const backFill = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.28, 24), molMat);
   backFill.position.set(0, 1.28, -0.78);
+  tagSemantic(backFill, 'causal_feature');
 
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.26, 0.92), M.concrete || new THREE.MeshStandardMaterial({ color: 0x6f7275, roughness: 0.9 }));
   plinth.position.set(0, 0.13, 0.12);
@@ -489,7 +500,9 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
  */
 export function makeMolassesGravityCurrentRig({ width = 4.2, height = 1.65 } = {}) {
   const root = new THREE.Group();
+  tagSemantic(root, 'causal_feature');
   const waveGroup = new THREE.Group();
+  tagSemantic(waveGroup, 'causal_feature');
 
   // Continuous deformable 3D viscous surface (replaces disconnected spheres/bars cleanly)
   const viscousWave = makeContinuousViscousSurface({
@@ -577,6 +590,7 @@ export function makeMolassesGravityCurrentRig({ width = 4.2, height = 1.65 } = {
  */
 export function makeElevatedRailAndStreetImpactRig() {
   const root = new THREE.Group();
+  tagSemantic(root, 'subject');
   const ironMat = new THREE.MeshStandardMaterial({ color: 0x262d35, roughness: 0.48, metalness: 0.76 });
   const trackMat = new THREE.MeshStandardMaterial({ color: 0x565e68, roughness: 0.38, metalness: 0.85 });
   const coachWood = new THREE.MeshStandardMaterial({ color: 0x5c3c28, roughness: 0.78 });
@@ -682,6 +696,7 @@ export function makeElevatedRailAndStreetImpactRig() {
  */
 export function makePeriodCrowdActionRig(makeHumanFn, charSpec = {}, roleMode = 'pedestrians') {
   const root = new THREE.Group();
+  tagSemantic(root, 'character');
   const actors = [];
 
   if (roleMode === 'dock_worker') {
@@ -873,6 +888,7 @@ export function makeRescueAndAftermathRig(makeHumanFn) {
  */
 export function makeBostonSteelSectionCutawayRig() {
   const root = new THREE.Group();
+  tagSemantic(root, 'subject');
   const cutaway = new LayeredCutaway({
     id: 'tank_lap_joint_cutaway',
     worldAnchor: [0, 1.24, 0.08],
@@ -923,6 +939,7 @@ export function makeBostonSteelSectionCutawayRig() {
   molCutSide.position.set(0.56, 0, 0.05);
   l2.add(molWall, molCutSide);
   cutaway.addInternalComponent('molasses_hydrostatic_core', l2, { layerIndex: 2, materialId: 'mat_molasses_core' });
+  tagSemantic(l2, 'causal_feature');
 
   // Clearly visible horizontal-to-outward hydrostatic stress path pressing onto the strained rivet row
   cutaway.addConnectionEdge('hydro_load_center', [[0.56, 1.24, 0.12], [0.18, 1.24, 0.18], [-0.14, 1.24, 0.18]], 0.016, 0xfbbf24);
@@ -961,6 +978,7 @@ export function makeBostonSteelSectionCutawayRig() {
  */
 export function makeBostonLocationOverview() {
   const root = new THREE.Group();
+  tagSemantic(root, 'environment');
   const brickMat = new THREE.MeshStandardMaterial({ color: 0x763e30, roughness: 0.90 });
   const graniteMat = new THREE.MeshStandardMaterial({ color: 0x676b70, roughness: 0.88 });
   const harborMat = new THREE.MeshStandardMaterial({ color: 0x1c3a4f, roughness: 0.28, metalness: 0.15 });
@@ -982,6 +1000,7 @@ export function makeBostonLocationOverview() {
     new THREE.MeshStandardMaterial({ color: 0x4b423b, roughness: 0.72, metalness: 0.35 })
   );
   memorialPad.position.set(0.0, 0.14, -0.45);
+  tagSemantic(memorialPad, 'causal_feature');
   root.add(memorialPad);
 
   // North End multi-block tenement silhouette + inner harbor landmarks inside 9:16 portrait cone
@@ -1000,6 +1019,7 @@ export function makeBostonLocationOverview() {
     blocks.setMatrixAt(idx, dummy.matrix);
   });
   blocks.instanceMatrix.needsUpdate = true;
+  tagSemantic(blocks, 'subject');
   root.add(blocks);
 
   // Harbor tugboat silhouette near pier for unmistakable coastal context
@@ -1009,11 +1029,15 @@ export function makeBostonLocationOverview() {
   cabin.position.set(-0.65, 0.38, -2.55);
   const funnel = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.38, 10), railMat);
   funnel.position.set(-0.65, 0.64, -2.42);
+  tagSemantic(hull, 'subject');
+  tagSemantic(cabin, 'subject');
+  tagSemantic(funnel, 'subject');
   root.add(hull, cabin, funnel);
 
   // Atlantic Ave Elevated Railway ribbon behind memorial plinth along waterfront edge
   const railSpan = new THREE.Mesh(new THREE.BoxGeometry(11.5, 0.18, 0.44), railMat);
   railSpan.position.set(0, 1.15, -1.65);
+  tagSemantic(railSpan, 'subject');
   root.add(railSpan);
 
   const overviewAnchor = new THREE.Object3D();
