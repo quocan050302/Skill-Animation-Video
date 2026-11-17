@@ -463,6 +463,7 @@ def execute_short_director_run(
             render_info=render_info,
             preview_mp4=Path(timeline_info["preview_1080_mp4"]),
             final_4k_mp4=Path(timeline_info["final_4k_mp4"]),
+            max_static_hold_sec=max_static_hold_sec,
         )
         aqc_report = json.loads((out_dir / "audio" / "audio_qc_report.json").read_text(encoding="utf-8"))
 
@@ -475,6 +476,9 @@ def execute_short_director_run(
             "schema_version": __version__,
             "delivered": delivered,
             "overall_qc_status": qc_report["overall_status"],
+            "release_status": qc_report.get("release_status", "TECHNICAL_ACCEPTANCE_PASS" if delivered else "FAIL"),
+            "subjective_visual_review": qc_report.get("subjective_visual_review", "NOT_VERIFIED"),
+            "subjective_editorial_listening": aqc_report.get("subjective_editorial_listening", "NOT_VERIFIED"),
             "selection_mode": style_decisions["selection_mode"],
             "selected_skill": selected_skill,
             "style_lock": style_decisions["style_lock"],
@@ -486,9 +490,11 @@ def execute_short_director_run(
                 "edit_energy": storyboard.get("edit_energy", edit_energy),
                 "scene_novelty": scene_novelty,
                 "transition_policy": transition_policy,
+                "max_static_hold_sec": max_static_hold_sec,
                 "shot_count": len(storyboard.get("shots", [])),
                 "diversity_summary": storyboard.get("diversity_summary", {}),
                 "scene_diversity_status": (qc_report.get("checks", {}).get("scene_diversity_and_retention") or {}).get("status"),
+                "camera_execution_status": (qc_report.get("checks", {}).get("camera_execution") or {}).get("status"),
                 "subjective_visual_review": (qc_report.get("checks", {}).get("scene_diversity_and_retention") or {}).get("subjective_visual_review", "NOT_VERIFIED"),
             },
             "video_contract": {
@@ -505,8 +511,11 @@ def execute_short_director_run(
                 "visual_events_json": str((out_dir / "visual_events.json").resolve()),
                 "shot_coverage_json": str((out_dir / "shot_coverage.json").resolve()),
                 "camera_paths_json": str((out_dir / "camera_paths.json").resolve()),
+                "camera_execution_trace_json": render_info.get("camera_execution_trace_json"),
+                "raw_render_telemetry_json": render_info.get("raw_render_telemetry_json"),
                 "transition_edl_json": str((out_dir / "transition_edl.json").resolve()),
                 "scene_diversity_report_json": str((out_dir / "scene_diversity_report.json").resolve()),
+                "visual_qc_timeline_json": (qc_report.get("checks", {}).get("scene_diversity_and_retention") or {}).get("visual_qc_timeline_json"),
                 "style_decisions_json": str((out_dir / "style_decisions.json").resolve()),
                 "art_bible_md": str((out_dir / "art_bible.md").resolve()),
                 "style_lock_audit_json": str((out_dir / "style_lock_audit.json").resolve()),

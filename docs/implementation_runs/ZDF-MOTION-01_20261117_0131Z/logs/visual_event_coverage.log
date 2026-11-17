@@ -1,0 +1,20 @@
+TASK: visual_event_coverage
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_visual_event_and_coverage -v
+STATUS: PASS (exit=0, elapsed=0.22s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_a_b_semantic_events_anti_repetition_and_non_duplicated_splits (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_a_b_semantic_events_anti_repetition_and_non_duplicated_splits) ... ok
+test_c_canonical_planning_determinism (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_c_canonical_planning_determinism) ... ok
+test_d_provenance_guard_locks_visual_planning_and_all_six_skills (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_d_provenance_guard_locks_visual_planning_and_all_six_skills) ... ok
+test_e_non_roman_script_rejects_armor_and_validates_bounds (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_e_non_roman_script_rejects_armor_and_validates_bounds) ... ok
+test_h_diverse_script_niches_yield_distinct_graphs (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_h_diverse_script_niches_yield_distinct_graphs) ... ok
+test_i_audio_visual_sync_and_no_ungrounded_hallucination (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_i_audio_visual_sync_and_no_ungrounded_hallucination) ... ok
+test_k_fault_injection_validation_fails_closed (tests.test_visual_event_and_coverage.TestVisualEventAndCoverage.test_k_fault_injection_validation_fails_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.082s
+
+OK
+

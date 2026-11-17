@@ -19,9 +19,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const kitNodeModules = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'vendor', 'claude-animation-skills', 'kit', 'node_modules');
+const __filename = fileURLToPath(import.meta.url);
+const kitNodeModules = path.resolve(path.dirname(__filename), '..', 'vendor', 'claude-animation-skills', 'kit', 'node_modules');
 const { chromium } = require(path.join(kitNodeModules, 'playwright'));
 
 const MIME_TYPES = {
@@ -60,10 +62,17 @@ function startStaticServer(rootDir) {
 
 function buildLaunchArgs(webglBackend) {
   const base = ['--allow-file-access-from-files', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'];
-  if (webglBackend === 'metal') {
+  let effective = webglBackend;
+  if (effective === 'metal' && process.platform !== 'darwin') {
+    effective = process.platform === 'win32' ? 'd3d11' : 'swiftshader';
+  }
+  if (effective === 'metal') {
     return [...base, '--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist'];
   }
-  if (webglBackend === 'swiftshader') {
+  if (effective === 'd3d11') {
+    return [...base, '--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist'];
+  }
+  if (effective === 'swiftshader') {
     return [...base, '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
   }
   return [...base, '--ignore-gpu-blocklist'];
@@ -78,13 +87,15 @@ function buildLaunchArgs(webglBackend) {
   const scale = Number(
     mode === 'stills' ? process.argv[6] :
     mode === 'segment' ? process.argv[8] :
+    mode === 'trace' ? process.argv[5] :
     process.argv[7]
   ) || 1;
   const webglBackend = (
     mode === 'stills' ? process.argv[7] :
     mode === 'segment' ? process.argv[10] :
+    mode === 'trace' ? process.argv[6] :
     process.argv[8]
-  ) || 'metal';
+  ) || (process.platform === 'darwin' ? 'metal' : (process.platform === 'win32' ? 'd3d11' : 'swiftshader'));
 
   const chromeExe = process.env.PLAYWRIGHT_CHROME_PATH || process.env.CHROME || undefined;
   const { server, port } = await startStaticServer(rootDir);
@@ -142,10 +153,12 @@ function buildLaunchArgs(webglBackend) {
         '-framerate', String(fps),
         '-c:v', 'mjpeg',
         '-i', '-',
+        '-vf', 'scale=in_range=pc:out_range=tv,format=yuv420p',
         '-c:v', 'libx264',
         '-preset', 'veryfast',
         '-crf', scale >= 2 ? '16' : '16',
         '-pix_fmt', 'yuv420p',
+        '-color_range', 'tv',
         '-r', String(fps),
         tmpMp4,
       ];
@@ -188,6 +201,21 @@ function buildLaunchArgs(webglBackend) {
         hashes.push({ frame: f, time: Number(t.toFixed(4)), sha256: sha, bytes: buf.length });
       }
       console.log(JSON.stringify({ ok: true, hashes }));
+    } else if (mode === 'trace') {
+      const times = (process.argv[4] || '').split(',').filter(Boolean).map(Number);
+      const traces = [];
+      for (const t of times) {
+        const rec = await page.evaluate(ts => {
+          const shotIdx = window.renderAtTime(ts);
+          return {
+            time: Number(ts.toFixed(4)),
+            shot_index: shotIdx,
+            telemetry: window.__LAST_RENDER_TELEMETRY__ || null,
+          };
+        }, t);
+        traces.push(rec);
+      }
+      console.log(JSON.stringify({ ok: true, traces }));
     } else {
       throw new Error(`Unknown render_node.mjs mode: ${mode}`);
     }

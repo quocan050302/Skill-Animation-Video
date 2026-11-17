@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .preflight import check_disk_quota
+from .camera_execution import collect_camera_trace_samples, evaluate_camera_trace_accuracy
+from .preflight import DiskBudgetGuard, check_disk_quota
 from .provenance_guard import ProvenanceGuard, StyleLockViolationError
 from .quality_gate import audit_style_lock, inspect_pre_render_stills
 
@@ -52,6 +53,8 @@ def render_stills_and_shots(
     workers: int = 2,
     render_4k_mode: str = "native",  # "native" | "upscale"
     min_free_gb: float = 1.5,
+    camera_plan: Optional[Dict[str, Any]] = None,
+    transition_edl: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Execute STEP 5 strictly in order:
     1) Fail-closed style-lock audit
@@ -85,12 +88,34 @@ def render_stills_and_shots(
             f"Pre-render style-lock audit {pre_audit['status']}: {pre_audit['violations'] or pre_audit['unverified_reasons']}"
         )
 
-    # 2. Check Disk Quota BEFORE rendering
+    # 2. Check Disk Quota & Adaptive Budget Guard BEFORE rendering
     disk_ok, _, free_gb = check_disk_quota(run_dir, min_free_gb=min_free_gb)
     if not disk_ok:
         raise RuntimeError(f"Aborting render: free disk {free_gb:.2f} GiB < quota {min_free_gb:.2f} GiB")
 
-    # 3. Render Stills (first frame + busiest midpoint + end frame of every shot)
+    can_native_4k = bool(engine_project.get("supports_native_4k", False))
+    use_native_4k = (render_4k_mode == "native") and can_native_4k
+    fps = int(storyboard["fps"])
+    total_dur = float(storyboard.get("total_duration_sec") or 30.0)
+    disk_guard = DiskBudgetGuard(run_dir)
+    est_bytes = DiskBudgetGuard.estimate_render_bytes(
+        duration_sec=total_dur,
+        native_4k=use_native_4k,
+        workers=workers,
+    )
+    pre_budget = disk_guard.check(est_bytes)
+    if not pre_budget["ok"]:
+        raise RuntimeError(
+            f"DISK_BUDGET_BLOCKED before stills: free={pre_budget['free_bytes']} < needed={pre_budget['needed_total_bytes']}"
+        )
+
+    # Load camera_plan & transition_edl from run_dir if not passed explicitly
+    if camera_plan is None and (run_dir / "camera_paths.json").exists():
+        camera_plan = json.loads((run_dir / "camera_paths.json").read_text(encoding="utf-8"))
+    if transition_edl is None and (run_dir / "transition_edl.json").exists():
+        transition_edl = json.loads((run_dir / "transition_edl.json").read_text(encoding="utf-8"))
+
+    # 3. Render Stills (first frame + busiest midpoint + end frame + contact hits + transition midpoints)
     shots = storyboard["shots"]
     still_times: List[float] = []
     for s in shots:
@@ -100,6 +125,15 @@ def render_stills_and_shots(
             round(0.5 * (st + en), 3),
             round(max(st + 0.08, en - 0.06), 3),
         ])
+        ca = (s.get("staging") or {}).get("contact_action")
+        if isinstance(ca, dict) and ca.get("hit_time_sec") is not None:
+            ht = max(st + 0.02, min(en - 0.02, float(ca["hit_time_sec"])))
+            still_times.append(round(ht, 3))
+    for tr in (transition_edl or {}).get("transitions", []):
+        if str(tr.get("actual_method") or "cut") not in ("cut", "cut_on_action"):
+            b = float(tr.get("boundary_sec") or 0.0)
+            if 0.02 < b < total_dur - 0.02:
+                still_times.append(round(b, 3))
     still_times = sorted(set(still_times))
     times_arg = ",".join(f"{t:.3f}" for t in still_times)
 
@@ -118,12 +152,50 @@ def render_stills_and_shots(
         raise RuntimeError(f"Pre-render visual still inspection FAILED: {still_qc['failures']}")
     stills_elapsed = round(time.time() - t0_stills, 2)
 
+    # 3b. Single-Authority Camera & Transition Telemetry Trace (for ZDF WebGL engine)
+    raw_telemetry_path = logs_dir / "raw_render_telemetry.json"
+    cam_trace_path = run_dir / "camera_execution_trace.json"
+    cam_trace_doc: Optional[Dict[str, Any]] = None
+    if style_decisions.get("selected_skill") == "zach-d-films":
+        trace_times = set(collect_camera_trace_samples(storyboard, fps=fps))
+        for tr in (transition_edl or {}).get("transitions", []):
+            d_tr = float(tr.get("duration_sec") or 0.0)
+            if str(tr.get("actual_method") or "cut") not in ("cut", "cut_on_action") and d_tr > 0.0:
+                b_tr = float(tr.get("boundary_sec") or 0.0)
+                for mul in (-0.36, -0.18, 0.0, 0.18, 0.36):
+                    tk = max(0.0, min(total_dur - 0.002, b_tr + mul * d_tr))
+                    trace_times.add(round(tk, 4))
+        sorted_trace_times = sorted(trace_times)
+        trace_res = _run_render_node(
+            node_bin=node_bin,
+            render_mjs=render_mjs,
+            args=[
+                "trace",
+                engine_project["entry_html"],
+                ",".join(f"{t:.4f}" for t in sorted_trace_times),
+                "1",
+                webgl_backend,
+            ],
+            browser_exe=browser_exe,
+            log_path=logs_dir / "camera_trace.log",
+        )
+        raw_telemetry_path.write_text(json.dumps(trace_res, indent=2), encoding="utf-8")
+        if isinstance(camera_plan, dict):
+            cam_trace_doc = evaluate_camera_trace_accuracy(
+                storyboard=storyboard,
+                camera_plan=camera_plan,
+                trace_records=list(trace_res.get("traces") or []),
+                transition_edl=transition_edl,
+            )
+            cam_trace_path.write_text(json.dumps(cam_trace_doc, indent=2), encoding="utf-8")
+            if cam_trace_doc["status"] != "PASS":
+                raise RuntimeError(
+                    f"Camera execution trace FAILED accuracy/collision check: {cam_trace_doc['failures'][:6]}"
+                )
+
     # 4. Determine Native 4K vs Explicit Upscale
-    can_native_4k = bool(engine_project.get("supports_native_4k", False))
-    use_native_4k = (render_4k_mode == "native") and can_native_4k
     scale = 2 if use_native_4k else 1
-    fps = int(storyboard["fps"])
-    total_frames = int(round(float(storyboard["total_duration_sec"]) * fps))
+    total_frames = int(round(total_dur * fps))
 
     # Build contiguous non-overlapping frame ranges per shot so concat has exact total_frames
     shot_jobs: List[Dict[str, Any]] = []
@@ -140,6 +212,11 @@ def render_stills_and_shots(
         })
 
     # 5. Bounded Parallel Scene Render Jobs (await ALL exit statuses!)
+    pre_parallel_budget = disk_guard.check(est_bytes)
+    if not pre_parallel_budget["ok"]:
+        raise RuntimeError(
+            f"DISK_BUDGET_BLOCKED before parallel render: free={pre_parallel_budget['free_bytes']} < needed={pre_parallel_budget['needed_total_bytes']}"
+        )
     bounded_workers = max(1, min(workers, len(shot_jobs), 4))
     t0_render = time.time()
 
@@ -213,5 +290,9 @@ def render_stills_and_shots(
         "stills_count": len(still_paths),
         "stills_elapsed_sec": stills_elapsed,
         "render_elapsed_sec": render_elapsed,
+        "camera_execution_trace_json": str(cam_trace_path.resolve()) if cam_trace_path.exists() else None,
+        "camera_execution_trace_status": cam_trace_doc["status"] if isinstance(cam_trace_doc, dict) else "NOT_APPLICABLE",
+        "raw_render_telemetry_json": str(raw_telemetry_path.resolve()) if raw_telemetry_path.exists() else None,
+        "disk_budget_pre_render": pre_budget,
         "shots": completed_shots,
     }

@@ -329,7 +329,13 @@ def _master_pre_to_final_wav(
 
     ff_bin = shutil.which("ffmpeg")
     if ff_bin:
-        af = f"alimiter=limit=0.88:attack=3:release=60,loudnorm=I={target_lufs:.1f}:TP={target_tp_dbtp:.1f}:LRA=9"
+        effective_tp = min(-2.4, float(target_tp_dbtp) - 0.85)
+        af = (
+            f"alimiter=limit=0.82:attack=4:release=60:level=false,"
+            f"loudnorm=I={target_lufs:.1f}:TP={effective_tp:.1f}:LRA=9,"
+            f"lowpass=f=18000,"
+            f"alimiter=limit=0.74:attack=4:release=60:level=false"
+        )
         subprocess.run(
             [
                 ff_bin, "-v", "error", "-y",

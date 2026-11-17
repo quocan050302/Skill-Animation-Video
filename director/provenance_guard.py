@@ -148,19 +148,22 @@ class ProvenanceGuard:
             return
         try:
             p_str = os.fsdecode(raw_path)
+            p_low = p_str.replace("\\", "/").lower()
+            root_low = str(self.project_root).replace("\\", "/").lower()
             # Fast-path ignore system paths outside project_root
-            if "short-director" not in p_str and "claude-animation-skills" not in p_str and not p_str.startswith("."):
+            if root_low not in p_low and "short-director" not in p_low and "claude-animation-skills" not in p_low and not p_str.startswith("."):
                 return
             resolved = Path(p_str).resolve()
         except Exception:
             return
 
         res_str = str(resolved)
-        skills_prefix = str(self.upstream_skills_root) + os.sep
-        kit_prefix = str((self.upstream_root / "kit").resolve()) + os.sep
-        assets_prefix = str(self.director_assets_root) + os.sep
+        res_cmp = os.path.normcase(res_str)
+        skills_prefix = os.path.normcase(str(self.upstream_skills_root) + os.sep)
+        kit_prefix = os.path.normcase(str((self.upstream_root / "kit").resolve()) + os.sep)
+        assets_prefix = os.path.normcase(str(self.director_assets_root) + os.sep)
 
-        if res_str.startswith(skills_prefix):
+        if res_cmp.startswith(skills_prefix):
             rel = res_str[len(skills_prefix) :]
             parts = rel.split(os.sep)
             target_skill = parts[0] if parts else ""
@@ -190,10 +193,10 @@ class ProvenanceGuard:
                     raise StyleLockViolationError(msg)
                 self.opened_skill_files.add(res_str)
 
-        elif res_str.startswith(kit_prefix):
+        elif res_cmp.startswith(kit_prefix):
             self.opened_kit_files.add(res_str)
 
-        elif res_str.startswith(assets_prefix):
+        elif res_cmp.startswith(assets_prefix):
             stem = resolved.stem
             owner_skill = _skill_for_adapter_stem(stem)
             if owner_skill is not None:

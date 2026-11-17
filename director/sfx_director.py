@@ -22,15 +22,21 @@ from .audio_dsp import (
     _chime,
     _coin_cascade,
     _cosmic_swell,
+    _door_slide_open,
     _electric_crackle,
+    _elevator_arrival_chime,
+    _elevator_button_click,
     _glass_tap,
     _lp,
     _mechanical_click,
+    _motor_drive_hum,
     _pin_drop,
     _place,
     _pop,
+    _relay_cabinet_click,
     _riser,
     _sand_thud,
+    _sheave_cable_whir,
     _shield_clang,
     _step_gravel,
     _subsea_bubble,
@@ -97,6 +103,18 @@ def select_procedural_sfx(
         return _subsea_bubble(rng, 0.38)
     if gen == "cosmic_swell":
         return _cosmic_swell(rng, 0.78)
+    if gen == "elevator_button_click":
+        return _elevator_button_click(rng)
+    if gen == "relay_cabinet_click":
+        return _relay_cabinet_click(rng)
+    if gen == "motor_drive_hum":
+        return _motor_drive_hum(rng, 0.52)
+    if gen == "sheave_cable_whir":
+        return _sheave_cable_whir(rng, 0.44)
+    if gen == "door_slide_open":
+        return _door_slide_open(rng, 0.42)
+    if gen == "elevator_arrival_chime":
+        return _elevator_arrival_chime(880.0, 0.62)
     return _pop(520.0) * 0.6
 
 

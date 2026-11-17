@@ -7,11 +7,32 @@ five skill adapters is ever loaded or executed during a run.
 from __future__ import annotations
 
 import importlib
+import os
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List
 
 from .. import VALID_SKILLS
 from ..provenance_guard import ProvenanceGuard, StyleLockViolationError
+
+
+def link_kit_node_modules(src_node_modules: Path, dst_node_modules: Path) -> str:
+    """Link shared `kit/node_modules` into `engine_work` (symlink, or Windows directory junction)."""
+    src = str(src_node_modules.resolve())
+    dst = str(dst_node_modules)
+    try:
+        os.symlink(src, dst, target_is_directory=True)
+        return "symlink"
+    except OSError:
+        if os.name == "nt":
+            try:
+                import _winapi  # type: ignore[attr-defined]
+                _winapi.CreateJunction(src, dst)
+                return "junction"
+            except Exception:
+                subprocess.run(["cmd", "/c", "mklink", "/J", dst, src], check=True, capture_output=True)
+                return "junction"
+        raise
 
 
 def build_locked_engine_workspace(

@@ -1,0 +1,137 @@
+{
+  "schema_version": "sd-async-validation-1",
+  "mode": "full",
+  "workers": 2,
+  "overall_status": "PASS",
+  "total_elapsed_sec": 328.77,
+  "tasks": [
+    {
+      "task_id": "unit_and_negative",
+      "description": "Style-lock negative & routing contracts",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_unit_and_negative",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 1.39,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\unit_and_negative.log"
+    },
+    {
+      "task_id": "visual_event_coverage",
+      "description": "VisualEventGraph, coverage, bounds & fault-injection unit contracts",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_visual_event_and_coverage",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 0.22,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\visual_event_coverage.log"
+    },
+    {
+      "task_id": "audio_determinism",
+      "description": "Audio DSP determinism & mastering LUFS/TP checks",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_audio_mix_determinism",
+        "-v"
+      ],
+      "deps": [],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 5.69,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\audio_determinism.log"
+    },
+    {
+      "task_id": "zdf_motion01_matrix",
+      "description": "T01-T20 ZDF-MOTION-01 contracts, IK, cutaway, transition & QA tamper traps",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_zdf_motion01",
+        "-v"
+      ],
+      "deps": [
+        "unit_and_negative",
+        "visual_event_coverage"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 15.92,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\zdf_motion01_matrix.log"
+    },
+    {
+      "task_id": "visual_scene_factory_e2e",
+      "description": "ZDF non-Roman cutaway stills, determinism hashes & E2E pipeline",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_visual_scene_factory_and_diversity",
+        "-v"
+      ],
+      "deps": [
+        "zdf_motion01_matrix"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 130.41,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\visual_scene_factory_e2e.log"
+    },
+    {
+      "task_id": "determinism_and_resources",
+      "description": "Seeded TTS/storyboard/resource budget determinism",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_determinism_and_resources",
+        "-v"
+      ],
+      "deps": [
+        "unit_and_negative"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 51.08,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\determinism_and_resources.log"
+    },
+    {
+      "task_id": "smoke_all_engines",
+      "description": "All remaining 5 visual engines smoke + upstream isolation check",
+      "cmd": [
+        "C:\\Users\\QuocAn\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-m",
+        "unittest",
+        "tests.test_smoke_all_engines",
+        "-v"
+      ],
+      "deps": [
+        "zdf_motion01_matrix"
+      ],
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_sec": 307.16,
+      "log_path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\docs\\implementation_runs\\ZDF-MOTION-01_20261117_0131Z\\logs\\smoke_all_engines.log"
+    }
+  ]
+}

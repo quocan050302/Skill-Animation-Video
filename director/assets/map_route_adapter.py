@@ -10,11 +10,12 @@ Strictly locks to `/map-route` visual language:
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List
+
+from . import link_kit_node_modules
 
 
 def _extract_route_params(parsed_script: Dict[str, Any], seed: int) -> Dict[str, Any]:
@@ -62,7 +63,7 @@ def generate_engine_project(
         shutil.copy2(wf.resolve(), work_dir / "fonts" / wf.name)
         visual_sources.append(str(wf.resolve()))
 
-    os.symlink(str((kit_dir / "node_modules").resolve()), str(work_dir / "node_modules"))
+    link_kit_node_modules(kit_dir / "node_modules", work_dir / "node_modules")
 
     route_spec = _extract_route_params(parsed_script, storyboard["seed"])
     payload = {

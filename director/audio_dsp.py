@@ -290,3 +290,72 @@ def _cosmic_swell(rng: np.random.Generator, dur: float = 0.78) -> np.ndarray:
     shimmer = _bp(rng.standard_normal(n), 800.0, 2400.0) * 0.16
     env = np.sin(np.pi * np.minimum(1.0, t / dur)) ** 1.3
     return (sub + shimmer) * env
+
+
+def _elevator_button_click(rng: np.random.Generator) -> np.ndarray:
+    """Crisp tactile microswitch press + subtle illuminated confirmation ping."""
+    n = int(0.11 * SR)
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0008)
+    snap = _bp(rng.standard_normal(n), 1800.0, 5600.0) * np.exp(-t * 165.0) * 0.55
+    body = np.sin(2.0 * np.pi * 640.0 * t) * np.exp(-t * 72.0) * 0.42
+    ring = np.sin(2.0 * np.pi * 1920.0 * t) * np.exp(-t * 48.0) * 0.28
+    return (snap + body + ring) * atk
+
+
+def _relay_cabinet_click(rng: np.random.Generator) -> np.ndarray:
+    """Metallic electromagnetic contactor snap inside control cabinet."""
+    n = int(0.14 * SR)
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.001)
+    latch = _bp(rng.standard_normal(n), 1100.0, 4200.0) * np.exp(-t * 95.0) * 0.55
+    coil = np.sin(2.0 * np.pi * 420.0 * t) * np.exp(-t * 58.0) * 0.38
+    hum = np.sin(2.0 * np.pi * 120.0 * t) * np.exp(-t * 18.0) * 0.22
+    return (latch + coil + hum) * atk
+
+
+def _motor_drive_hum(rng: np.random.Generator, dur: float = 0.52) -> np.ndarray:
+    """Traction motor rotor engage + electromagnetic stator hum."""
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.002)
+    engage = _bp(rng.standard_normal(n), 500.0, 2200.0) * np.exp(-t * 55.0) * 0.36
+    freq = 92.0 + 36.0 * np.sin(np.pi * np.minimum(1.0, t / dur))
+    motor = np.sin(2.0 * np.pi * np.cumsum(freq) / SR) * 0.42 + np.sin(2.0 * np.pi * np.cumsum(freq * 3.0) / SR) * 0.16
+    env = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.08)
+    return (engage + motor * 0.72) * atk * env
+
+
+def _sheave_cable_whir(rng: np.random.Generator, dur: float = 0.44) -> np.ndarray:
+    """Steel traction cables rolling smoothly across grooved drive sheave."""
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.002)
+    pulley_tick = _bp(rng.standard_normal(n), 1600.0, 4800.0) * np.exp(-t * 70.0) * 0.35
+    whir = _bp(rng.standard_normal(n), 280.0, 1450.0) * 0.32 * (0.65 + 0.35 * np.sin(2.0 * np.pi * 6.0 * t))
+    tone = np.sin(2.0 * np.pi * 240.0 * t) * 0.18
+    env = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.06)
+    return (pulley_tick + whir + tone) * atk * env
+
+
+def _door_slide_open(rng: np.random.Generator, dur: float = 0.42) -> np.ndarray:
+    """Pneumatic door latch release and brushed steel track glide."""
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0015)
+    unlatch = _bp(rng.standard_normal(n), 950.0, 3400.0) * np.exp(-t * 64.0) * 0.48
+    slide = _bp(rng.standard_normal(n), 180.0, 920.0) * np.exp(-t * 5.2) * 0.35
+    env = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.05)
+    return (unlatch + slide) * atk * env
+
+
+def _elevator_arrival_chime(freq: float = 880.0, dur: float = 0.62) -> np.ndarray:
+    """Warm two-tone harmonic elevator arrival chime (E5 -> A5)."""
+    n = max(32, int(dur * SR))
+    t = _t(n)
+    atk1 = np.minimum(1.0, t / 0.0015)
+    note1 = np.sin(2.0 * np.pi * (freq * 0.75) * t) * np.exp(-t * 6.5) * 0.45 * atk1
+    shift = np.maximum(0.0, t - 0.14)
+    active2 = (t >= 0.14).astype(np.float64) * np.minimum(1.0, shift / 0.0015)
+    note2 = np.sin(2.0 * np.pi * freq * shift) * np.exp(-shift * 4.8) * 0.52 * active2
+    return note1 + note2

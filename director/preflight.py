@@ -214,15 +214,28 @@ def find_browser_executable() -> Optional[str]:
         return env_chrome
 
     home = Path.home()
+    sys_name = platform.system().lower()
     patterns = [
         str(home / "Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
         str(home / "Library/Caches/ms-playwright/chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium"),
         str(home / ".cache/ms-playwright/chromium-*/chrome-linux/chrome"),
     ]
+    if sys_name == "windows":
+        local_app = Path(os.environ.get("LOCALAPPDATA", str(home / "AppData/Local")))
+        patterns.extend([
+            str(local_app / "ms-playwright/chromium-*/chrome-win/chrome.exe"),
+            str(home / ".cache/ms-playwright/chromium-*/chrome-win/chrome.exe"),
+        ])
+
     for pat in patterns:
         matches = sorted(glob.glob(pat), reverse=True)
         for m in matches:
-            if os.path.exists(m) and os.access(m, os.X_OK):
+            p = Path(m)
+            if p.exists() and (sys_name == "windows" or os.access(m, os.X_OK)):
+                # Guard against incomplete partial Playwright downloads (0-byte chrome.dll)
+                dll = p.parent / "chrome.dll"
+                if sys_name == "windows" and dll.exists() and dll.stat().st_size == 0:
+                    continue
                 return m
 
     system_candidates = [
@@ -231,10 +244,49 @@ def find_browser_executable() -> Optional[str]:
         shutil.which("chromium"),
         shutil.which("chromium-browser"),
     ]
+    if sys_name == "windows":
+        system_candidates.extend([
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            shutil.which("chrome"),
+            shutil.which("msedge"),
+        ])
     for c in system_candidates:
-        if c and os.path.exists(c) and os.access(c, os.X_OK):
+        if c and os.path.exists(c) and (sys_name == "windows" or os.access(c, os.X_OK)):
             return c
     return None
+
+
+def probe_windows_sapi_voices() -> Dict[str, List[str]]:
+    """Query Windows System.Speech installed voices when running on Windows."""
+    if platform.system().lower() != "windows":
+        return {}
+    ps_bin = shutil.which("powershell")
+    if not ps_bin:
+        return {}
+    cmd = (
+        "$ProgressPreference = 'SilentlyContinue'; "
+        "Add-Type -AssemblyName System.Speech; "
+        "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+        "$s.GetInstalledVoices() | ForEach-Object { "
+        "Write-Output ($_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name + '|' + $_.Enabled) }"
+    )
+    try:
+        res = subprocess.run([ps_bin, "-NoProfile", "-Command", cmd], capture_output=True, text=True, timeout=8, check=True)
+    except Exception:
+        return {}
+    by_lang: Dict[str, List[str]] = {}
+    for line in res.stdout.splitlines():
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 3 or parts[2].lower() != "true":
+            continue
+        vname, culture = parts[0], parts[1].replace("_", "-").lower()
+        short_lang = culture.split("-")[0]
+        by_lang.setdefault(culture, []).append(vname)
+        by_lang.setdefault(short_lang, []).append(vname)
+    return by_lang
 
 
 def probe_macos_say_voices() -> Dict[str, List[str]]:
@@ -301,6 +353,19 @@ def verify_language_voice_support(
                 note += " (Note: Kokoro v1.0 does NOT support Vietnamese; verified host macOS voice 'Linh' vi_VN is used.)"
             return (True, "macos_say", chosen, note)
 
+    # Check Windows SAPI installed voices when on Windows
+    win_voices = probe_windows_sapi_voices()
+    if win_voices:
+        candidates = win_voices.get(norm) or win_voices.get(base) or []
+        if candidates:
+            preferred_order = {
+                "en": ["Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Mark"],
+                "vi": ["Microsoft An"],
+            }.get(base, [])
+            chosen = next((p for p in preferred_order if p in candidates), candidates[0])
+            note = f"Windows System.Speech SAPI verified installed voice '{chosen}' for '{norm}'."
+            return (True, "windows_sapi", chosen, note)
+
     if base == "vi":
         return (
             False,
@@ -342,6 +407,41 @@ def ensure_kit_dependencies(kit_dir: Path) -> Tuple[bool, List[str]]:
         notes.append("Fetched shared kit/vendor/gsap.min.js.")
 
     return three_js.exists() and pw_dir.exists() and gsap_js.exists(), notes
+
+
+class DiskBudgetGuard:
+    """Target-aware disk headroom guard keeping >= max(4 GiB, 20% of initial free space)."""
+
+    def __init__(self, target_dir: Path, initial_free_bytes: Optional[int] = None) -> None:
+        self.target_dir = target_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        usage = shutil.disk_usage(str(target_dir))
+        self.initial_free_bytes = int(initial_free_bytes if initial_free_bytes is not None else usage.free)
+        self.default_headroom_bytes = max(4 * (1024 ** 3), int(self.initial_free_bytes * 0.20))
+
+    @staticmethod
+    def estimate_render_bytes(duration_sec: float, native_4k: bool = True, workers: int = 2) -> int:
+        # Realistic upper bound for H.264 segment streams + 4K/1080 masters + stems + stills + overhead
+        video_bps = 18_000_000 if native_4k else 8_000_000
+        stream_bytes = int((video_bps / 8.0) * max(1.0, duration_sec) * 2.4)
+        stems_and_stills = 120 * 1024 * 1024 + max(1, workers) * 32 * 1024 * 1024
+        return stream_bytes + stems_and_stills
+
+    def check(self, required_bytes: int, headroom_bytes: Optional[int] = None) -> Dict[str, Any]:
+        usage = shutil.disk_usage(str(self.target_dir))
+        free_b = int(usage.free)
+        headroom = int(headroom_bytes if headroom_bytes is not None else self.default_headroom_bytes)
+        needed_total = int(required_bytes) + headroom
+        ok = free_b >= needed_total
+        return {
+            "ok": ok,
+            "status": "PASS" if ok else "DISK_BUDGET_BLOCKED",
+            "free_bytes": free_b,
+            "required_bytes": int(required_bytes),
+            "headroom_bytes": headroom,
+            "needed_total_bytes": needed_total,
+            "free_gb": round(free_b / (1024 ** 3), 2),
+        }
 
 
 def check_disk_quota(target_dir: Path, min_free_gb: float = 1.5) -> Tuple[bool, float, float]:
@@ -427,8 +527,8 @@ def run_preflight(
 
     if sys_name == "darwin":
         webgl_backend = "metal"
-    elif sys_name == "linux":
-        webgl_backend = "swiftshader"
+    elif sys_name == "windows":
+        webgl_backend = "d3d11"
     else:
         webgl_backend = "swiftshader"
 

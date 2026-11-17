@@ -113,10 +113,10 @@ def audit_style_lock(
             # Recursively audit generated code files inside engine_work (skipping symlinked neutral kit/node_modules)
             for p in sorted(work_dir.rglob("*")):
                 if "node_modules" in p.parts:
-                    if p.name == "node_modules" and p.is_symlink():
+                    if p.name == "node_modules" and (p.is_symlink() or (hasattr(p, "is_junction") and p.is_junction())):
                         target = str(p.resolve())
                         if "claude-animation-skills/kit/node_modules" not in target.replace("\\", "/"):
-                            violations.append(f"node_modules symlink points outside neutral kit: {target}")
+                            violations.append(f"node_modules link points outside neutral kit: {target}")
                     continue
                 if not p.is_file():
                     continue
@@ -313,6 +313,7 @@ def run_final_quality_gate(
     render_info: Dict[str, Any],
     preview_mp4: Path,
     final_4k_mp4: Path,
+    max_static_hold_sec: Optional[float] = None,
 ) -> Dict[str, Any]:
     """STEP 7 Complete QC Gate: PASS / FAIL / WARN / NOT_RUN per check."""
     checks: Dict[str, Dict[str, Any]] = {}
@@ -510,13 +511,24 @@ def run_final_quality_gate(
     else:
         checks["audio_levels_and_ducking"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
-    # 6. Scene Diversity, Perceptual SSIM/pHash & Transition Continuity QA (`SD-VISUAL-01`)
+    # 6. Scene Diversity, Camera Trace, Multi-frame Transition & Perceptual QA
+    subj_audio = "NOT_VERIFIED"
+    if "audio_levels_and_ducking" in checks and (run_dir / "audio" / "audio_qc_report.json").exists():
+        _aqc_tmp = json.loads((run_dir / "audio" / "audio_qc_report.json").read_text(encoding="utf-8"))
+        subj_audio = str(_aqc_tmp.get("subjective_editorial_listening", "NOT_VERIFIED"))
+
     if final_4k_mp4.exists():
         from .scene_diversity_qa import run_scene_diversity_qa
         edl_p = run_dir / "transition_edl.json"
         cam_p = run_dir / "camera_paths.json"
+        trace_p = run_dir / "camera_execution_trace.json"
+        raw_tel_p = run_dir / "logs" / "raw_render_telemetry.json"
+
         edl_doc = json.loads(edl_p.read_text(encoding="utf-8")) if edl_p.exists() else None
         cam_doc = json.loads(cam_p.read_text(encoding="utf-8")) if cam_p.exists() else None
+        cam_trace_doc = json.loads(trace_p.read_text(encoding="utf-8")) if trace_p.exists() else None
+        raw_traces = list((json.loads(raw_tel_p.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p.exists() else None
+
         div_qa = run_scene_diversity_qa(
             run_dir=run_dir,
             video_mp4=final_4k_mp4,
@@ -524,15 +536,30 @@ def run_final_quality_gate(
             style_lock_status=post_audit["status"],
             transition_edl=edl_doc,
             camera_plan=cam_doc,
+            max_static_hold_sec=max_static_hold_sec,
+            camera_trace_doc=cam_trace_doc,
+            raw_traces=raw_traces,
         )
         checks["scene_diversity_and_retention"] = {
             "status": div_qa["overall_status"],
             "subjective_visual_review": div_qa.get("subjective_visual_review", "NOT_VERIFIED"),
             "scene_diversity_report": str((run_dir / "scene_diversity_report.json").resolve()),
+            "visual_qc_timeline_json": div_qa.get("visual_qc_timeline_json"),
             "checks_summary": {k: v["status"] for k, v in (div_qa.get("checks") or {}).items()},
+        }
+        cam_audit = (div_qa.get("checks") or {}).get("camera_execution_audit") or {"status": "PASS"}
+        checks["camera_execution"] = {
+            "status": cam_audit["status"],
+            "camera_execution_trace_json": str(trace_p.resolve()) if trace_p.exists() else None,
+            "worst_pos_err_m": cam_audit.get("worst_pos_err_m"),
+            "worst_ori_err_deg": cam_audit.get("worst_ori_err_deg"),
+            "worst_fov_err_deg": cam_audit.get("worst_fov_err_deg"),
+            "worst_contact_err_m": cam_audit.get("worst_contact_err_m"),
+            "issues": cam_audit.get("issues", []),
         }
     else:
         checks["scene_diversity_and_retention"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
+        checks["camera_execution"] = {"status": "NOT_RUN", "reason": "final_4k.mp4 missing"}
 
     # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])
@@ -545,10 +572,14 @@ def run_final_quality_gate(
 
     statuses = [c["status"] for c in checks.values()]
     overall = "FAIL" if ("FAIL" in statuses or "NOT_VERIFIED" in statuses) else ("WARN" if "WARN" in statuses else "PASS")
+    release_status = "TECHNICAL_ACCEPTANCE_PASS" if overall in ("PASS", "WARN") else "FAIL"
 
     qc_report = {
-        "schema_version": "0.4.0",
+        "schema_version": "0.5.0",
         "overall_status": overall,
+        "release_status": release_status,
+        "subjective_visual_review": "NOT_VERIFIED",
+        "subjective_editorial_listening": subj_audio,
         "selected_skill": style_decisions["selected_skill"],
         "selection_mode": style_decisions["selection_mode"],
         "checks": checks,

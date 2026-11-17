@@ -1,24 +1,31 @@
-"""Single-Engine Adapter for `zach-d-films` (3D Cartoon Three.js Studio Explainer).
+"""Single-Engine Adapter for `zach-d-films` (3D Cartoon Three.js Studio Explainer — ZDF-MOTION-01).
 
 Uses ONLY:
 - `vendor/claude-animation-skills/skills/zach-d-films/engine/src/{anim.js,human.js,props.js,materials.js,textures.js}`
 - Shared `kit/node_modules/three` and `@fontsource/montserrat`
-- Bespoke procedural 3D modules generated solely inside `engine_work/src/` (`novel_props.js`, `shots.js`, `director_main.js`).
+- Modular ZDF-only procedural 3D modules emitted strictly inside `engine_work/src/`:
+  `camera_executor.js`, `character_action_rig.js`, `layered_cutaway.js`,
+  `mechanical_systems.js`, `novel_props.js`, `shots.js`, `director_main.js`.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List
 
+from . import link_kit_node_modules
+from ..camera_execution import CAMERA_EXECUTOR_JS
+from .zdf_rigs import CHARACTER_ACTION_RIG_JS, LAYERED_CUTAWAY_JS
+from .zdf_mechanical_scenes import MECHANICAL_SYSTEMS_JS
+
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
-import { torsoShell } from './human.js';
 import { materials } from './materials.js';
 import { rng, woodTexture } from './textures.js';
+import { LayeredCutaway } from './layered_cutaway.js';
+import { buildRegisteredCharacter } from './character_action_rig.js';
 
 function shadow(o) {
   o.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
@@ -68,7 +75,7 @@ export function cutawaySlabStack() {
   return shadow(g);
 }
 
-// ---------- Procedural Seeded Textures for Bespoke Roman Props ----------
+// ---------- Procedural Seeded Textures for Roman Props ----------
 function makeSandTexture(seed = 17) {
   const r = rng(seed);
   const c = document.createElement('canvas');
@@ -140,7 +147,6 @@ function makeTabletTexture(headerTxt, bigTxt, bgHex = '#2a211b', borderHex = '#d
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Auto-scale text cleanly inside tablet safe padding (420px max width) so long words NEVER clip!
   const fitFont = (txt, startPx) => {
     let sz = startPx;
     while (sz > 28) {
@@ -184,7 +190,6 @@ export function romanMaterials() {
   return _romanMats;
 }
 
-// Add leather/bronze gladiator wrist bracers ('manica') cleanly covering human wrist seam
 export function addGladiatorBracers(human) {
   const RM = romanMaterials();
   for (const side of ['lWr', 'rWr']) {
@@ -195,7 +200,6 @@ export function addGladiatorBracers(human) {
   }
 }
 
-// Fluted Roman travertine plinth pedestal (grounded on arena floor)
 export function romanPlinth(height = 0.72, topR = 0.30) {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -212,7 +216,6 @@ export function romanPlinth(height = 0.72, topR = 0.30) {
   return shadow(g);
 }
 
-// Roman wooden combat training post ('palus') driven into the arena sand
 export function trainingPalus() {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -232,7 +235,6 @@ export function trainingPalus() {
   return shadow(g);
 }
 
-// Roman Coliseum sandy floor + distant curved stone arcade
 export function arenaStage({ radius = 4.6, wallArc = true } = {}) {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -271,35 +273,29 @@ export function arenaStage({ radius = 4.6, wallArc = true } = {}) {
   return g;
 }
 
-// Roman Imperial Galea Helmet: sits high cleanly above eyes & eyebrows (eyes 100% visible!)
 export function romanHelmet(crestHex = 0xb81d24) {
   const RM = romanMaterials();
   const M = materials();
   const g = new THREE.Group();
-  // Upper bowl ends at phi = 0.44 * PI so it leaves eyes (y=0.11) & brows (y=0.134) unobstructed!
   const dome = new THREE.Mesh(new THREE.SphereGeometry(0.124, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.44), RM.bronze);
   dome.position.set(0, 0.134, -0.008);
   dome.scale.set(0.98, 1.15, 1.08);
   dome.rotation.x = -0.10;
   g.add(dome);
-  // Forehead brow guard above eyebrows
   const brow = new THREE.Mesh(new THREE.TorusGeometry(0.118, 0.011, 8, 32, Math.PI * 0.85), RM.gold);
   brow.rotation.set(Math.PI * 0.44, 0, Math.PI * 0.075);
   brow.position.set(0, 0.155, 0.018);
   g.add(brow);
-  // Hinged cheek guards set beside face (z = -0.01 so face remains expressive)
   for (const s of [-1, 1]) {
     const cg = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.09, 0.055), RM.bronze);
     cg.position.set(s * 0.095, 0.095, -0.005);
     cg.rotation.set(0.08, -s * 0.25, -s * 0.08);
     g.add(cg);
   }
-  // Angled neck apron flare behind skull
   const neck = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.042, 0.075), M.steel);
   neck.position.set(0, 0.095, -0.102);
   neck.rotation.x = 0.62;
   g.add(neck);
-  // Arched horsehair crest cleanly above dome top
   const crestMat = new THREE.MeshStandardMaterial({ color: crestHex, roughness: 0.78 });
   for (let i = 0; i < 11; i++) {
     const t = (i / 10) * 2 - 1;
@@ -312,7 +308,6 @@ export function romanHelmet(crestHex = 0xb81d24) {
   return shadow(g);
 }
 
-// Solid 3D Curved Rectangular Roman Scutum Shield (matches props.js solid ExtrudeGeometry method!)
 export function romanScutum() {
   const RM = romanMaterials();
   const shape = new THREE.Shape();
@@ -323,12 +318,7 @@ export function romanScutum() {
   shape.closePath();
 
   const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.020,
-    bevelEnabled: true,
-    bevelThickness: 0.008,
-    bevelSize: 0.008,
-    bevelSegments: 2,
-    curveSegments: 16,
+    depth: 0.020, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 16,
   });
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
@@ -340,8 +330,6 @@ export function romanScutum() {
   const g = new THREE.Group();
   const body = new THREE.Mesh(geo, RM.scutumFace);
   g.add(body);
-
-  // Brass rim edges top/bottom & central bronze Umbo boss
   for (const y of [-0.32, 0.32]) {
     const trim = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.024, 0.034), RM.bronze);
     trim.position.set(0, y, -0.02);
@@ -354,7 +342,6 @@ export function romanScutum() {
   return shadow(g);
 }
 
-// Gleaming Roman coin stack
 export function denariusStack({ count = 12, radius = 0.075, height = 0.018, gold = true } = {}) {
   const RM = romanMaterials();
   const mat = gold ? RM.gold : RM.silver;
@@ -376,7 +363,6 @@ export function denariusStack({ count = 12, radius = 0.075, height = 0.018, gold
   return shadow(g);
 }
 
-// Roman wax-and-bronze display tablet with auto-fitted crisp label text
 export function romanScrollTablet(headerTxt, bigTxt, accentHex = 0xd4a017) {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -392,7 +378,6 @@ export function romanScrollTablet(headerTxt, bigTxt, accentHex = 0xd4a017) {
   return shadow(g);
 }
 
-// Roman Organizers' crimson shoulder toga sash attached cleanly onto chest group
 export function togaSash() {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -404,7 +389,6 @@ export function togaSash() {
   return shadow(g);
 }
 
-// Compact 9:16-framed Roman Balance Scale comparing 1x Rent vs 50x Penalty inside safe zone
 export function balanceScale50x() {
   const RM = romanMaterials();
   const g = new THREE.Group();
@@ -420,7 +404,6 @@ export function balanceScale50x() {
   beamPivot.position.set(0, 1.30, 0);
   g.add(beamPivot);
 
-  // Beam half-width 0.30 so BOTH 1x and 50x plaques stay 100% inside narrow 9:16 frame!
   const beam = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.034, 0.040), RM.bronze);
   beamPivot.add(beam);
 
@@ -442,7 +425,6 @@ export function balanceScale50x() {
 
   const leftArm = mkPan(-0.32);
   const rightArm = mkPan(0.32);
-
   const stack1x = denariusStack({ count: 3, radius: 0.062, height: 0.016, gold: false });
   stack1x.position.set(0, -0.33, 0);
   leftArm.add(stack1x);
@@ -473,7 +455,7 @@ export function balanceScale50x() {
   return shadow(g);
 }
 
-// ---------- SD-VISUAL-01: Non-Roman 3D Multi-Family Scene Builders ----------
+// ---------- Non-Roman Multi-Family Scene Builders ----------
 
 function makeScreenTexture(headline = 'READY', btnText = 'SEND', sent = false) {
   const c = document.createElement('canvas');
@@ -484,16 +466,12 @@ function makeScreenTexture(headline = 'READY', btnText = 'SEND', sent = false) {
   bg.addColorStop(1, '#1e293b');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 256, 512);
-
-  // Header bar
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   ctx.fillRect(16, 28, 224, 52);
   ctx.fillStyle = '#94a3b8';
   ctx.font = '700 20px Cap, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('DIRECT LINK', 128, 60);
-
-  // Chat bubble
   ctx.fillStyle = sent ? '#0ea5e9' : '#2563eb';
   ctx.beginPath();
   ctx.roundRect(24, 150, 208, 92, 22);
@@ -501,16 +479,13 @@ function makeScreenTexture(headline = 'READY', btnText = 'SEND', sent = false) {
   ctx.fillStyle = '#ffffff';
   ctx.font = '700 26px Cap, sans-serif';
   ctx.fillText(headline, 128, 204);
-
-  // Action pill
   ctx.fillStyle = sent ? '#10b981' : '#38bdf8';
   ctx.beginPath();
   ctx.roundRect(44, 340, 168, 68, 34);
   ctx.fill();
   ctx.fillStyle = '#07131d';
   ctx.font = '700 28px Cap, sans-serif';
-  ctx.fillText(sent ? 'SENT ✓' : btnText, 128, 383);
-
+  ctx.fillText(sent ? 'SENT' : btnText, 128, 383);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
@@ -540,29 +515,9 @@ function makeRackTexture(seed = 11) {
   return tex;
 }
 
-export function makeModernOutfitCharacter(makeHumanFn, accentHex = 0x2b6cb0) {
-  const h = makeHumanFn('plain');
-  const shirtMat = new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.78, metalness: 0.05 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.55 });
-  // Smooth torsoShell jacket/shirt sleeves over base mesh (+0.016..0.018 offset avoids z-fighting; zero armor!)
-  const chestG = torsoShell(0.18, 0.54, 0.018);
-  chestG.translate(0, -0.2, 0);
-  const chestShirt = new THREE.Mesh(chestG, shirtMat);
-  chestShirt.castShadow = true;
-  chestShirt.receiveShadow = true;
-  h.j.chest.add(chestShirt);
-
-  const spineShirt = new THREE.Mesh(torsoShell(-0.14, 0.20, 0.016), shirtMat);
-  spineShirt.castShadow = true;
-  spineShirt.receiveShadow = true;
-  h.j.spine.add(spineShirt);
-
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 8, 24), accentMat);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.set(0, 0.34, 0.01);
-  collar.castShadow = true;
-  h.j.chest.add(collar);
-  return h;
+export function makeModernOutfitCharacter(makeHumanFn, charSpecOrHex = 0x2563eb) {
+  const charSpec = typeof charSpecOrHex === 'object' ? charSpecOrHex : { shirt_hex: charSpecOrHex };
+  return buildRegisteredCharacter(makeHumanFn, charSpec);
 }
 
 export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
@@ -574,26 +529,22 @@ export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
   const chipMat = new THREE.MeshPhysicalMaterial({ color: 0x111827, metalness: 0.4, roughness: 0.2, clearcoat: 0.8 });
   const traceMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.55, metalness: 0.9, roughness: 0.2 });
 
-  // Back frame & interior PCB assembly (visible during cutaway reveal)
   const backShell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.56, 0.016), chassisMat);
   backShell.position.z = -0.018;
   g.add(backShell);
 
   const internals = new THREE.Group();
   g.add(internals);
-
   const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.50, 0.008), pcbMat);
   pcb.position.z = -0.004;
   internals.add(pcb);
 
-  // Lithium battery cell
   const batt = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.25, 0.014), M.steelDark);
   batt.position.set(-0.025, -0.08, 0.006);
   const battBadge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.004), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.45 }));
   battBadge.position.set(-0.025, -0.06, 0.014);
   internals.add(batt, battBadge);
 
-  // SoC chip + gold copper traces
   const soc = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.095, 0.012), chipMat);
   soc.position.set(0.03, 0.11, 0.007);
   internals.add(soc);
@@ -609,22 +560,18 @@ export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
     pulses.push(pkt);
   }
 
-  // Front glass OLED assembly (detaches forward cleanly on cutaway!)
   const frontGlass = new THREE.Group();
   g.add(frontGlass);
   const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.285, 0.565, 0.014), frameMat);
   const scrMat = new THREE.MeshStandardMaterial({
     map: makeScreenTexture(sent ? 'DELIVERED' : 'HELLO WORLD', 'SEND', sent),
-    emissive: sent ? 0x0ea5e9 : 0x1d4ed8,
-    emissiveIntensity: 0.45,
-    roughness: 0.15,
+    emissive: sent ? 0x0ea5e9 : 0x1d4ed8, emissiveIntensity: 0.45, roughness: 0.15,
   });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.255, 0.515), scrMat);
   screen.position.z = 0.008;
   frontGlass.position.z = 0.014;
   frontGlass.add(bezel, screen);
 
-  // Sending ring ripple on screen tap point
   const tapRing = new THREE.Mesh(
     new THREE.TorusGeometry(0.055, 0.006, 12, 36),
     new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 1.4, transparent: true, opacity: 0.0 })
@@ -638,6 +585,15 @@ export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
   g.pulses = pulses;
   g.tapRing = tapRing;
   g.screenMat = scrMat;
+  g.getTelemetry = (peelU = 0) => ({
+    cutaway_id: 'smartphone_device_cutaway',
+    has_clip_plane: false,
+    reveal_u: Number(peelU.toFixed(4)),
+    layers_count: 3,
+    components_count: 4,
+    internal_component_count: 4,
+    internal_component_names: ['pcb', 'lithium_battery', 'soc_chip', 'copper_traces'],
+  });
   return shadow(g);
 }
 
@@ -647,11 +603,9 @@ export function makeRadioTowerRig() {
   const hilltop = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.55, 0.42, 36), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
   hilltop.position.y = 0.21;
   g.add(hilltop);
-
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.16, 1.95, 6), M.steelBright);
   mast.position.y = 1.38;
   g.add(mast);
-
   for (let k = 0; k < 4; k++) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14 - k * 0.022, 0.012, 8, 6), M.steelDark);
     ring.rotation.x = Math.PI / 2;
@@ -663,7 +617,6 @@ export function makeRadioTowerRig() {
   beacon.position.y = 2.38;
   g.add(beacon);
 
-  // Expanding RF emission wavefront toruses
   const rfRings = [];
   for (let i = 0; i < 4; i++) {
     const rm = new THREE.Mesh(
@@ -683,7 +636,6 @@ export function makeRadioTowerRig() {
 export function makeSubseaCableRig(seed = 23) {
   const M = materials();
   const g = new THREE.Group();
-  // Procedural rippled seabed terrain
   const bedGeo = new THREE.PlaneGeometry(8.5, 6.5, 42, 32);
   bedGeo.rotateX(-Math.PI / 2);
   const pos = bedGeo.attributes.position;
@@ -695,7 +647,6 @@ export function makeSubseaCableRig(seed = 23) {
   const seabed = new THREE.Mesh(bedGeo, new THREE.MeshStandardMaterial({ color: 0x164e63, roughness: 0.92, metalness: 0.05 }));
   g.add(seabed);
 
-  // Cutaway armored fiber-optic trunk laying diagonally across seabed
   const cable = new THREE.Group();
   cable.position.set(0, 0.34, 0);
   cable.rotation.y = -0.38;
@@ -712,7 +663,6 @@ export function makeSubseaCableRig(seed = 23) {
   armor.position.x = -0.45;
   cable.add(armor);
 
-  // Exposed luminous optical glass core running through cutaway window
   const glassCore = new THREE.Mesh(
     new THREE.CylinderGeometry(0.068, 0.068, 3.6, 28),
     new THREE.MeshPhysicalMaterial({ color: 0x67e8f9, emissive: 0x06b6d4, emissiveIntensity: 0.7, transparent: true, opacity: 0.85, roughness: 0.1 })
@@ -756,7 +706,6 @@ export function makeDatacenterRackBank(seed = 41) {
       g.add(rack);
     }
   }
-  // Overhead fiber trunk & fast light packets
   const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 4.8), M.copper);
   trunk.position.set(0, 2.12, -0.8);
   g.add(trunk);
@@ -778,12 +727,10 @@ export function makePowerTurbineRig() {
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 1.2), M.steelDark);
   plinth.position.y = 0.14;
   g.add(plinth);
-
   const housing = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.09, 16, 48, Math.PI * 1.45), M.copper);
   housing.position.set(0, 1.15, 0);
   housing.rotation.z = -0.35;
   g.add(housing);
-
   const rotor = new THREE.Group();
   rotor.position.set(0, 1.15, 0);
   g.add(rotor);
@@ -798,14 +745,12 @@ export function makePowerTurbineRig() {
     blade.rotation.y = 0.35;
     rotor.add(blade);
   }
-  // Glowing charge core / magnetic field arcs
   const coilGlow = new THREE.Mesh(
     new THREE.TorusGeometry(0.68, 0.022, 12, 48),
     new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 1.4 })
   );
   coilGlow.position.set(0, 1.15, 0);
   g.add(coilGlow);
-
   g.rotor = rotor;
   g.coilGlow = coilGlow;
   return shadow(g);
@@ -817,7 +762,6 @@ export function makeCosmicGenesisRig(seed = 88) {
   const starMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 1.9, roughness: 0.2 });
   const star = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 4), starMat);
   g.add(star);
-
   const ring1 = new THREE.Mesh(
     new THREE.TorusGeometry(0.75, 0.026, 14, 72),
     new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.85, roughness: 0.3 })
@@ -830,7 +774,6 @@ export function makeCosmicGenesisRig(seed = 88) {
   ring2.rotation.set(0.75, 0.5, 0.3);
   g.add(ring1, ring2);
 
-  // Crystallized elemental orbs (copper & silicon planetary seeds)
   const orbiters = [];
   for (let i = 0; i < 10; i++) {
     const rad = 0.55 + (i % 4) * 0.24;
@@ -843,7 +786,6 @@ export function makeCosmicGenesisRig(seed = 88) {
     g.add(m);
     orbiters.push(m);
   }
-  // Distant stars
   for (let i = 0; i < 40; i++) {
     const theta = r() * Math.PI * 2, phi = Math.acos(2 * r() - 1);
     const d = 5.5 + r() * 6.0;
@@ -851,21 +793,28 @@ export function makeCosmicGenesisRig(seed = 88) {
     s.position.set(d * Math.sin(phi) * Math.cos(theta), d * Math.cos(phi), d * Math.sin(phi) * Math.sin(theta));
     g.add(s);
   }
-  g.star = star;
-  g.ring1 = ring1;
-  g.ring2 = ring2;
-  g.orbiters = orbiters;
+  g.star = star; g.ring1 = ring1; g.ring2 = ring2; g.orbiters = orbiters;
   return g;
 }
 
+/**
+ * Upgraded Stylized/Schematic Anatomical Cutaway using LayeredCutaway with real clipping plane + multi-layer structure.
+ */
 export function makeAnatomicalCutawayRig(isBrain = true) {
-  const g = new THREE.Group();
-  const shellMat = new THREE.MeshPhysicalMaterial({
-    color: 0x93c5fd, transparent: true, opacity: 0.34, roughness: 0.15, metalness: 0.05, clearcoat: 0.8, side: THREE.DoubleSide
+  const cutaway = new LayeredCutaway({
+    id: isBrain ? 'stylized_brain_cutaway' : 'stylized_heart_cutaway',
+    worldAnchor: [0, 1.25, 0.02],
+    clipNormal: [0, 0, -1],
+    clipConstantStart: 0.42,
+    clipConstantOpen: 0.02,
   });
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.42, 36, 28, 0, Math.PI * 1.45), shellMat);
+
+  const shellMat = new THREE.MeshPhysicalMaterial({
+    color: 0x93c5fd, transparent: true, opacity: 0.36, roughness: 0.16, metalness: 0.08, clearcoat: 0.7, side: THREE.DoubleSide
+  });
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.42, 36, 28), shellMat);
   shell.position.y = 1.25;
-  g.add(shell);
+  cutaway.addOuterShell(shell, { applyClip: true });
 
   const organMat = new THREE.MeshStandardMaterial({
     color: isBrain ? 0xf472b6 : 0xe11d48,
@@ -879,28 +828,26 @@ export function makeAnatomicalCutawayRig(isBrain = true) {
       const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.20, 28, 22), organMat);
       lobe.scale.set(0.82, 1.0, 1.25);
       lobe.position.set(side * 0.11, 1.26, 0.02);
-      g.add(lobe);
+      cutaway.addInternalComponent('cortex_hemisphere_' + (side < 0 ? 'l' : 'r'), lobe, { layerIndex: 1 });
       lobes.push(lobe);
     }
+    cutaway.addConnectionEdge('neural_tract', [[-0.14, 1.22, 0.05], [0.0, 1.32, 0.04], [0.14, 1.24, 0.05]], 0.010, 0xfef08a);
   } else {
     const heart = new THREE.Mesh(new THREE.SphereGeometry(0.24, 32, 24), organMat);
     heart.scale.set(0.85, 1.22, 0.85);
     heart.position.set(0, 1.22, 0.02);
-    g.add(heart);
+    cutaway.addInternalComponent('schematic_chambers', heart, { layerIndex: 1 });
     lobes.push(heart);
+    cutaway.addConnectionEdge('vessel_arch', [[-0.08, 1.12, 0.04], [0.0, 1.42, 0.04], [0.10, 1.18, 0.04]], 0.014, 0xef4444);
   }
-  const sparkNodes = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    const nd = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfacc15, emissiveIntensity: 1.6 }));
-    nd.position.set(Math.cos(a) * 0.16, 1.26 + Math.sin(a) * 0.12, 0.14);
-    g.add(nd);
-    sparkNodes.push(nd);
-  }
-  g.shell = shell;
-  g.lobes = lobes;
-  g.sparkNodes = sparkNodes;
-  return shadow(g);
+  cutaway.addFlowPulseOnEdge(0, 0xfef08a, 0.022, 0.0);
+  cutaway.addFlowPulseOnEdge(0, 0xfef08a, 0.022, 0.5);
+
+  const root = shadow(cutaway.root);
+  root.cutaway = cutaway;
+  root.lobes = lobes;
+  root.representation = 'schematic/stylized';
+  return root;
 }
 
 export function makeVaultGearStage() {
@@ -939,7 +886,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { SHOTS, CAPTIONS, DURATION, FADES } from './shots.js';
+import { SHOTS, CAPTIONS, DURATION, FADES, TRANSITIONS } from './shots.js';
 
 const params = new URLSearchParams(location.search);
 const SCALE = Math.max(1, Number(params.get('scale') || 1));
@@ -952,6 +899,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.03;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
 document.getElementById('stage').prepend(renderer.domElement);
 
 const SKY_FRAG = `
@@ -1023,46 +971,97 @@ export function makeStage({ shadowSize = 3, sunDir = [-3, 6, 4], sun = null, sky
 }
 
 const rt = new THREE.WebGLRenderTarget(W * SCALE, H * SCALE, { samples: SCALE >= 2 ? 0 : 2, type: THREE.HalfFloatType });
+const rtA = new THREE.WebGLRenderTarget(W * SCALE, H * SCALE, { type: THREE.HalfFloatType });
+const rtB = new THREE.WebGLRenderTarget(W * SCALE, H * SCALE, { type: THREE.HalfFloatType });
+
+const compositeMat = new THREE.ShaderMaterial({
+  uniforms: {
+    tA: { value: rtA.texture },
+    tB: { value: rtB.texture },
+    uAlpha: { value: 0.0 },
+    uMode: { value: 0 }, // 1=zoom_through, 2=match_cut, 3=object_wipe, 4=whip_pan
+    uAnchorA: { value: new THREE.Vector2(0.5, 0.5) },
+    uAnchorB: { value: new THREE.Vector2(0.5, 0.5) },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tA, tB;
+    uniform float uAlpha;
+    uniform int uMode;
+    uniform vec2 uAnchorA, uAnchorB;
+    varying vec2 vUv;
+    void main(){
+      float p = clamp(uAlpha, 0.0, 1.0);
+      if (uMode == 1) {
+        // True 2-source zoom_through portal bridge: outgoing plunges toward anchorA while incoming opens radially
+        float sA = mix(1.0, 0.42, p * p);
+        float sB = mix(1.85, 1.0, smoothstep(0.0, 1.0, p));
+        vec2 uvA = clamp(uAnchorA + (vUv - uAnchorA) * sA, 0.001, 0.999);
+        vec2 uvB = clamp(uAnchorB + (vUv - uAnchorB) * sB, 0.001, 0.999);
+        vec4 colA = texture2D(tA, uvA);
+        vec4 colB = texture2D(tB, uvB);
+        float d = length((vUv - uAnchorA) * vec2(0.5625, 1.0));
+        float rad = p * 1.25;
+        float portal = smoothstep(rad + 0.16, rad - 0.16, d) * smoothstep(0.0, 0.30, p);
+        float mixF = clamp(max(portal, smoothstep(0.62, 1.0, p)), 0.0, 1.0);
+        gl_FragColor = mix(colA, colB, mixF);
+      } else if (uMode == 2) {
+        // True 2-source match_cut: aligns focal centroids & dissolves cleanly
+        vec2 dA = (uAnchorB - uAnchorA) * (p * 0.35);
+        vec2 dB = (uAnchorA - uAnchorB) * ((1.0 - p) * 0.35);
+        vec4 colA = texture2D(tA, clamp(vUv - dA, 0.001, 0.999));
+        vec4 colB = texture2D(tB, clamp(vUv - dB, 0.001, 0.999));
+        float m = smoothstep(0.05, 0.95, p);
+        gl_FragColor = mix(colA, colB, m);
+      } else if (uMode == 3) {
+        // True 2-source object_wipe: physical bevel divider sweeps left->right revealing target scene
+        float cutX = p * 1.18 - 0.09;
+        float edge = vUv.x + (vUv.y - 0.5) * 0.14;
+        float maskB = 1.0 - smoothstep(cutX - 0.018, cutX + 0.018, edge);
+        float bar = smoothstep(0.026, 0.0, abs(edge - cutX));
+        vec4 colA = texture2D(tA, vUv);
+        vec4 colB = texture2D(tB, vUv);
+        vec3 mixed = mix(colA.rgb, colB.rgb, maskB);
+        mixed = mix(mixed, vec3(0.10, 0.16, 0.26), bar * 0.85);
+        gl_FragColor = vec4(mixed, 1.0);
+      } else if (uMode == 4) {
+        // True 2-source whip_pan: directional horizontal handoff + motion smear across both shots
+        float shift = p;
+        vec4 acc = vec4(0.0);
+        float blurAmt = sin(p * 3.14159) * 0.022;
+        for (int i = -2; i <= 2; i++) {
+          float ox = float(i) * blurAmt;
+          vec2 uA = vec2(vUv.x + shift * 0.85 + ox, vUv.y);
+          vec2 uB = vec2(vUv.x - (1.0 - shift) * 0.85 + ox, vUv.y);
+          vec4 cA = (uA.x >= 0.0 && uA.x <= 1.0) ? texture2D(tA, clamp(uA, 0.001, 0.999)) : texture2D(tB, clamp(uB, 0.001, 0.999));
+          vec4 cB = (uB.x >= 0.0 && uB.x <= 1.0) ? texture2D(tB, clamp(uB, 0.001, 0.999)) : texture2D(tA, clamp(uA, 0.001, 0.999));
+          acc += mix(cA, cB, smoothstep(0.25, 0.75, p));
+        }
+        gl_FragColor = acc * 0.20;
+      } else {
+        gl_FragColor = mix(texture2D(tA, vUv), texture2D(tB, vUv), p);
+      }
+    }`,
+  depthTest: false, depthWrite: false, toneMapped: false,
+});
+const compositeScene = new THREE.Scene();
+const compositeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+compositeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), compositeMat));
+
 const composer = new EffectComposer(renderer, rt);
 const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
 const bloom = new UnrealBloomPass(new THREE.Vector2(W * SCALE, H * SCALE), 0.22, 0.4, 1.5);
 const grade = new ShaderPass({
   uniforms: {
     tDiffuse: { value: null },
-    uVig: { value: 0.25 },
-    uZoom: { value: 0.0 },
-    uWhip: { value: 0.0 },
-    uWipe: { value: 0.0 },
-    uFlash: { value: 0.0 },
+    uVig: { value: 0.24 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; uniform float uZoom; uniform float uWhip; uniform float uWipe; uniform float uFlash; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; varying vec2 vUv;
     void main(){
-      vec2 uv = vUv;
-      vec2 cvec = uv - 0.5;
-      if (uZoom > 0.001) {
-        vec4 acc = vec4(0.0);
-        for (int i = 0; i < 4; i++) {
-          float s = 1.0 - uZoom * 0.14 * (float(i) / 3.0);
-          acc += texture2D(tDiffuse, clamp(0.5 + cvec * s, 0.001, 0.999));
-        }
-        gl_FragColor = acc * 0.25;
-      } else if (abs(uWhip) > 0.001) {
-        vec4 acc = vec4(0.0);
-        for (int i = -2; i <= 2; i++) {
-          acc += texture2D(tDiffuse, clamp(uv + vec2(uWhip * 0.032 * float(i), 0.0), 0.001, 0.999));
-        }
-        gl_FragColor = acc * 0.20;
-      } else {
-        gl_FragColor = texture2D(tDiffuse, uv);
-      }
-      if (uWipe > 0.001) {
-        float bar = smoothstep(uWipe - 0.04, uWipe, uv.x) * (1.0 - smoothstep(uWipe, uWipe + 0.04, uv.x));
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.07, 0.11, 0.18), bar * 0.85);
-      }
+      gl_FragColor = texture2D(tDiffuse, vUv);
       vec2 q = vUv - 0.5; q.x *= 0.5625;
       gl_FragColor.rgb *= 1.0 - uVig * smoothstep(0.18, 0.62, length(q));
-      gl_FragColor.rgb += vec3(uFlash * 0.18);
     }`,
 });
 composer.addPass(renderPass);
@@ -1081,66 +1080,123 @@ function getShot(i) {
 window.TOTAL_DURATION = DURATION;
 window.SHOT_SPANS = SHOTS.map(s => [s.start, s.end]);
 
+function findActiveTransition(t) {
+  for (let k = 0; k < (TRANSITIONS || []).length; k++) {
+    const tr = TRANSITIONS[k];
+    if (!tr || !tr.duration || tr.duration <= 0) continue;
+    const half = tr.duration * 0.5;
+    const t0 = tr.boundary - half;
+    const t1 = tr.boundary + half;
+    if (t >= t0 && t <= t1) {
+      const alpha = Math.max(0, Math.min(1, (t - t0) / Math.max(1e-5, t1 - t0)));
+      return { ...tr, alpha, index: k };
+    }
+  }
+  return null;
+}
+
+const MODE_CODES = { zoom_through: 1, match_cut: 2, object_wipe: 3, whip_pan: 4 };
+
 window.renderAtTime = (rawT) => {
   const t = Math.max(0, Math.min(rawT, DURATION - 1e-4));
   let idx = SHOTS.findIndex(s => t >= s.start && t < s.end);
   if (idx < 0) idx = SHOTS.length - 1;
   const def = SHOTS[idx];
-  const prevDef = idx > 0 ? SHOTS[idx - 1] : null;
   const shot = getShot(idx);
   const lt = Math.max(0, t - def.start);
-  const dur = Math.max(0.2, def.end - def.start);
-  const r = shot.update(lt, t) || {};
-  const cam = shot.camera;
 
-  // Deterministic transition execution on camera + optical shader grade (verified on pixels!)
-  let tZoom = 0.0, tWhip = 0.0, tWipe = 0.0, tFlash = 0.0;
-  const outTr = def.tr || 'cut';
-  const inTr = prevDef ? (prevDef.tr || 'cut') : 'cut';
-  const rem = def.end - t;
+  const activeTr = findActiveTransition(t);
+  const trCode = activeTr ? (MODE_CODES[activeTr.method] || 0) : 0;
 
-  if (idx < SHOTS.length - 1 && outTr === 'zoom_through' && rem < 0.16) {
-    const p = 1.0 - rem / 0.16;
-    cam.fov = Math.max(14, (cam.fov || 34) * (1.0 - 0.34 * p * p));
-    tZoom = p * 0.9;
-  } else if (inTr === 'zoom_through' && lt < 0.16) {
-    const p = 1.0 - lt / 0.16;
-    cam.fov = Math.max(14, (cam.fov || 34) * (1.0 + 0.28 * p * p));
-    tZoom = p * 0.75;
+  let camTel = null;
+  let contactTel = null;
+  let cutawayTel = null;
+  let trTel = { active: false, method: def.tr || 'cut', alpha: 0.0, from_shot: def.id, to_shot: null };
+
+  if (activeTr && trCode > 0 && activeTr.from_idx < SHOTS.length - 1) {
+    const iA = activeTr.from_idx;
+    const iB = activeTr.to_idx;
+    const defA = SHOTS[iA];
+    const defB = SHOTS[iB];
+    const shotA = getShot(iA);
+    const shotB = getShot(iB);
+    const ltA = Math.max(0.0, Math.min(defA.end - defA.start, t - defA.start));
+    const ltB = Math.max(0.0, Math.min(defB.end - defB.start, t - defB.start));
+
+    const trOptsA = trCode === 1
+      ? { transitionFovScale: 1.0 - 0.24 * activeTr.alpha * activeTr.alpha }
+      : (trCode === 4 ? { transitionYawDelta: 0.36 * activeTr.alpha * activeTr.alpha } : {});
+    const trOptsB = trCode === 1
+      ? { transitionFovScale: 1.0 + 0.22 * (1 - activeTr.alpha) * (1 - activeTr.alpha) }
+      : (trCode === 4 ? { transitionYawDelta: -0.36 * (1 - activeTr.alpha) * (1 - activeTr.alpha) } : {});
+
+    const rA = shotA.update(ltA, t, trOptsA) || {};
+    const rB = shotB.update(ltB, t, trOptsB) || {};
+
+    shotA.scene.userData.sky.position.copy(shotA.camera.position);
+    shotB.scene.userData.sky.position.copy(shotB.camera.position);
+
+    const prevRT = renderer.getRenderTarget();
+    renderer.setRenderTarget(rtA);
+    renderer.clear();
+    renderer.render(shotA.scene, shotA.camera);
+    renderer.setRenderTarget(rtB);
+    renderer.clear();
+    renderer.render(shotB.scene, shotB.camera);
+    renderer.setRenderTarget(prevRT);
+
+    const fuvA = rA.camTel?.focal_anchor_uv;
+    const fuvB = rB.camTel?.focal_anchor_uv;
+    compositeMat.uniforms.uAlpha.value = activeTr.alpha;
+    compositeMat.uniforms.uMode.value = trCode;
+    if (fuvA && fuvA.in_front) compositeMat.uniforms.uAnchorA.value.set(Math.max(0.15, Math.min(0.85, fuvA.u)), 1.0 - Math.max(0.15, Math.min(0.85, fuvA.v)));
+    else compositeMat.uniforms.uAnchorA.value.set(0.5, 0.5);
+    if (fuvB && fuvB.in_front) compositeMat.uniforms.uAnchorB.value.set(Math.max(0.15, Math.min(0.85, fuvB.u)), 1.0 - Math.max(0.15, Math.min(0.85, fuvB.v)));
+    else compositeMat.uniforms.uAnchorB.value.set(0.5, 0.5);
+
+    renderPass.scene = compositeScene;
+    renderPass.camera = compositeCam;
+    const rMain = idx === iA ? rA : rB;
+    camTel = rMain.camTel || null;
+    contactTel = rMain.contact || null;
+    cutawayTel = rMain.cutaway || null;
+    bloom.strength = ((rMain.bloom ?? 0.30) * 0.52);
+    renderer.toneMappingExposure = rMain.exposure ?? 1.03;
+    composer.render();
+
+    trTel = {
+      active: true,
+      transition_id: activeTr.transition_id,
+      method: activeTr.method,
+      alpha: Number(activeTr.alpha.toFixed(4)),
+      from_shot: defA.id,
+      to_shot: defB.id,
+      anchor_a_uv: [Number(compositeMat.uniforms.uAnchorA.value.x.toFixed(4)), Number(compositeMat.uniforms.uAnchorA.value.y.toFixed(4))],
+      anchor_b_uv: [Number(compositeMat.uniforms.uAnchorB.value.x.toFixed(4)), Number(compositeMat.uniforms.uAnchorB.value.y.toFixed(4))],
+    };
+  } else {
+    const r = shot.update(lt, t, {}) || {};
+    const cam = shot.camera;
+    shot.scene.userData.sky.position.copy(cam.position);
+    renderPass.scene = shot.scene;
+    renderPass.camera = cam;
+    bloom.strength = (r.bloom ?? 0.30) * 0.52;
+    renderer.toneMappingExposure = r.exposure ?? 1.03;
+    composer.render();
+    camTel = r.camTel || null;
+    contactTel = r.contact || null;
+    cutawayTel = r.cutaway || null;
   }
 
-  if (idx < SHOTS.length - 1 && outTr === 'whip_pan' && rem < 0.12) {
-    const p = 1.0 - rem / 0.12;
-    cam.rotation.y += p * p * 0.42;
-    tWhip = p * 1.0;
-  } else if (inTr === 'whip_pan' && lt < 0.12) {
-    const p = 1.0 - lt / 0.12;
-    cam.rotation.y -= p * p * 0.42;
-    tWhip = -p * 1.0;
-  }
-
-  if ((idx < SHOTS.length - 1 && outTr === 'match_cut' && rem < 0.10) || (inTr === 'match_cut' && lt < 0.10)) {
-    const dist = (idx < SHOTS.length - 1 && rem < 0.10) ? (1.0 - rem / 0.10) : (1.0 - lt / 0.10);
-    tFlash = dist * 0.55;
-  }
-
-  if (idx < SHOTS.length - 1 && outTr === 'object_wipe' && rem < 0.14) {
-    tWipe = 0.5 * (1.0 - rem / 0.14) + 0.02;
-  } else if (inTr === 'object_wipe' && lt < 0.14) {
-    tWipe = 0.5 + 0.5 * (lt / 0.14);
-  }
-
-  cam.aspect = W / H; cam.updateProjectionMatrix();
-  shot.scene.userData.sky.position.copy(cam.position);
-  renderPass.scene = shot.scene;
-  renderPass.camera = cam;
-  bloom.strength = (r.bloom ?? 0.30) * 0.52;
-  grade.uniforms.uZoom.value = tZoom;
-  grade.uniforms.uWhip.value = tWhip;
-  grade.uniforms.uWipe.value = tWipe;
-  grade.uniforms.uFlash.value = tFlash;
-  renderer.toneMappingExposure = r.exposure ?? 1.03;
-  composer.render();
+  window.__LAST_RENDER_TELEMETRY__ = {
+    time_sec: Number(t.toFixed(4)),
+    shot_index: idx,
+    shot_id: def.id,
+    camera: camTel,
+    transition: trTel,
+    contact: contactTel,
+    cutaway: cutawayTel,
+  };
 
   const c = CAPTIONS.filter(c => t >= c[0]).pop();
   capEl.textContent = c && (c[2] == null || t < c[2]) ? c[1] : '';
@@ -1176,38 +1232,50 @@ def _build_captions_list(words: List[Dict[str, Any]]) -> List[List[Any]]:
     return out
 
 
+def _cam_helper_js(cam_path: Dict[str, Any] | None, fallback_pos: List[float], fallback_look: List[float], fallback_fov: int) -> str:
+    kfs = (cam_path or {}).get("keyframes") or [
+        {"t_norm": 0.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0, "ease": "quintic"},
+        {"t_norm": 1.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0, "ease": "quintic"},
+    ]
+    return json.dumps(kfs)
+
+
+def _anchor_helper_js(shot: Dict[str, Any]) -> str:
+    fa = shot.get("focal_anchor") or (shot.get("camera_path") or {}).get("focal_anchor") or {"anchor_id": "stage_center", "world_pos": [0.0, 1.18, 0.0], "radius_m": 0.25}
+    return json.dumps(fa)
+
+
 def _roman_shot_code(i: int, shot: Dict[str, Any], total_shots: int) -> str:
     start, end = shot["start"], shot["end"]
     dur = max(0.2, round(end - start, 3))
     low = shot["narration_text"].lower()
     setup = shot["setup_type"]
+    kfs_json = _cam_helper_js(shot.get("camera_path"), [-0.35, 1.26, 4.05], [0.0, 0.90, 0.10], 39)
+    anchor_json = _anchor_helper_js(shot)
 
-    # 1. Hook ("In Rome, killing your opponent could cost a fortune.")
     if i == 0:
         return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 4.5, sunDir: [-3, 7, 5] }});
   scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
   const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
   fighter.root.position.set(-0.46, 0, 0.16); fighter.root.rotation.y = 1.08; scene.add(fighter.root);
   const fHelm = romanHelmet(0xc92a2a); fighter.j.head.add(fHelm);
   const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.84);
   const fSw = sword(); fighter.j.rWr.add(fSw); fSw.position.set(0, -0.065, 0); fSw.rotation.x = Math.PI / 2;
-
   const opp = makeHuman('plate'); addGladiatorBracers(opp);
   opp.root.position.set(0.46, 0, -0.14); opp.root.rotation.y = -1.78; scene.add(opp.root);
   const oHelm = romanHelmet(0xd9a441); opp.j.head.add(oHelm);
   const oSw = sword(); opp.j.rWr.add(oSw); oSw.position.set(0, -0.065, 0); oSw.rotation.x = Math.PI / 2;
-
   const ped = romanPlinth(0.55, 0.24); ped.position.set(0.02, 0, 0.72); scene.add(ped);
   const coins = denariusStack({{ count: 14, radius: 0.065, height: 0.017, gold: true }});
   coins.position.set(0.02, 0.56, 0.72); scene.add(coins);
-
-  const c = cam(39);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 39);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const bob = Math.sin(lt * 3.1) * 0.03;
       fighter.setPose({{
@@ -1225,112 +1293,96 @@ function shot_{i}({{ makeStage }}) {{
       coins.rotation.y = lt * 0.85;
       const pop = easeOut(clamp(u * 2.2, 0, 1));
       coins.scale.set(1, Math.max(0.05, pop), 1);
-      const s = shake(lt, 0.4, 1);
-      place(c, [lerp(-0.35, 0.15, easeInOut(u)) + s[0], lerp(1.26, 1.12, easeInOut(u)) + s[1], lerp(4.05, 3.35, easeInOut(u))], [0.0, 0.90, 0.10]);
-      return {{ bloom: 0.34 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.34, camTel }};
     }}
   }};
 }}"""
 
-    # 2. Slow-motion blade halting inches from chest + Red Force Ripple ("You expect the final blow. But it doesn't come.")
     if "final blow" in low or "doesn't come" in low or setup == "novel_slowmo_ripple_cutaway":
         TI = round(dur * 0.46, 3)
         return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 2.2, sunDir: [-2, 6, 5] }});
   scene.add(arenaStage({{ radius: 4.2, wallArc: false }}));
-
   const fallen = makeHuman('vest'); addGladiatorBracers(fallen);
   fallen.root.position.set(0.0, 0, 0.15); fallen.root.rotation.y = 0.25; scene.add(fallen.root);
   const disc = new THREE.Mesh(new THREE.CircleGeometry(0.28, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
   disc.position.set(0.02, 0.82, 0.29); scene.add(disc);
   const rp = rippleOverlay(disc);
-
   const sw = sword(); scene.add(sw);
   const sp = sparks(85, {{ speed: 0.42, spread: 1.4, gravity: -0.35, life: 0.9, size: 0.008, seed: 29, dir: V(0, 0.4, 1), color: [1, 0.32, 0.14] }});
   sp.position.set(0.02, 0.84, 0.30); scene.add(sp);
   const tab = romanScrollTablet('BLOW', 'HALTED', 0xff4d4d);
   tab.scale.setScalar(0.46); tab.position.set(0.02, 1.32, 0.08); scene.add(tab);
-
-  const c = cam(36);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 36);
   const TI = {TI};
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const before = easeOut(clamp(lt / TI, 0, 1));
       const hitT = lt - TI;
       const tremble = hitT > 0 ? Math.sin(hitT * 26) * Math.exp(-hitT * 2.2) * 0.014 : 0;
-
       fallen.setPose({{
-        drop: -0.48,
-        pelvis: [-0.25, 0.1, 0], spine: [-0.24, 0, 0], chest: [-0.15 + tremble, 0, 0],
+        drop: -0.48, pelvis: [-0.25, 0.1, 0], spine: [-0.24, 0, 0], chest: [-0.15 + tremble, 0, 0],
         neck: [-0.28, 0.15, 0], head: [-0.22, 0.12, 0],
         lHip: [-1.2, 0, 0.18], lKn: [1.6, 0, 0], rHip: [-0.8, 0, -0.16], rKn: [1.4, 0, 0],
         lSh: [-0.95, 0.1, 0.35], lEl: [-0.75, 0, 0], rSh: [-0.95, -0.1, -0.35], rEl: [-0.75, 0, 0],
       }});
       fallen.setMouth(hitT < 0 ? 0.65 * before : lerp(0.65, 0.22, clamp(hitT * 1.4, 0, 1)));
-
       const stopTarget = V(0.02, 0.84, 0.34);
       const bladeDir = V(-0.42, -0.82, -0.38).normalize();
       const swDist = lerp(0.88, 0.05, before) + tremble;
       const tipPos = stopTarget.clone().addScaledVector(bladeDir, -swDist);
       sw.quaternion.setFromUnitVectors(V(0, 1, 0), bladeDir);
       sw.position.copy(tipPos).addScaledVector(bladeDir, -0.94);
-
       const ru = rp.material.uniforms;
       ru.uCenter.value.set(0, 0, 0);
       ru.uAmp.value = hitT > 0 ? Math.min(1.0, hitT * 4.5) * (1.0 - 0.35 * smooth(range(hitT, 0.8, 2.0))) : 0.0;
       ru.uRadius.value = hitT > 0 ? 0.04 + easeOut(range(hitT, 0, 1.2)) * 0.24 : 0.0;
       ru.uRings.value = 180.0; ru.uSpot.value = 0.045; ru.uSpotAmp.value = 1.1; ru.uTime.value = lt * 0.8;
-
       tab.scale.setScalar(hitT > 0.05 ? 0.48 * easeOut(clamp((hitT - 0.05) * 4, 0, 1)) : 0.001);
       sp.update(hitT);
-
-      const shk = hitT > 0 && hitT < 0.35 ? shake(lt * 10, 2.2, {i}) : shake(lt, 0.32, {i});
-      place(c, [lerp(0.62, 0.40, easeInOut(u)) + shk[0], lerp(1.22, 1.14, u) + shk[1], lerp(1.98, 1.66, easeInOut(u))], [0.02, 1.00, 0.16]);
-      return {{ bloom: hitT > 0 && hitT < 0.35 ? 0.62 : 0.34 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: hitT > 0 && hitT < 0.35 ? 0.62 : 0.34, camTel }};
     }}
   }};
 }}"""
 
-    # 3. Balance Scale 50X Catch ("Here's the catch: if a rented gladiator died... fifty times the rental fee.")
     if "fifty times" in low or "catch" in low or setup == "mechanism_cross_section_3d":
         TSLAM = round(dur * 0.24, 3)
         return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 3.5, sunDir: [-3, 7, 4] }});
   scene.add(arenaStage({{ radius: 4.3, wallArc: true }}));
-
   const scaleObj = balanceScale50x();
   scaleObj.position.set(0, 0.0, 0.05);
   scene.add(scaleObj);
-
   const rippleDisc = new THREE.Mesh(new THREE.CircleGeometry(0.45, 36), new THREE.MeshBasicMaterial({{ visible: false }}));
-  rippleDisc.rotation.x = -Math.PI / 2;
-  rippleDisc.position.set(0.32, 0.05, 0.05);
-  scene.add(rippleDisc);
+  rippleDisc.rotation.x = -Math.PI / 2; rippleDisc.position.set(0.32, 0.05, 0.05); scene.add(rippleDisc);
   const rp = rippleOverlay(rippleDisc);
-
   const sp = sparks(110, {{ speed: 1.5, spread: 1.6, gravity: -3.5, life: 0.75, size: 0.015, seed: 50, color: [1.0, 0.78, 0.18] }});
   sp.position.set(0.32, 0.92, 0.05); scene.add(sp);
-
-  const c = cam(39);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 39);
   const TSLAM = {TSLAM};
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const dropProgress = easeOut(clamp((lt - TSLAM) / 0.35, 0, 1));
       const bounce = lt > TSLAM ? Math.exp(-(lt - TSLAM) * 5.2) * Math.sin((lt - TSLAM) * 18) * 0.08 : 0;
-
       scaleObj.stack50x.coins.forEach((cn, idx) => {{
         const reveal = clamp(dropProgress * 24 - idx * 0.45, 0, 1);
-        cn.visible = reveal > 0.02;
-        cn.scale.setScalar(easeOut(reveal));
+        cn.visible = reveal > 0.02; cn.scale.setScalar(easeOut(reveal));
       }});
       scaleObj.setTilt(-0.34 * dropProgress + bounce);
-
       const it = lt - TSLAM;
       const ru = rp.material.uniforms;
       ru.uCenter.value.set(0, 0, 0);
@@ -1338,380 +1390,263 @@ function shot_{i}({{ makeStage }}) {{
       ru.uRadius.value = it > 0 ? 0.06 + easeOut(range(it, 0, 1.2)) * 0.38 : 0.0;
       ru.uRings.value = 150.0; ru.uSpot.value = 0.06; ru.uSpotAmp.value = 0.9; ru.uTime.value = lt;
       sp.update(it - 0.15);
-
-      const shk = it > 0 && it < 0.45 ? shake(lt * 10, 2.4, 50) : shake(lt, 0.35, 50);
-      place(c, [lerp(-0.28, 0.20, easeInOut(u)) + shk[0], lerp(1.18, 1.26, u) + shk[1], lerp(3.45, 3.05, easeInOut(u))], [0.0, 0.96, 0.05]);
-      return {{ bloom: it > 0 && it < 0.4 ? 0.58 : 0.34 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: it > 0 && it < 0.4 ? 0.58 : 0.34, camTel }};
     }}
   }};
 }}"""
 
-    # 4. Knocked down / Towering opponent ("knocked into the sand", "stands over him")
-    if "knocked into the sand" in low or "stands over him" in low or "sword ready" in low:
-        is_up_angle = "stands over him" in low or "sword ready" in low
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-2.5, 7, 4] }});
-  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
-  const fallen = makeHuman('vest'); addGladiatorBracers(fallen);
-  fallen.root.position.set(-0.20, 0, 0.28); fallen.root.rotation.y = 0.42; scene.add(fallen.root);
-  const droppedSh = romanScutum();
-  droppedSh.position.set(-0.52, 0.045, 0.48); droppedSh.rotation.set(-Math.PI / 2, 0.25, 0.38); droppedSh.scale.setScalar(0.76); scene.add(droppedSh);
-
-  const opp = makeHuman('plate'); addGladiatorBracers(opp);
-  opp.root.position.set(0.28, 0, -0.32); opp.root.rotation.y = -0.32; scene.add(opp.root);
-  const oHelm = romanHelmet(0xc92a2a); opp.j.head.add(oHelm);
-  const oSw = sword(); opp.j.rWr.add(oSw); oSw.position.set(0, -0.065, 0); oSw.rotation.x = Math.PI / 2;
-
-  const spDust = sparks(45, {{ speed: 1.1, spread: 1.4, gravity: -2.8, life: 0.75, size: 0.016, seed: 12, dir: V(0, 0.5, 0.4), color: [0.95, 0.78, 0.52] }});
-  spDust.position.set(-0.20, 0.08, 0.28); scene.add(spDust);
-  const c = cam(39);
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      const dropImpact = {'1.0' if is_up_angle else 'easeOut(clamp(u * 2.1, 0, 1))'};
-      const slump = Math.sin(u * Math.PI) * 0.03;
-      fallen.setPose({{
-        drop: -0.45 * dropImpact - 0.06,
-        pelvis: [-0.22 * dropImpact, 0.15, 0], spine: [-0.28 * dropImpact + slump, 0, 0], chest: [-0.15 * dropImpact, -0.1, 0],
-        neck: [-0.32, 0.12, 0], head: [-0.24, 0.15, 0],
-        lHip: [-1.18, 0, 0.18], lKn: [1.58, 0, 0], rHip: [-0.72, 0, -0.18], rKn: [1.35, 0, 0],
-        lSh: [0.42, 0, 0.35], lEl: [-0.25, 0, 0], rSh: [-0.82, -0.1, -0.25], rEl: [-0.65, 0, 0],
-      }});
-      fallen.setMouth(dropImpact > 0.3 ? 0.52 : 0.1);
-      const raise = {'lerp(0.65, 1.0, easeInOut(u))' if is_up_angle else 'easeInOut(range(lt, 0.4, 2.0))'};
-      opp.setPose({{
-        ...STAND, drop: -0.05,
-        spine: [0.12, 0.18 * raise, 0], chest: [0.12, 0.22 * raise, 0],
-        neck: [0.22, -0.12, 0], head: [0.15, -0.08, 0],
-        lSh: [-0.25, 0, 0.32], lEl: [-0.55, 0, 0],
-      }});
-      opp.root.updateMatrixWorld(true);
-      const handPos = opp.root.localToWorld(V(lerp(-0.25, -0.12, raise), lerp(1.38, 1.88, raise), lerp(0.32, 0.22, raise)));
-      const tipHint = V(lerp(0.1, -0.15, raise), lerp(-0.5, 0.65, raise), lerp(0.9, 0.45, raise)).applyQuaternion(opp.root.quaternion);
-      ikArm(opp, 'r', handPos, opp.root.localToWorld(V(-0.55, 1.25, -0.45)), tipHint);
-
-      spDust.update(lt - 0.15);
-      const s = shake(lt, dropImpact < 0.8 ? 1.8 : 0.4, {i});
-      {'place(c, [lerp(-0.72, -0.42, easeInOut(u)) + s[0], lerp(0.88, 1.22, u) + s[1], lerp(2.75, 2.35, easeInOut(u))], [0.05, 0.92, 0.0]);' if is_up_angle else 'place(c, [lerp(-0.98, -0.58, easeInOut(u)) + s[0], lerp(1.05, 1.18, u) + s[1], lerp(3.45, 2.85, easeInOut(u))], [0.02, 0.85, 0.0]);'}
-      return {{ bloom: 0.30 }};
-    }}
-  }};
-}}"""
-
-    # 5. Training & Preparation ("These fighters were expensive to train, feed, and prepare.")
-    if "train" in low or "feed" in low or "prepare" in low:
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
-  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
-  const trainee = makeHuman('vest'); addGladiatorBracers(trainee);
-  trainee.root.position.set(-0.34, 0, 0.12); trainee.root.rotation.y = 0.88; scene.add(trainee.root);
-  const tSh = romanScutum(); trainee.j.lEl.add(tSh); tSh.position.set(0.08, -0.15, 0.06); tSh.rotation.set(0, 1.15, 0); tSh.scale.setScalar(0.80);
-  const tSw = sword(); trainee.j.rWr.add(tSw); tSw.position.set(0, -0.065, 0); tSw.rotation.x = Math.PI / 2;
-
-  const palus = trainingPalus();
-  palus.position.set(0.32, 0, -0.04); scene.add(palus);
-
-  const spHit = sparks(55, {{ speed: 1.2, spread: 1.4, gravity: -3.5, life: 0.55, size: 0.013, seed: 34, dir: V(-1, 0.4, 0.5), color: [1.0, 0.72, 0.25] }});
-  spHit.position.set(0.24, 1.05, 0.0); scene.add(spHit);
-
-  const tab = romanScrollTablet('TRAINING', 'COSTS', 0xf4c430);
-  tab.scale.setScalar(0.50); tab.position.set(0.24, 1.82, -0.04); scene.add(tab);
-
-  const c = cam(39);
-  const TH = 1.25;
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      const strike = easeIn(range(lt, 0.4, TH));
-      const rec = lt > TH ? Math.sin(Math.min(lt - TH, 0.6) / 0.6 * Math.PI) * 0.12 : 0;
-      trainee.setPose({{
-        ...STAND, drop: -0.08,
-        spine: [0.10, lerp(-0.22, 0.35, strike), 0], chest: [0.06, lerp(-0.20, 0.28, strike), 0],
-        lSh: [-0.52, 0.2, 0.25], lEl: [-0.85, 0, 0],
-        rSh: [lerp(-0.35, -1.05, strike), lerp(-0.35, 0.22, strike), -0.2], rEl: [lerp(-0.95, -0.35, strike), 0, 0],
-      }});
-      palus.rotation.z = -rec * 0.35;
-      spHit.update(lt - TH);
-      const s = shake(lt, lt > TH && lt < TH + 0.35 ? 1.8 : 0.35, {i});
-      place(c, [lerp(-0.45, 0.28, easeInOut(u)) + s[0], lerp(1.18, 1.12, u) + s[1], lerp(3.45, 2.95, easeInOut(u))], [0.0, 0.96, 0.05]);
-      return {{ bloom: 0.32 }};
-    }}
-  }};
-}}"""
-
-    # 6. Rental contract over stone counter ("Organizers often rented them from their owners.")
-    if "rented" in low or "owners" in low:
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 4] }});
-  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
-  const fighter = makeHuman('chainmail'); addGladiatorBracers(fighter);
-  fighter.root.position.set(-0.40, 0, -0.05); fighter.root.rotation.y = 0.25; scene.add(fighter.root);
-  const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.76);
-
-  const org = makeHuman('vest'); addGladiatorBracers(org);
-  org.root.position.set(0.42, 0, 0.08); org.root.rotation.y = -0.38; scene.add(org.root);
-  org.j.chest.add(togaSash());
-
-  const plinth = romanPlinth(0.84, 0.20); plinth.position.set(0.02, 0, 0.28); scene.add(plinth);
-  const stack = denariusStack({{ count: 10, radius: 0.062, height: 0.017, gold: true }});
-  stack.position.set(0.02, 0.85, 0.28); scene.add(stack);
-
-  const tab = romanScrollTablet('GLADIATOR', 'RENTED', 0xf4c430);
-  tab.scale.setScalar(0.50); tab.position.set(0.02, 1.48, 0.16); scene.add(tab);
-
-  const c = cam(39);
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      fighter.setPose({{
-        ...STAND, chest: [Math.sin(lt * 1.8) * 0.02, 0.1, 0],
-        lSh: [-0.28, 0, 0.28], lEl: [-0.85, 0, 0], rSh: [-0.30, -0.1, -0.22], rEl: [-0.55, 0, 0],
-      }});
-      org.setPose({{
-        ...STAND,
-        chest: [0.04, -0.12, 0], head: [Math.sin(lt * 2.5) * 0.05, -0.18, 0],
-        lSh: [-0.55 - easeInOut(u) * 0.2, 0.1, 0.22], lEl: [-0.65, 0, 0],
-      }});
-      org.setMouth(0.2 + 0.22 * Math.abs(Math.sin(lt * 7.0)));
-      const rise = easeOut(clamp(u * 1.8, 0, 1));
-      stack.coins.forEach((cn, k) => {{ cn.visible = k < Math.max(1, Math.round(rise * 10)); }});
-      stack.rotation.y = lt * 0.9;
-      const s = shake(lt, 0.35, {i});
-      place(c, [lerp(-0.28, 0.24, easeInOut(u)) + s[0], lerp(1.22, 1.16, u) + s[1], lerp(3.45, 3.05, easeInOut(u))], [0.0, 1.02, 0.05]);
-      return {{ bloom: 0.32 }};
-    }}
-  }};
-}}"""
-
-    # 7. Losing didn't mean death / Granted mercy ("losing a match", "granted mercy", "leave the arena alive")
-    if "losing a match" in low or "mercy" in low and ("alive" in low or "leave" in low):
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
-  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
-  const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
-  fighter.root.position.set(-0.28, 0, 0.10); fighter.root.rotation.y = 0.35; scene.add(fighter.root);
-
-  const victor = makeHuman('plate'); addGladiatorBracers(victor);
-  victor.root.position.set(0.38, 0, -0.06); victor.root.rotation.y = -0.45; scene.add(victor.root);
-  const vHelm = romanHelmet(0xd9a441); victor.j.head.add(vHelm);
-  const vSw = sword(); victor.j.rWr.add(vSw); vSw.position.set(0, -0.065, 0); vSw.rotation.x = Math.PI / 2;
-
-  const badge = romanScrollTablet('MERCY', 'ALIVE', 0x52b788);
-  badge.scale.setScalar(0.50); badge.position.set(0.04, 1.80, 0.06); scene.add(badge);
-
-  const sp = sparks(45, {{ speed: 0.65, spread: 1.5, gravity: 0.4, life: 1.2, size: 0.015, seed: 71, dir: V(0, 1, 0), color: [0.4, 0.95, 0.55] }});
-  sp.position.set(-0.2, 0.85, 0.15); scene.add(sp);
-  const c = cam(39);
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      const standUp = easeInOut(clamp(u * 1.35, 0, 1));
-      fighter.setPose({{
-        drop: lerp(-0.36, -0.02, standUp),
-        spine: [lerp(-0.16, 0.02, standUp), 0, 0], chest: [lerp(-0.08, 0.03, standUp), 0.10, 0],
-        head: [lerp(-0.18, 0.0, standUp), 0.20, 0],
-        lHip: [lerp(-0.90, 0.0, standUp), 0, 0.1], lKn: [lerp(1.20, 0.0, standUp), 0, 0],
-        rHip: [lerp(-0.52, 0.0, standUp), 0, -0.1], rKn: [lerp(0.90, 0.0, standUp), 0, 0],
-        lSh: [lerp(0.2, -0.15, standUp), 0, 0.25], rSh: [lerp(0.15, -0.35, standUp), 0, -0.25],
-      }});
-      fighter.setMouth(0.15 + 0.12 * standUp);
-      victor.setPose({{
-        ...STAND,
-        chest: [0.02, -0.20, 0], head: [0.02, -0.20, 0],
-        lSh: [-0.52 * standUp, 0.1, 0.28], lEl: [-0.58, 0, 0],
-        rSh: [lerp(-0.45, 0.12, standUp), 0, -0.25], rEl: [lerp(-0.7, -0.15, standUp), 0, 0],
-      }});
-      badge.scale.setScalar(0.50 * easeOut(clamp(u * 2.2, 0, 1)));
-      sp.update(lt - 0.35);
-      const s = shake(lt, 0.32, {i});
-      place(c, [lerp(0.45, -0.22, easeInOut(u)) + s[0], lerp(1.18, 1.26, u) + s[1], lerp(3.25, 3.45, easeInOut(u))], [0.02, 1.00, 0.04]);
-      return {{ bloom: 0.35 }};
-    }}
-  }};
-}}"""
-
-    # 8. Valuable investment / financial sense ("valuable investment", "financial sense")
-    if "investment" in low or "financial sense" in low:
-        tab_top = 'INVESTMENT' if 'investment' in low else 'MATH'
-        tab_bot = 'SAVED' if 'investment' in low else 'CLEAR'
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.0, sunDir: [-3, 7, 5] }});
-  scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
-  const org = makeHuman('vest'); addGladiatorBracers(org);
-  org.root.position.set(-0.34, 0, 0.05); org.root.rotation.y = 0.28; scene.add(org.root);
-  org.j.chest.add(togaSash());
-
-  const plinth = romanPlinth(0.84, 0.22); plinth.position.set(0.30, 0, 0.15); scene.add(plinth);
-  const coins = denariusStack({{ count: 16, radius: 0.070, height: 0.017, gold: true }});
-  coins.position.set(0.30, 0.85, 0.15); scene.add(coins);
-  const tab = romanScrollTablet('{tab_top}', '{tab_bot}', 0x52b788);
-  tab.scale.setScalar(0.48); tab.position.set(0.30, 1.54, 0.15); scene.add(tab);
-
-  const c = cam(39);
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      org.setPose({{
-        ...STAND,
-        chest: [0.03, -0.18, 0], head: [0.04, -0.22, 0],
-        rSh: [-0.72 - Math.sin(u * Math.PI) * 0.18, 0.12, -0.22], rEl: [-0.45, 0, 0],
-      }});
-      org.setMouth(0.18 + 0.18 * Math.abs(Math.sin(lt * 6.0)));
-      coins.rotation.y = lt * 0.85;
-      tab.rotation.y = -0.15 + Math.sin(lt * 1.5) * 0.08;
-      const s = shake(lt, 0.32, {i});
-      place(c, [lerp(-0.32, 0.22, easeInOut(u)) + s[0], lerp(1.22, 1.16, u) + s[1], lerp(3.35, 3.05, easeInOut(u))], [0.0, 1.00, 0.08]);
-      return {{ bloom: 0.34 }};
-    }}
-  }};
-}}"""
-
-    # 9. Final Payoff ("The danger was real... bill.")
-    if i == total_shots - 1 or setup == "payoff_full_stage_reveal" or "bill" in low:
-        return f"""
-function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 4.5, sunDir: [-3, 7, 5] }});
-  scene.add(arenaStage({{ radius: 4.6, wallArc: true }}));
-
-  const fighter = makeHuman('vest'); addGladiatorBracers(fighter);
-  fighter.root.position.set(-0.34, 0, 0.10); fighter.root.rotation.y = 0.25; scene.add(fighter.root);
-  const fHelm = romanHelmet(0xd9a441); fighter.j.head.add(fHelm);
-  const fSh = romanScutum(); fighter.j.lEl.add(fSh); fSh.position.set(0.08, -0.15, 0.06); fSh.rotation.set(0, 1.15, 0); fSh.scale.setScalar(0.82);
-  const fSw = sword(); fighter.j.rWr.add(fSw); fSw.position.set(0, -0.065, 0); fSw.rotation.x = Math.PI / 2;
-
-  const ped = romanPlinth(0.68, 0.22); ped.position.set(0.32, 0, 0.15); scene.add(ped);
-  const coins = denariusStack({{ count: 20, radius: 0.072, height: 0.017, gold: true }});
-  coins.position.set(0.32, 0.69, 0.15); scene.add(coins);
-  const billTab = romanScrollTablet('SURVIVAL', 'THE BILL', 0xf5b700);
-  billTab.scale.setScalar(0.48); billTab.position.set(0.32, 1.48, 0.15); scene.add(billTab);
-
-  const sp = sparks(65, {{ speed: 0.9, spread: 1.8, gravity: 0.3, life: 1.4, size: 0.016, seed: 99, dir: V(0, 1, 0), color: [1.0, 0.85, 0.25] }});
-  sp.position.set(0.32, 1.05, 0.15); scene.add(sp);
-  const c = cam(39);
-  return {{
-    scene, camera: c,
-    update(lt) {{
-      const u = clamp(lt / {dur}, 0, 1);
-      fighter.setPose({{
-        ...STAND,
-        chest: [Math.sin(lt * 1.8) * 0.02, -0.08, 0], head: [0.02, -0.10, 0],
-        lSh: [-0.25, 0.15, 0.25], lEl: [-0.65, 0, 0],
-        rSh: [-0.45 - Math.sin(u * Math.PI) * 0.22, 0, -0.25], rEl: [-0.45, 0, 0],
-      }});
-      coins.rotation.y = lt * 0.7;
-      billTab.rotation.y = Math.sin(lt * 1.4) * 0.10 - 0.12;
-      sp.update(lt - 0.15);
-      const s = shake(lt, 0.32, 9);
-      place(c, [lerp(-0.18, 0.05, easeInOut(u)) + s[0], lerp(1.16, 1.38, easeInOut(u)) + s[1], lerp(3.15, 3.85, easeInOut(u))], [0.0, 0.98, 0.08]);
-      return {{ bloom: 0.38 }};
-    }}
-  }};
-}}"""
-
-    # 10. Suspense / Danger ("mercy was never guaranteed", "danger was real")
+    # Generic Roman arena messenger / organizer shot (safe per-shot!)
     return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 4.0, sunDir: [-2.5, 6.5, 4] }});
   scene.add(arenaStage({{ radius: 4.5, wallArc: true }}));
-
   const org = makeHuman('vest'); addGladiatorBracers(org);
   org.root.position.set(-0.28, 0, 0.10); org.root.rotation.y = 0.28; scene.add(org.root);
   org.j.chest.add(togaSash());
   const plinth = romanPlinth(0.84, 0.20); plinth.position.set(0.30, 0, 0.16); scene.add(plinth);
   const coins = denariusStack({{ count: 14, radius: 0.068, height: 0.017, gold: true }});
   coins.position.set(0.30, 0.85, 0.16); scene.add(coins);
-
-  const sw = sword();
-  sw.position.set(0.42, 1.62, -0.10); sw.rotation.set(0.25, 0, 2.75); scene.add(sw);
-  const badge = romanScrollTablet('MERCY?', 'NOT SURE', 0xe63946);
+  const badge = romanScrollTablet('ROME', 'ARENA', 0xf4c430);
   badge.scale.setScalar(0.48); badge.position.set(0.28, 1.54, 0.16); scene.add(badge);
-
-  const c = cam(39);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 39);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       org.setPose({{
         ...STAND,
         chest: [Math.sin(lt * 2.1) * 0.02, -0.14, 0], head: [0.04, -0.20 + Math.sin(lt * 3.0) * 0.08, 0],
         rSh: [-0.58 - easeOut(u) * 0.18, 0, -0.26], rEl: [-0.55, 0, 0],
       }});
-      org.setMouth(0.22 + 0.2 * Math.abs(Math.sin(lt * 6.0)));
+      org.setMouth(0.20 + 0.18 * Math.abs(Math.sin(lt * 6.0)));
       coins.rotation.y = lt * 0.95;
-      sw.position.y = 1.60 + Math.sin(lt * 2.8) * 0.04;
-      const s = shake(lt, 0.45, {i});
-      place(c, [lerp(0.40, -0.18, easeInOut(u)) + s[0], lerp(1.20, 1.14, u) + s[1], lerp(3.35, 3.00, easeInOut(u))], [0.0, 1.00, 0.10]);
-      return {{ bloom: 0.34 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.34, camTel }};
     }}
   }};
 }}"""
 
 
-def _cam_helper_js(cam_path: Dict[str, Any] | None, fallback_pos: List[float], fallback_look: List[float], fallback_fov: int) -> str:
-    kfs = (cam_path or {}).get("keyframes") or [
-        {"t_norm": 0.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0},
-        {"t_norm": 1.0, "pos": fallback_pos, "look": fallback_look, "fov": fallback_fov, "roll": 0.0},
-    ]
-    return json.dumps(kfs)
-
-
-def _build_non_roman_scene_shot_code(i: int, s: Dict[str, Any], total_shots: int, seed: int = 42) -> str:
+def _build_non_roman_scene_shot_code(
+    i: int,
+    s: Dict[str, Any],
+    total_shots: int,
+    seed: int = 42,
+    char_registry: Dict[str, Any] | None = None,
+) -> str:
     start, end = s["start"], s["end"]
     dur = max(0.2, round(end - start, 3))
     gen = str(s.get("procedural_generator") or "")
     prop = str((s.get("staging") or {}).get("visual_metaphor") or "idea_spark")
+    nar_low = str(s.get("narration_text") or "").lower()
     is_callback = bool(s.get("callback_reason"))
     cam_path = s.get("camera_path")
     kfs_json = _cam_helper_js(cam_path, [0.4, 1.38, 2.0], [0.0, 1.18, 0.0], 34)
-    shirt_palette = [0x2563eb, 0x0d9488, 0x4f46e5, 0xd97706, 0x0284c7]
-    shirt_hex = shirt_palette[i % len(shirt_palette)]
+    anchor_json = _anchor_helper_js(s)
+
+    creg = char_registry or {}
+    cid = str((s.get("staging") or {}).get("character_id") or "char_protagonist_01")
+    char_spec = creg.get(cid) or {"character_id": cid, "shirt_hex": 0x2563EB, "pants_hex": 0x1E293B, "collar_hex": 0xE2E8F0}
+    char_spec_json = json.dumps(char_spec)
+
+    contact_spec = (s.get("staging") or {}).get("contact_action")
+    contact_json = json.dumps(contact_spec) if contact_spec else json.dumps({
+        "verb": "press_button",
+        "performer_id": cid,
+        "target_id": "call_button_01",
+        "hit_time_rel_sec": round(dur * 0.44, 3),
+        "hold_duration_sec": 0.16,
+        "target_world": [0.24, 1.16, 0.24],
+        "target_normal": [-1.0, 0.0, 0.0],
+        "target_radius_m": 0.028,
+        "button_depress_m": 0.008,
+    })
+
+    if gen == "zach3d:elevator_lobby_button_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.8, skyTheme: 'day' }});
+  const man = makeModernOutfitCharacter(makeHuman, {char_spec_json});
+  man.root.position.set(-0.20, 0, 0.10); man.root.rotation.y = 1.12; scene.add(man.root);
+  const panel = makePushButtonPanelRig();
+  scene.add(panel);
+  const sp = sparks(35, {{ speed: 0.35, spread: 1.2, gravity: -0.2, life: 0.5, size: 0.007, dir: V(-1, 0.2, 0), seed: {seed + i}, color: [0.96, 0.65, 0.12] }});
+  sp.position.set(0.23, 1.16, 0.24); scene.add(sp);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const CONTACT = {contact_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const cRes = updateButtonPressAction(man, CONTACT, lt, STAND);
+      panel.setButtonState(cRes.button_depress_m, cRes.button_lit);
+      man.setMouth(0.08 + 0.12 * Math.abs(Math.sin(lt * 4.5)));
+      sp.update(lt - CONTACT.hit_time_rel_sec);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: cRes.button_lit ? 0.54 : 0.28, camTel, contact: cRes }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:controller_cabinet_cutaway_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.2, skyTheme: 'datacenter_dark' }});
+  const cab = makeControllerCabinetRig();
+  scene.add(cab.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 32);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      cab.updateCabinet(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.45, camTel, cutaway: cab.getTelemetry() }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:traction_machine_room_stage":
+        decel_flag = "true" if ("slow" in nar_low or "brake" in nar_low or "approach" in nar_low) else "false"
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.0, skyTheme: 'lab_studio' }});
+  const mach = makeTractionDriveMachineRig();
+  scene.add(mach.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      mach.updateDrive(lt, {dur}, {{ decelerate: {decel_flag} }});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.40, camTel, cutaway: mach.getTelemetry() }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:elevator_shaft_cutaway_stage":
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.4, skyTheme: 'datacenter_dark' }});
+  const shaft = makeElevatorShaftRig();
+  scene.add(shaft.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 32);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      shaft.updateShaft(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.42, camTel, cutaway: shaft.getTelemetry() }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:elevator_landing_doors_stage":
+        start_open = "false"
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 3.2, skyTheme: 'day' }});
+  const portal = makeLandingDoorsRig();
+  scene.add(portal);
+  const man = makeModernOutfitCharacter(makeHuman, {char_spec_json});
+  man.root.position.set(-0.22, 0, 0.44); man.root.rotation.y = 0.48; scene.add(man.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      portal.updatePortal(lt, {dur}, {{ startOpen: {start_open} }});
+      const nod = Math.sin(lt * 2.4) * 0.04;
+      man.setPose({{
+        ...STAND,
+        chest: [0.02, 0.14, 0],
+        head: [nod, 0.22, 0],
+        rSh: [-0.18 - 0.12 * smooth(u), 0.06, -0.18],
+        rEl: [-0.40, 0, 0],
+      }});
+      man.setMouth(0.14 + 0.16 * Math.abs(Math.sin(lt * 5.0)));
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.34, camTel }};
+    }}
+  }};
+}}"""
+
+    if gen == "zach3d:schematic_mechanism_stage":
+        dom_label = str(s.get("unsupported_exact_domain") or prop or "SCHEMATIC")
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 2.8, skyTheme: 'lab_studio' }});
+  const mech = makeSchematicMechanismStage({json.dumps(dom_label)});
+  scene.add(mech);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 34);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      mech.wheels.forEach((w, idx) => {{ w.rotation.z = -lt * (idx === 0 ? 1.8 : 2.9); }});
+      mech.link.position.y = 1.05 + Math.sin(lt * 3.0) * 0.06;
+      mech.link.rotation.z = Math.sin(lt * 3.0) * 0.18;
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.32, camTel }};
+    }}
+  }};
+}}"""
 
     if gen == "zach3d:human_device_stage" or (prop == "phone_screen" and gen != "zach3d:device_cutaway_stage"):
         sent_flag = "true" if (is_callback or i == total_shots - 1) else "false"
         theme = "lab_studio" if sent_flag == "true" else "day"
+        t_tap = round(float(contact_spec.get("hit_time_rel_sec", dur * 0.42)) if isinstance(contact_spec, dict) else (dur * 0.42), 3)
         return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 2.6, skyTheme: '{theme}' }});
-  const man = makeModernOutfitCharacter(makeHuman, {shirt_hex});
-  man.root.position.set(-0.24, 0, 0); man.root.rotation.y = 0.28; scene.add(man.root);
+  const man = makeModernOutfitCharacter(makeHuman, {char_spec_json});
+  man.root.position.set(-0.08, 0, 0.02); man.root.rotation.y = 0.42; scene.add(man.root);
   const phone = makeSmartphoneRig({{ sent: {sent_flag}, scale: 0.78 }});
-  phone.position.set(0.26, 1.36, 0.28); phone.rotation.set(-0.16, -0.34, 0.05);
+  phone.position.set(0.16, 1.28, 0.28); phone.rotation.set(-0.14, -0.32, 0.04);
   scene.add(phone);
+  phone.updateMatrixWorld(true);
+  const _btnW = phone.tapRing.getWorldPosition(new THREE.Vector3());
+  const _btnN = new THREE.Vector3(0, 0, 1).transformDirection(phone.matrixWorld).normalize();
   const sp = sparks(45, {{ speed: 0.45, spread: 1.4, gravity: -0.2, life: 0.7, size: 0.008, dir: V(0, 0.2, 1), seed: {seed + i}, color: [0.22, 0.74, 0.97] }});
-  sp.position.set(0.26, 1.30, 0.32); scene.add(sp);
+  sp.position.copy(_btnW); scene.add(sp);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 35);
-  const T_TAP = {round(dur * 0.42, 3)};
+  const T_TAP = {t_tap};
+  const PHONE_CONTACT = {{ verb: 'tap_screen', performer_id: {json.dumps(cid)}, target_id: 'phone_send_button_01', hit_time_rel_sec: T_TAP, hold_duration_sec: 0.14, target_world: [_btnW.x, _btnW.y, _btnW.z], target_normal: [_btnN.x, _btnN.y, _btnN.z], target_radius_m: 0.055, button_depress_m: 0.004 }};
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const tapU = smooth(range(lt, T_TAP - 0.14, T_TAP + 0.06));
       const postTap = lt - T_TAP;
-      man.setPose({{
-        ...STAND,
-        chest: [0.06 * tapU, 0.20, 0],
-        head: [0.08 + 0.04 * tapU, 0.16, -0.04],
-        lSh: [-0.82, 0.25, 0.22], lEl: [-0.95, 0, 0],
-        rSh: [-0.88 - 0.18 * tapU, -0.18, -0.18], rEl: [-0.92 + 0.14 * Math.sin(tapU * Math.PI), 0, 0],
-      }});
+      const cRes = updateButtonPressAction(man, PHONE_CONTACT, lt, STAND);
       man.setMouth({0.35 if sent_flag == 'true' else 0.14} + 0.15 * Math.abs(Math.sin(lt * 5.0)));
-      phone.rotation.y = -0.34 + Math.sin(lt * 1.4) * 0.04;
+      phone.rotation.y = -0.34 + Math.sin(lt * 1.4) * 0.03;
       if (postTap > 0) {{
         const ringU = clamp(postTap / 0.55, 0, 1);
         phone.tapRing.scale.setScalar(0.5 + easeOut(ringU) * 3.2);
@@ -1720,10 +1655,9 @@ function shot_{i}({{ makeStage }}) {{
         phone.tapRing.material.opacity = 0.0;
       }}
       sp.update(postTap);
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [lerp(0.55, 0.24, u), lerp(1.50, 1.40, u), lerp(2.78, 2.28, easeInOut(u))], [0.02, 1.20, 0.12], poseCam.roll * 0.4);
-      return {{ bloom: postTap > 0 && postTap < 0.35 ? 0.62 : 0.30 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: postTap > 0 && postTap < 0.35 ? 0.62 : 0.30, camTel, contact: cRes }};
     }}
   }};
 }}"""
@@ -1736,10 +1670,11 @@ function shot_{i}({{ makeStage }}) {{
   phone.position.set(0, 1.24, 0);
   scene.add(phone);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 32);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const peel = easeInOut(clamp(u * 1.55, 0, 1));
       phone.frontGlass.position.set(-0.22 * peel, 0.06 * peel, 0.014 + 0.22 * peel);
@@ -1750,10 +1685,9 @@ function shot_{i}({{ makeStage }}) {{
         p.position.y = lerp(-0.14, 0.21, cyc);
         p.scale.setScalar(0.85 + 0.45 * Math.sin(cyc * Math.PI));
       }});
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [Math.sin(u * 0.8 - 0.3) * 1.32, lerp(1.48, 1.32, u), lerp(2.15, 1.68, easeInOut(u))], [0.0, 1.22, 0.02], poseCam.roll * 0.3);
-      return {{ bloom: 0.48 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.48, camTel, cutaway: phone.getTelemetry(peel) }};
     }}
   }};
 }}"""
@@ -1765,10 +1699,11 @@ function shot_{i}({{ makeStage }}) {{
   const tower = makeRadioTowerRig();
   scene.add(tower);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 36);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       tower.beacon.material.emissiveIntensity = 1.1 + Math.abs(Math.sin(lt * 5.0)) * 1.4;
       tower.rfRings.forEach((rm, k) => {{
@@ -1776,10 +1711,9 @@ function shot_{i}({{ makeStage }}) {{
         rm.scale.setScalar(0.5 + prog * 4.4);
         rm.material.opacity = (1.0 - prog) * 0.88;
       }});
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [lerp(-1.25, 0.85, easeInOut(u)), lerp(1.25, 2.55, u), lerp(2.85, 2.25, u)], [0.0, lerp(1.65, 2.30, u), 0.0]);
-      return {{ bloom: 0.44 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.44, camTel }};
     }}
   }};
 }}"""
@@ -1791,19 +1725,19 @@ function shot_{i}({{ makeStage }}) {{
   const rig = makeSubseaCableRig({seed + i});
   scene.add(rig);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 34);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       rig.pulses.forEach((p, k) => {{
         const s = ((lt * 1.35 + k * 0.167) % 1.0);
         p.position.set(lerp(-1.65, 1.70, s), 0.0, 0.0);
       }});
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [lerp(-1.65, 1.45, easeInOut(u)), lerp(1.42, 0.98, u), lerp(2.95, 2.30, u)], [0.0, 0.36, 0.0], poseCam.roll * 0.25);
-      return {{ bloom: 0.56 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.56, camTel }};
     }}
   }};
 }}"""
@@ -1815,20 +1749,20 @@ function shot_{i}({{ makeStage }}) {{
   const dc = makeDatacenterRackBank({seed + i * 7});
   scene.add(dc);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 38);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       dc.packets.forEach((sp, k) => {{
         const cyc = ((lt * 1.6 + k * 0.16) % 1.0);
         sp.position.z = lerp(1.4, -3.2, cyc);
         sp.position.x = Math.sin(lt * 3 + k) * 0.08;
       }});
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [Math.sin(u * 1.2) * 0.16, lerp(1.32, 1.55, u), lerp(2.85, 0.45, easeInOut(u))], [0.0, 1.18, -2.5]);
-      return {{ bloom: 0.50 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.50, camTel }};
     }}
   }};
 }}"""
@@ -1840,17 +1774,17 @@ function shot_{i}({{ makeStage }}) {{
   const tb = makePowerTurbineRig();
   scene.add(tb);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 34);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       tb.rotor.rotation.z = -lt * (4.5 + u * 6.5);
       tb.coilGlow.material.emissiveIntensity = 1.0 + 0.65 * Math.abs(Math.sin(lt * 7.5));
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [Math.sin(u * 0.85 - 0.4) * 1.85, lerp(1.55, 1.25, u), Math.cos(u * 0.85 - 0.4) * 1.85], [0.0, 1.12, 0.0]);
-      return {{ bloom: 0.48 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.48, camTel }};
     }}
   }};
 }}"""
@@ -1863,10 +1797,11 @@ function shot_{i}({{ makeStage }}) {{
   cosmos.position.set(0, 1.25, 0);
   scene.add(cosmos);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 38);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       cosmos.star.rotation.y = lt * 0.55;
       cosmos.star.scale.setScalar(1.0 + Math.sin(lt * 3.5) * 0.06);
@@ -1877,10 +1812,9 @@ function shot_{i}({{ makeStage }}) {{
         m.position.set(Math.cos(a) * m.userData.rad, Math.sin(a * 0.6) * 0.14, Math.sin(a) * m.userData.rad);
         m.rotation.x = lt * 1.8; m.rotation.y = lt * 1.4;
       }});
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [lerp(-0.55, 0.75, easeInOut(u)), lerp(1.32, 1.95, u), lerp(2.15, 3.65, easeInOut(u))], [0.0, 1.25, 0.0], poseCam.roll * 0.25);
-      return {{ bloom: 0.68 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.68, camTel }};
     }}
   }};
 }}"""
@@ -1893,30 +1827,29 @@ function shot_{i}({{ makeStage }}) {{
   const rig = makeAnatomicalCutawayRig({is_brain});
   scene.add(rig);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 32);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const pulse = 1.0 + 0.065 * Math.sin(lt * 5.2);
+      const openU = easeInOut(clamp(u * 1.8, 0, 1));
+      rig.cutaway.setReveal(openU);
+      rig.cutaway.updateFlow(lt, 1.2);
+      const pulse = 1.0 + 0.05 * Math.sin(lt * 5.2);
       rig.lobes.forEach(l => l.scale.set(0.85 * pulse, 1.05 * pulse, 1.0 * pulse));
-      rig.sparkNodes.forEach((nd, k) => {{
-        nd.material.emissiveIntensity = 0.8 + 1.2 * Math.max(0, Math.sin(lt * 6.0 + k * 1.1));
-      }});
-      rig.rotation.y = lerp(-0.45, 0.35, easeInOut(u));
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, [lerp(0.55, 0.15, easeInOut(u)), 1.32, lerp(1.55, 1.10, easeInOut(u))], [0.0, 1.25, 0.0]);
-      return {{ bloom: 0.45 }};
+      rig.rotation.y = lerp(-0.35, 0.35, easeInOut(u));
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.45, camTel, cutaway: rig.cutaway.getTelemetry() }};
     }}
   }};
 }}"""
 
-    # Default General Non-Roman Studio Demonstrator: stylized modern character + grounded prop (ZERO armor!)
     return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 2.8, skyTheme: 'lab_studio' }});
-  const man = makeModernOutfitCharacter(makeHuman, {shirt_hex});
+  const man = makeModernOutfitCharacter(makeHuman, {char_spec_json});
   man.root.position.set(-0.24, 0, 0); man.root.rotation.y = 0.32; scene.add(man.root);
   const ped = forcePedestal(); ped.position.set(0.32, 0, 0.08); scene.add(ped);
   const gearStage = makeVaultGearStage();
@@ -1924,10 +1857,11 @@ function shot_{i}({{ makeStage }}) {{
   const core = energyCore({0xf59e0b if i == total_shots - 1 else 0x38bdf8});
   core.position.set(0.32, 1.44, 0.08); core.scale.setScalar(0.56); scene.add(core);
   const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
   const c = cam(KFS[0].fov || 34);
   return {{
     scene, camera: c,
-    update(lt) {{
+    update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const wave = Math.sin(lt * 2.6) * 0.06;
       man.setPose({{
@@ -1940,10 +1874,9 @@ function shot_{i}({{ makeStage }}) {{
       man.setMouth(0.18 + 0.22 * Math.abs(Math.sin(lt * 6.5)));
       gearStage.gears.forEach((gr, k) => {{ gr.rotation.z = lt * (k % 2 ? -1.4 : 1.4); }});
       core.r1.rotation.y = lt * 2.4; core.r2.rotation.x = lt * 1.9;
-      const poseCam = evalCamPath(KFS, u);
-      c.fov = poseCam.fov;
-      place(c, poseCam.pos, poseCam.look, poseCam.roll);
-      return {{ bloom: 0.34 }};
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      return {{ bloom: 0.34, camTel }};
     }}
   }};
 }}"""
@@ -1954,73 +1887,89 @@ def _build_zach_shots_js(storyboard: Dict[str, Any], words: List[Dict[str, Any]]
     total_dur = storyboard["total_duration_sec"]
     seed = int(storyboard.get("seed", 42))
     captions = _build_captions_list(words)
-    motifs = set(storyboard.get("entities_and_facts", {}).get("detected_motifs", []))
-    is_roman = bool({"roman_gladiator", "roman_ledger_50x"} & motifs)
+    char_registry = storyboard.get("character_registry") or {}
 
     fades: List[List[float]] = []
-    for s in shots:
-        if s["transition_out"] == "dip_to_black":
+    transitions_meta: List[Dict[str, Any]] = []
+    for idx, s in enumerate(shots):
+        tr_out = str(s.get("transition_out") or "cut")
+        tr_meta = s.get("transition_meta") or {}
+        tr_dur = float(tr_meta.get("duration_sec") or 0.0)
+        if tr_out == "dip_to_black":
             t_c = s["end"]
             fades.append([round(t_c - 0.16, 3), round(t_c - 0.03, 3), round(t_c + 0.04, 3), round(t_c + 0.18, 3)])
+        if idx < len(shots) - 1 and tr_dur > 0.0 and tr_out not in ("cut", "cut_on_action"):
+            transitions_meta.append({
+                "transition_id": f"tr_{idx:02d}",
+                "from_idx": idx,
+                "to_idx": idx + 1,
+                "boundary": round(float(s["end"]), 4),
+                "duration": tr_dur,
+                "method": tr_out,
+            })
 
     fn_blocks: List[str] = []
     list_entries: List[str] = []
+    has_any_roman = False
+    has_any_non_roman = False
 
+    # Per-shot dispatch strictly from each shot's grounded generator/scene_family (ZERO global is_roman override!)
     for i, s in enumerate(shots):
         tr_out = str(s.get("transition_out") or "cut")
-        if is_roman:
+        gen = str(s.get("procedural_generator") or "")
+        fam = str(s.get("scene_family") or "")
+        shot_is_roman = (gen == "zach3d:roman_historical_stage") or (fam == "roman_historical")
+        if shot_is_roman:
+            has_any_roman = True
             fn_blocks.append(_roman_shot_code(i, s, len(shots)))
         else:
-            fn_blocks.append(_build_non_roman_scene_shot_code(i, s, len(shots), seed=seed))
-        list_entries.append(f"  {{ start: {s['start']}, end: {s['end']}, tr: {json.dumps(tr_out)}, build: shot_{i} }},")
+            has_any_non_roman = True
+            fn_blocks.append(_build_non_roman_scene_shot_code(i, s, len(shots), seed=seed, char_registry=char_registry))
+        list_entries.append(f"  {{ id: {json.dumps(s['shot_id'])}, start: {s['start']}, end: {s['end']}, tr: {json.dumps(tr_out)}, build: shot_{i} }},")
 
-    novel_imports = (
-        """  forcePedestal, energyCore, cutawaySlabStack,
-  addGladiatorBracers, romanPlinth, trainingPalus,
-  arenaStage, romanHelmet, romanScutum, denariusStack,
-  romanScrollTablet, togaSash, balanceScale50x"""
-        if is_roman
-        else """  forcePedestal, energyCore, cutawaySlabStack,
-  makeModernOutfitCharacter, makeSmartphoneRig, makeRadioTowerRig,
-  makeSubseaCableRig, makeDatacenterRackBank, makePowerTurbineRig,
-  makeCosmicGenesisRig, makeAnatomicalCutawayRig, makeVaultGearStage"""
+    novel_symbols: List[str] = []
+    if has_any_roman:
+        novel_symbols.extend([
+            "addGladiatorBracers", "romanPlinth", "trainingPalus",
+            "arenaStage", "romanHelmet", "romanScutum", "denariusStack",
+            "romanScrollTablet", "togaSash", "balanceScale50x",
+        ])
+    if has_any_non_roman:
+        novel_symbols.extend([
+            "forcePedestal", "energyCore", "cutawaySlabStack",
+            "makeModernOutfitCharacter", "makeSmartphoneRig", "makeRadioTowerRig",
+            "makeSubseaCableRig", "makeDatacenterRackBank", "makePowerTurbineRig",
+            "makeCosmicGenesisRig", "makeAnatomicalCutawayRig", "makeVaultGearStage",
+        ])
+
+    mech_import = (
+        """import {
+  makePushButtonPanelRig, makeControllerCabinetRig, makeTractionDriveMachineRig,
+  makeElevatorShaftRig, makeLandingDoorsRig, makeSchematicMechanismStage
+} from './mechanical_systems.js';"""
+        if has_any_non_roman else ""
     )
 
     header = f"""import * as THREE from 'three';
 import {{ makeHuman }} from './human.js';
 import {{ sword, sparks, rippleOverlay }} from './props.js';
-import {{ clamp, lerp, smooth, easeOut, easeIn, easeInOut, range, V, cam, place, shake, ikArm }} from './anim.js';
+import {{ clamp, lerp, smooth, easeOut, easeInOut, range, V, cam }} from './anim.js';
+import {{ evalCameraPath, applyCameraPath }} from './camera_executor.js';
+import {{ updateButtonPressAction }} from './character_action_rig.js';
 import {{
-{novel_imports}
+  {', '.join(novel_symbols)}
 }} from './novel_props.js';
+{mech_import}
 
 export const DURATION = {total_dur};
 export const CAPTIONS = {json.dumps(captions, ensure_ascii=False)};
 export const FADES = {json.dumps(fades)};
+export const TRANSITIONS = {json.dumps(transitions_meta)};
 
 const STAND = {{
   lSh: [0.05, 0, 0.16], rSh: [0.05, 0, -0.16], lEl: [-0.25, 0, 0], rEl: [-0.25, 0, 0],
   lHip: [0, 0, 0.07], rHip: [0, 0, -0.07], lAn: [0, 0, -0.07], rAn: [0, 0, 0.07],
 }};
-
-function evalCamPath(kfs, u) {{
-  if (!kfs || !kfs.length) return {{ pos: [0.3, 1.38, 2.0], look: [0, 1.18, 0], fov: 34, roll: 0 }};
-  const uc = clamp(u, 0, 1);
-  for (let i = 0; i < kfs.length - 1; i++) {{
-    const a = kfs[i], b = kfs[i + 1];
-    if (uc <= b.t_norm + 1e-6) {{
-      const segU = easeInOut(clamp((uc - a.t_norm) / Math.max(1e-4, b.t_norm - a.t_norm), 0, 1));
-      return {{
-        pos: [lerp(a.pos[0], b.pos[0], segU), lerp(a.pos[1], b.pos[1], segU), lerp(a.pos[2], b.pos[2], segU)],
-        look: [lerp(a.look[0], b.look[0], segU), lerp(a.look[1], b.look[1], segU), lerp(a.look[2], b.look[2], segU)],
-        fov: lerp(a.fov || 34, b.fov || 34, segU),
-        roll: lerp(a.roll || 0, b.roll || 0, segU),
-      }};
-    }}
-  }}
-  const last = kfs[kfs.length - 1];
-  return {{ pos: last.pos, look: last.look, fov: last.fov || 34, roll: last.roll || 0 }};
-}}
 """
     return header + "\n".join(fn_blocks) + "\nexport const SHOTS = [\n" + "\n".join(list_entries) + "\n];\n"
 
@@ -2046,9 +1995,19 @@ def generate_engine_project(
         shutil.copy2(src, src_dst / fname)
         visual_sources.append(str(src))
 
-    # Symlink shared neutral kit/node_modules
-    nm_link = work_dir / "node_modules"
-    os.symlink(str((kit_dir / "node_modules").resolve()), str(nm_link))
+    link_kit_node_modules(kit_dir / "node_modules", work_dir / "node_modules")
+
+    cam_exec_p = src_dst / "camera_executor.js"
+    cam_exec_p.write_text(CAMERA_EXECUTOR_JS, encoding="utf-8")
+
+    char_rig_p = src_dst / "character_action_rig.js"
+    char_rig_p.write_text(CHARACTER_ACTION_RIG_JS, encoding="utf-8")
+
+    cutaway_p = src_dst / "layered_cutaway.js"
+    cutaway_p.write_text(LAYERED_CUTAWAY_JS, encoding="utf-8")
+
+    mech_p = src_dst / "mechanical_systems.js"
+    mech_p.write_text(MECHANICAL_SYSTEMS_JS, encoding="utf-8")
 
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
@@ -2068,8 +2027,8 @@ def generate_engine_project(
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
   canvas { display: block; width: 1080px; height: 1920px; }
   #cap {
-    position: absolute; left: 100px; width: 880px; top: 1390px; text-align: center;
-    font: 700 66px/1.1 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
+    position: absolute; left: 100px; width: 880px; top: 1410px; text-align: center;
+    font: 700 64px/1.1 'Cap', sans-serif; color: #fff; letter-spacing: -0.4px;
     text-shadow: 0 0 4px rgba(0,0,0,.78), 0 4px 16px rgba(0,0,0,.72);
   }
   #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
@@ -2090,6 +2049,10 @@ def generate_engine_project(
 
     visual_sources.extend([
         str(Path(__file__).resolve()),
+        str(cam_exec_p.resolve()),
+        str(char_rig_p.resolve()),
+        str(cutaway_p.resolve()),
+        str(mech_p.resolve()),
         str(novel_p.resolve()),
         str(shots_p.resolve()),
         str(main_p.resolve()),

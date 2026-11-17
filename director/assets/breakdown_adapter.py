@@ -9,11 +9,12 @@ Strictly locks to `/breakdown` visual language:
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List
+
+from . import link_kit_node_modules
 
 
 def _extract_breakdown_labels(raw_script: str) -> Dict[str, Any]:
@@ -76,7 +77,7 @@ def generate_engine_project(
         shutil.copy2(wf.resolve(), work_dir / "fonts" / wf.name)
         visual_sources.append(str(wf.resolve()))
 
-    os.symlink(str((kit_dir / "node_modules").resolve()), str(work_dir / "node_modules"))
+    link_kit_node_modules(kit_dir / "node_modules", work_dir / "node_modules")
 
     bd_spec = _extract_breakdown_labels(parsed_script["raw_input_script"])
     payload = {

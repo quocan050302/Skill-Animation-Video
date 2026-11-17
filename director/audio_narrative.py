@@ -68,6 +68,8 @@ def _shot_visual_evidence(shot: Dict[str, Any], global_motifs: List[str]) -> Dic
     return {
         "engine": str(shot.get("engine") or ""),
         "setup_type": str(shot.get("setup_type") or ""),
+        "scene_family": str(shot.get("scene_family") or staging.get("scene_family") or ""),
+        "domain": str(shot.get("domain") or staging.get("domain") or ""),
         "beat_role": str(shot.get("beat_role") or ""),
         "transition_out": str(shot.get("transition_out") or "cut"),
         "framing": str(cam.get("framing") or ""),
@@ -77,6 +79,7 @@ def _shot_visual_evidence(shot: Dict[str, Any], global_motifs: List[str]) -> Dic
         "strict_props_only": strict_props_only,
         "global_motifs": {str(m).lower() for m in global_motifs},
         "narration_low": str(shot.get("narration_text") or "").lower(),
+        "contact_action": staging.get("contact_action") if isinstance(staging.get("contact_action"), dict) else None,
     }
 
 
@@ -132,24 +135,54 @@ def extract_sound_events(
         })
 
     # 1. Grounded hook anticipation / reveal (NO automatic hardcoded pop unless camera/action starts fast!)
+    is_shot_roman = (
+        ev["domain"] == "historical_roman"
+        or "roman" in ev["setup_type"]
+        or ("roman_gladiator" in ev["global_motifs"] and not ev["domain"] and not strict_props)
+    )
     if previous_shot is None:
         if eng == "minimalistic-graphics":
             # Subtle solitary dot pulse in quiet negative space
             _add(0.14, "dot_breath_pulse", "brain_spark_chime", "ui", -18.0, 0.0, 0.72, 0.45, 3, f"{sid}.setup:{setup}", depth="far", uncert=0.05)
-        elif eng == "zach-d-films" and "roman_gladiator" in ev["global_motifs"] and not strict_props:
+        elif eng == "zach-d-films" and is_shot_roman:
             _add(0.18, "arena_sword_draw", "sword_draw_scrape", "foley", -10.5, -0.18, 0.88, 0.70, 2, f"{sid}.gladius_raise", depth="mid", uncert=0.04)
             _add(0.45, "gold_stack_settle", "coin_clink_cascade", "foley", -12.0, 0.14, 0.85, 0.65, 3, f"{sid}.coins_plinth", depth="mid", uncert=0.05)
-        elif "push" in ev["cam_movement"] or "launch" in setup or "drop" in str(ev["props"]):
+        elif ("push" in ev["cam_movement"] or "launch" in setup or "drop" in str(ev["props"])) and str(shot.get("procedural_generator") or "") != "zach3d:elevator_lobby_button_stage":
             _add(0.10, "hook_reveal", "soft_impact", "reveal", -12.5, 0.0, 0.78, 0.58, 3, f"{sid}.camera:{ev['cam_movement']}", depth="mid", uncert=0.04)
 
     # 2. Engine + Setup + Procedural Generator Visually Grounded Action Foley
     proc_gen = str(shot.get("procedural_generator") or "")
+    ca = ev.get("contact_action")
     if eng == "zach-d-films":
-        is_roman = ("roman_gladiator" in ev["global_motifs"] or "roman_ledger_50x" in ev["global_motifs"]) and not strict_props
-        if proc_gen == "zach3d:human_device_stage":
-            # Syncs cleanly to `T_TAP = round(dur * 0.42, 3)` in zach_d_films_adapter!
+        is_roman = (
+            ev["domain"] == "historical_roman"
+            or "roman" in setup
+            or (("roman_gladiator" in ev["global_motifs"] or "roman_ledger_50x" in ev["global_motifs"]) and not ev["domain"] and not strict_props)
+        )
+        if proc_gen == "zach3d:elevator_lobby_button_stage":
+            # Sync strictly to exact physical fingertip contact timestamp `hit_time_rel_sec` (<= 1 frame tolerance)
+            hit_rel = float(ca.get("hit_time_rel_sec", dur * 0.44)) if isinstance(ca, dict) else dur * 0.44
+            _add(hit_rel, "elevator_call_button_press", "elevator_button_click", "impact", -8.0, 0.06, 0.98, 0.94, 1, f"{sid}.finger_button_contact.hit={hit_rel:.3f}", depth="near", uncert=0.015)
+        elif proc_gen == "zach3d:controller_cabinet_cutaway_stage":
+            _add(min(dur * 0.22, 0.28), "cabinet_cutaway_open", "mechanical_click", "foley", -10.5, -0.06, 0.90, 0.78, 2, f"{sid}.cabinet_clip_plane", depth="near", uncert=0.025)
+            _add(dur * 0.44, "relay_contactor_snap", "relay_cabinet_click", "foley", -9.5, 0.08, 0.94, 0.84, 1, f"{sid}.relay_contactor_close", depth="near", uncert=0.02)
+            _add(min(dur - 0.12, dur * 0.68), "vfd_bus_signal_pulse", "electric_spark_pulse", "foley", -12.0, 0.0, 0.86, 0.70, 2, f"{sid}.vfd_inverter_trace", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:traction_machine_room_stage":
+            _add(min(dur * 0.24, 0.30), "traction_motor_engage", "motor_drive_hum", "foley", -11.0, 0.0, 0.92, 0.80, 2, f"{sid}.traction_sheave_drive", depth="mid", uncert=0.025)
+            if "brake" in nar or "slow" in nar or "caliper" in nar:
+                _add(dur * 0.56, "caliper_brake_lock", "relay_cabinet_click", "foley", -9.5, -0.08, 0.90, 0.78, 1, f"{sid}.disc_brake_clamp", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:elevator_shaft_cutaway_stage":
+            _add(min(dur * 0.22, 0.26), "shaft_cutaway_reveal", "mechanical_click", "foley", -11.0, 0.0, 0.88, 0.72, 2, f"{sid}.hoistway_clip_plane", depth="mid", uncert=0.03)
+            _add(dur * 0.46, "hoist_cable_pulley_whir", "sheave_cable_whir", "foley", -10.5, 0.06, 0.90, 0.78, 2, f"{sid}.steel_ropes_counterweight", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:elevator_landing_doors_stage":
+            _add(min(dur * 0.25, 0.30), "floor_arrival_ding", "elevator_arrival_chime", "emphasis", -8.5, 0.0, 0.96, 0.90, 1, f"{sid}.hall_lantern_chime", depth="near", uncert=0.02)
+            _add(min(dur - 0.14, dur * 0.44), "steel_doors_glide_open", "door_slide_open", "foley", -10.5, 0.0, 0.90, 0.78, 2, f"{sid}.bi_parting_doors", depth="mid", uncert=0.025)
+        elif proc_gen == "zach3d:schematic_mechanism_stage":
+            _add(dur * 0.30, "schematic_linkage_engage", "mechanical_click", "foley", -10.5, 0.0, 0.88, 0.74, 2, f"{sid}.schematic_linkage", depth="near", uncert=0.03)
+        elif proc_gen == "zach3d:human_device_stage":
             if "phone_screen" in props or not strict_props:
-                _add(dur * 0.42, "screen_tap_send", "glass_tap_ui", "ui", -9.5, 0.08, 0.94, 0.86, 1, f"{sid}.phone_tap_T_TAP", depth="near", uncert=0.015)
+                t_tap = float(ca.get("hit_time_rel_sec", dur * 0.42)) if isinstance(ca, dict) else dur * 0.42
+                _add(t_tap, "screen_tap_send", "glass_tap_ui", "ui", -9.5, 0.08, 0.94, 0.86, 1, f"{sid}.phone_tap_T_TAP", depth="near", uncert=0.015)
         elif proc_gen == "zach3d:device_cutaway_stage":
             if "microchip_pcb" in props or "battery_cell" in props or "phone_screen" in props or not strict_props:
                 _add(min(dur * 0.25, 0.24), "chassis_shell_peel", "mechanical_click", "foley", -10.5, -0.08, 0.90, 0.78, 2, f"{sid}.frontGlass_peel", depth="near", uncert=0.02)

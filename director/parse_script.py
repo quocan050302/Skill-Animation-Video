@@ -455,19 +455,39 @@ def synthesize_and_align_voice(
         sf.write(str(vo_wav_path), full_vo, target_sr)
         alignment_method = "kokoro_sentence_exact_plus_vocal_energy_cdf"
 
-    elif backend == "macos_say":
+    elif backend in ("macos_say", "windows_sapi"):
+        import base64
         segments = []
         cursor = 0.0
         rate = "184" if not lang.lower().startswith("vi") else "178"
+        sapi_rate = 1
+        ps_bin = shutil.which("powershell") or "powershell"
         for li, sent in enumerate(sentences):
-            aiff_tmp = audio_dir / f"_line_{li:02d}.aiff"
+            raw_tmp = audio_dir / f"_line_{li:02d}_raw.{'aiff' if backend == 'macos_say' else 'wav'}"
             wav_tmp = audio_dir / f"_line_{li:02d}.wav"
-            subprocess.run(["say", "-v", voice_id, "-r", rate, "-o", str(aiff_tmp), sent], check=True)
+            if backend == "macos_say":
+                subprocess.run(["say", "-v", voice_id, "-r", rate, "-o", str(raw_tmp), sent], check=True)
+            else:
+                v_esc = voice_id.replace("'", "''")
+                s_esc = sent.replace("'", "''")
+                w_esc = str(raw_tmp).replace("'", "''")
+                ps_script = (
+                    "$ProgressPreference = 'SilentlyContinue'\n"
+                    "Add-Type -AssemblyName System.Speech\n"
+                    "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer\n"
+                    f"$s.SelectVoice('{v_esc}')\n"
+                    f"$s.Rate = {sapi_rate}\n"
+                    f"$s.SetOutputToWaveFile('{w_esc}')\n"
+                    f"$s.Speak('{s_esc}')\n"
+                    "$s.Dispose()\n"
+                )
+                enc = base64.b64encode(ps_script.encode("utf-16le")).decode("ascii")
+                subprocess.run([ps_bin, "-NoProfile", "-EncodedCommand", enc], check=True, capture_output=True)
             subprocess.run(
-                ["ffmpeg", "-v", "error", "-y", "-i", str(aiff_tmp), "-ac", "1", "-ar", str(target_sr), str(wav_tmp)],
+                ["ffmpeg", "-v", "error", "-y", "-i", str(raw_tmp), "-ac", "1", "-ar", str(target_sr), str(wav_tmp)],
                 check=True,
             )
-            aiff_tmp.unlink(missing_ok=True)
+            raw_tmp.unlink(missing_ok=True)
             raw_s, _ = sf.read(str(wav_tmp), dtype="float32")
             wav_tmp.unlink(missing_ok=True)
             if raw_s.ndim > 1:
@@ -490,7 +510,7 @@ def synthesize_and_align_voice(
 
         full_vo = np.concatenate(segments) if segments else np.zeros(target_sr, dtype=np.float32)
         sf.write(str(vo_wav_path), full_vo, target_sr)
-        alignment_method = "macos_say_sentence_exact_plus_vocal_energy_cdf"
+        alignment_method = f"{backend}_sentence_exact_plus_vocal_energy_cdf"
 
     else:
         raise RuntimeError(f"Unsupported voice backend: {backend}")

@@ -249,6 +249,12 @@ def discover_native_audio_assets(root: Path) -> List[AudioAsset]:
         ("nat_sfx_electric_crackle", "electric_spark_pulse", 0.28, "foley", ["chip", "circuit", "tower", "turbine", "rf", "electric"]),
         ("nat_sfx_subsea_bubble", "subsea_bubble_hum", 0.38, "foley", ["ocean", "subsea", "water", "fiber", "photon"]),
         ("nat_sfx_cosmic_swell", "cosmic_swell", 0.78, "reveal", ["cosmic", "star", "universe", "nebula", "scale"]),
+        ("nat_sfx_elevator_btn", "elevator_button_click", 0.11, "ui", ["elevator", "button", "press", "call"]),
+        ("nat_sfx_relay_click", "relay_cabinet_click", 0.14, "foley", ["relay", "cabinet", "contactor", "controller"]),
+        ("nat_sfx_motor_hum", "motor_drive_hum", 0.52, "foley", ["motor", "traction", "sheave", "drive"]),
+        ("nat_sfx_cable_whir", "sheave_cable_whir", 0.44, "foley", ["cable", "counterweight", "shaft", "pulley"]),
+        ("nat_sfx_door_slide", "door_slide_open", 0.42, "foley", ["door", "doors", "slide", "landing"]),
+        ("nat_sfx_arrival_chime", "elevator_arrival_chime", 0.62, "emphasis", ["arrival", "ding", "chime", "elevator"]),
     ]
 
     for aid, gen, dur, mood, tags in sfx_defs:

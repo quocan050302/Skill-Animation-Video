@@ -136,7 +136,22 @@ def build_storyboard_and_bible(
     )
     raw_shots = coverage["shots"]
 
-    # 3. Camera Choreography (`camera_paths.json`) & Transition EDL (`transition_edl.json`)
+    # 3. Entity & Character Registry Compilation (`scene_asset_factory.py`) BEFORE camera planning
+    #    so camera choreography uses real scene focal anchors, bounds & colliders.
+    entity_inventory = compile_scene_entities(
+        event_graph=visual_events,
+        selected_skill=selected_skill,
+        seed=seed,
+    )
+    for sc in raw_shots:
+        pre_mat = materialize_engine_scene(sc, entity_inventory, selected_skill=selected_skill, camera_path=None)
+        sc["procedural_generator"] = pre_mat["procedural_generator"]
+        sc["representation"] = pre_mat.get("representation", "stylized_schematic")
+        sc["focal_anchor"] = pre_mat.get("focal_anchor")
+        if pre_mat.get("character_id") and not sc.get("staging", {}).get("character_id"):
+            sc.setdefault("staging", {})["character_id"] = pre_mat["character_id"]
+
+    # 4. Camera Choreography (`camera_paths.json`) & Transition EDL (`transition_edl.json`)
     camera_plan = build_camera_plan(
         shots=raw_shots,
         selected_skill=selected_skill,
@@ -153,13 +168,6 @@ def build_storyboard_and_bible(
         mode=transition_policy,
         run_dir=run_dir,
     )
-
-    # 4. Entity Compilation & Camera Bounds Validation (`scene_asset_factory.py`)
-    entity_inventory = compile_scene_entities(
-        event_graph=visual_events,
-        selected_skill=selected_skill,
-        seed=seed,
-    )
     cam_by_id = {p["shot_id"]: p for p in camera_plan["paths"]}
 
     shots: List[Dict[str, Any]] = []
@@ -169,6 +177,8 @@ def build_storyboard_and_bible(
         cp = cam_by_id.get(sc["shot_id"])
         mat = materialize_engine_scene(sc, entity_inventory, selected_skill=selected_skill, camera_path=cp)
         sc["procedural_generator"] = mat["procedural_generator"]
+        sc["representation"] = mat.get("representation", "stylized_schematic")
+        sc["focal_anchor"] = mat.get("focal_anchor")
         sc["camera_path"] = cp
         sc["speed_ramp"] = (
             {"enabled": True, "slow_window_norm": [0.42, 0.72], "factor": 0.45}
@@ -191,6 +201,7 @@ def build_storyboard_and_bible(
             "generator_module": f"director/assets/{selected_skill.replace('-', '_')}_adapter.py",
             "setup_type": sc["setup_type"],
             "procedural_generator": mat["procedural_generator"],
+            "representation": mat.get("representation", "stylized_schematic"),
             "scene_family": mat["scene_family"],
             "novel_non_template": bool(sc.get("novel_non_template", False)),
             "motifs": list(sc["staging"].get("grounded_props", [mat["prop_id"]])),
@@ -201,7 +212,7 @@ def build_storyboard_and_bible(
     total_duration = float(visual_events["total_duration_sec"])
 
     storyboard: Dict[str, Any] = {
-        "schema_version": "0.4.0",
+        "schema_version": "0.5.0",
         "selection_mode": style_decisions["selection_mode"],
         "selected_skill": selected_skill,
         "style_lock": style_decisions["style_lock"],
@@ -215,6 +226,9 @@ def build_storyboard_and_bible(
         "edit_energy": coverage["edit_energy"],
         "scene_novelty": scene_novelty,
         "transition_policy": transition_policy,
+        "max_static_hold_sec": coverage.get("max_static_hold_sec"),
+        "character_registry": entity_inventory.get("character_registry", {}),
+        "prop_registry": entity_inventory.get("prop_registry", {}),
         "style_adapter_params": style_params.to_dict(),
         "entities_and_facts": parsed_script["entities_and_facts"],
         "visual_events_summary": {

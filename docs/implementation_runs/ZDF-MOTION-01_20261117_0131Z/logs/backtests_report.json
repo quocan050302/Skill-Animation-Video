@@ -1,0 +1,144 @@
+{
+  "roman_gladiator": {
+    "delivered": true,
+    "overall_qc_status": "PASS",
+    "duration_sec": 10.113,
+    "shots": [
+      [
+        "shot_00",
+        "zach3d:roman_historical_stage",
+        "exact_archetype"
+      ],
+      [
+        "shot_01",
+        "zach3d:studio_demonstrator_stage",
+        "stylized_schematic"
+      ],
+      [
+        "shot_02",
+        "zach3d:roman_historical_stage",
+        "exact_archetype"
+      ]
+    ],
+    "camera_execution": {
+      "status": "PASS",
+      "camera_execution_trace_json": "C:\\Users\\QuocAn\\AppData\\Local\\Temp\\tmpbf6gtbyr\\roman_gladiator\\camera_execution_trace.json",
+      "worst_pos_err_m": 0.0,
+      "worst_ori_err_deg": 0.165,
+      "worst_fov_err_deg": 0.0,
+      "worst_contact_err_m": null,
+      "issues": []
+    },
+    "scene_diversity": {
+      "visual_skill_lock": "PASS",
+      "adjacent_repetition_guard": "PASS",
+      "intra_shot_motion": "PASS",
+      "transition_continuity": "PASS",
+      "camera_execution_audit": "PASS",
+      "scene_novelty_metrics": "PASS"
+    }
+  },
+  "bicycle_unsupported": {
+    "delivered": true,
+    "overall_qc_status": "PASS",
+    "duration_sec": 26.41,
+    "shots": [
+      [
+        "shot_00",
+        "zach3d:schematic_mechanism_stage",
+        "UNSUPPORTED_EXACT_ARCHETYPE_FALLBACK_SCHEMATIC"
+      ],
+      [
+        "shot_01",
+        "zach3d:studio_demonstrator_stage",
+        "stylized_schematic"
+      ],
+      [
+        "shot_02",
+        "zach3d:device_cutaway_stage",
+        "exact_archetype"
+      ],
+      [
+        "shot_03",
+        "zach3d:studio_demonstrator_stage",
+        "stylized_schematic"
+      ],
+      [
+        "shot_04",
+        "zach3d:studio_demonstrator_stage",
+        "stylized_schematic"
+      ],
+      [
+        "shot_05",
+        "zach3d:studio_demonstrator_stage",
+        "stylized_schematic"
+      ],
+      [
+        "shot_06",
+        "zach3d:device_cutaway_stage",
+        "exact_archetype"
+      ]
+    ],
+    "camera_execution": {
+      "status": "PASS",
+      "camera_execution_trace_json": "C:\\Users\\QuocAn\\AppData\\Local\\Temp\\tmpbf6gtbyr\\bicycle_unsupported\\camera_execution_trace.json",
+      "worst_pos_err_m": 0.0,
+      "worst_ori_err_deg": 0.153,
+      "worst_fov_err_deg": 0.0,
+      "worst_contact_err_m": null,
+      "issues": []
+    },
+    "scene_diversity": {
+      "visual_skill_lock": "PASS",
+      "adjacent_repetition_guard": "PASS",
+      "intra_shot_motion": "PASS",
+      "transition_continuity": "PASS",
+      "camera_execution_audit": "PASS",
+      "scene_novelty_metrics": "PASS"
+    }
+  },
+  "mixed_roman_phone_cosmos": {
+    "delivered": true,
+    "overall_qc_status": "PASS",
+    "duration_sec": 10.582,
+    "shots": [
+      [
+        "shot_00",
+        "zach3d:roman_historical_stage",
+        "exact_archetype"
+      ],
+      [
+        "shot_01",
+        "zach3d:human_device_stage",
+        "exact_archetype"
+      ],
+      [
+        "shot_02",
+        "zach3d:network_relay_stage",
+        "exact_archetype"
+      ],
+      [
+        "shot_03",
+        "zach3d:cosmic_scale_bridge_stage",
+        "stylized_schematic"
+      ]
+    ],
+    "camera_execution": {
+      "status": "PASS",
+      "camera_execution_trace_json": "C:\\Users\\QuocAn\\AppData\\Local\\Temp\\tmpbf6gtbyr\\mixed_roman_phone_cosmos\\camera_execution_trace.json",
+      "worst_pos_err_m": 0.0,
+      "worst_ori_err_deg": 0.162,
+      "worst_fov_err_deg": 0.0,
+      "worst_contact_err_m": 0.0,
+      "issues": []
+    },
+    "scene_diversity": {
+      "visual_skill_lock": "PASS",
+      "adjacent_repetition_guard": "PASS",
+      "intra_shot_motion": "PASS",
+      "transition_continuity": "PASS",
+      "camera_execution_audit": "PASS",
+      "scene_novelty_metrics": "PASS"
+    }
+  }
+}

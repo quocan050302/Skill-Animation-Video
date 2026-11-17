@@ -20,6 +20,114 @@ from .visual_event_graph import classify_visual_clause
 ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
     "zach-d-films": [
         {
+            "setup": "elevator_lobby_button_macro",
+            "families": ("elevator_lobby_button",),
+            "framing": "CU_HandContact",
+            "angle": "three_quarter_button_reach",
+            "move": "macro_push_in",
+            "focal_mm": 45,
+            "placement": "foreground_right",
+            "silhouette": "hand_button_contact",
+            "pose": "reach_press_button",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "controller_cabinet_cutaway",
+            "families": ("controller_cabinet_cutaway",),
+            "framing": "ECU_Cutaway",
+            "angle": "cabinet_door_open_35deg",
+            "move": "peel_orbit_reveal",
+            "focal_mm": 65,
+            "placement": "center_exploded",
+            "silhouette": "open_cabinet_relays",
+            "pose": "cutaway_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "controller_relay_bus_macro",
+            "families": ("controller_cabinet_cutaway",),
+            "framing": "CU_LogicBus",
+            "angle": "right_oblique_pcb",
+            "move": "dolly_trace_relays",
+            "focal_mm": 50,
+            "placement": "right_logic_bay",
+            "silhouette": "relay_bus_pulses",
+            "pose": "signal_trace_sweep",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "traction_machine_room_drive",
+            "families": ("traction_machine_room",),
+            "framing": "MS_MachineRoom",
+            "angle": "elevated_sheave_isometric",
+            "move": "arc_around_rotor",
+            "focal_mm": 35,
+            "placement": "center_drive_bay",
+            "silhouette": "cutaway_motor_sheave",
+            "pose": "sheave_cable_drive",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "traction_caliper_brake_macro",
+            "families": ("traction_machine_room",),
+            "framing": "MCU_CaliperBrake",
+            "angle": "tight_sheave_caliper_right",
+            "move": "macro_push_caliper",
+            "focal_mm": 58,
+            "placement": "right_brake_caliper",
+            "silhouette": "red_caliper_clamp_sheave",
+            "pose": "caliper_clamp_stop",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "elevator_shaft_counterweight",
+            "families": ("elevator_shaft_cutaway",),
+            "framing": "WS_ShaftCutaway",
+            "angle": "front_cutaway_vertical",
+            "move": "crane_tilt_follow",
+            "focal_mm": 28,
+            "placement": "dual_rail_balance",
+            "silhouette": "car_counterweight_ropes",
+            "pose": "opposite_travel",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "elevator_shaft_sensors_close",
+            "families": ("elevator_shaft_cutaway",),
+            "framing": "CU_RailSensors",
+            "angle": "right_vertical_bus_angle",
+            "move": "vertical_sensor_track",
+            "focal_mm": 42,
+            "placement": "rail_sensor_column",
+            "silhouette": "magnetic_vane_sensors",
+            "pose": "sensor_beacon_pulse",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "elevator_landing_doors_reveal",
+            "families": ("elevator_landing_doors",),
+            "framing": "MS_LobbyPortal",
+            "angle": "eye_level_portal",
+            "move": "pull_back_crane",
+            "focal_mm": 32,
+            "placement": "centered_portal",
+            "silhouette": "biparting_doors_hero",
+            "pose": "level_and_open",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "schematic_mechanism_stage",
+            "families": ("schematic_mechanism",),
+            "framing": "MS_Schematic",
+            "angle": "three_quarter_isometric",
+            "move": "orbit_right",
+            "focal_mm": 35,
+            "placement": "center_pedestal",
+            "silhouette": "labeled_schematic_linkage",
+            "pose": "schematic_cycle",
+            "novel_non_template": True,
+        },
+        {
             "setup": "human_device_macro",
             "families": ("human_device", "human_lifestyle", "human_studio"),
             "framing": "CU_OverShoulder",
@@ -33,7 +141,7 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
         },
         {
             "setup": "device_cutaway_pcb",
-            "families": ("electromechanical", "human_device"),
+            "families": ("electromechanical",),
             "framing": "ECU_Cutaway",
             "angle": "exploded_oblique_35deg",
             "move": "peel_orbit_reveal",
@@ -226,9 +334,15 @@ def _select_transition_hint(event: Dict[str, Any], cand: Dict[str, Any], is_last
     skill = event.get("selected_skill", "zach-d-films")
 
     if skill == "zach-d-films":
+        if cand["setup"] == "elevator_lobby_button_macro":
+            return "zoom_through"
+        if cand["setup"] == "controller_cabinet_cutaway":
+            return "match_cut"
+        if cand["setup"] == "traction_machine_room_drive":
+            return "object_wipe"
         if axis in ("environment_and_scale_shift", "internal_cutaway") or verb == "scale_jump":
             return "zoom_through"
-        if event.get("has_contrast") and cand["setup"] in ("device_cutaway_pcb", "network_tower_relay"):
+        if event.get("has_contrast") and cand["setup"] in ("device_cutaway_pcb", "network_tower_relay", "elevator_shaft_counterweight"):
             return "match_cut"
         if event.get("lighting_mood") == "dark_dramatic" and cand["framing"].startswith("WS"):
             return "whip_pan"
@@ -249,6 +363,7 @@ def split_long_visual_beats_by_actions(
     preset: str = "dynamic",
     max_shot_dur: Optional[float] = None,
     fps: int = 30,
+    full_script_low: str = "",
 ) -> List[Dict[str, Any]]:
     """Split over-long events at word boundaries into genuinely distinct sub-beats cleanly.
 
@@ -269,7 +384,7 @@ def split_long_visual_beats_by_actions(
         toks = text.split()
 
         if dur > max_shot_dur and len(toks) >= 8 and ev.get("selected_skill") not in ("minimalistic-graphics",):
-            # Split cleanly around midpoint onto a distinct frame boundary
+            # Split cleanly around midpoint onto a distinct frame boundary ONLY if sub-clauses depict different visual stages
             n_parts = 2
             split_idx = len(toks) // 2
             mid_raw = st + dur * (split_idx / float(len(toks)))
@@ -279,36 +394,39 @@ def split_long_visual_beats_by_actions(
                 span_a = " ".join(toks[:split_idx]).strip()
                 span_b = " ".join(toks[split_idx:]).strip()
                 skill_s = str(ev.get("selected_skill") or "zach-d-films")
-                meta_a = classify_visual_clause(span_a, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 0, None, [], skill_s)
-                meta_b = classify_visual_clause(span_b, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 1, meta_a["scene_family"], [], skill_s)
+                meta_a = classify_visual_clause(span_a, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 0, None, [], skill_s, full_script_low=full_script_low)
+                meta_b = classify_visual_clause(span_b, str(ev.get("beat_role", "mechanism")), int(ev.get("beat_index", 0)), 1, meta_a["scene_family"], [], skill_s, full_script_low=full_script_low)
+                fam_a = meta_a["scene_family"] if meta_a["relevant_prop"] != "idea_spark" else ev.get("scene_family")
+                fam_b = meta_b["scene_family"] if meta_b["relevant_prop"] != "idea_spark" else ev.get("scene_family")
+                allow_same_fam_split = (skill_s != "zach-d-films") or (dur > 5.2)
+                if allow_same_fam_split or (fam_b != fam_a):
+                    u_a = dict(ev)
+                    u_a["unit_id"] = f"{ev['event_id']}_a"
+                    u_a["start_sec"] = st
+                    u_a["end_sec"] = mid_f
+                    u_a["duration_sec"] = round(mid_f - st, 3)
+                    u_a["narration_text"] = span_a
+                    u_a["narration_span_start"] = 0
+                    u_a["narration_span_end"] = split_idx
+                    if meta_a["relevant_prop"] != "idea_spark":
+                        u_a.update({k: meta_a[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
+                    u_a["visual_objective"] = f"Establish {u_a['subject']} acting on {u_a['relevant_prop']}"
+                    u_a["desired_novelty_axis"] = "subject_action_setup"
 
-                u_a = dict(ev)
-                u_a["unit_id"] = f"{ev['event_id']}_a"
-                u_a["start_sec"] = st
-                u_a["end_sec"] = mid_f
-                u_a["duration_sec"] = round(mid_f - st, 3)
-                u_a["narration_text"] = span_a
-                u_a["narration_span_start"] = 0
-                u_a["narration_span_end"] = split_idx
-                if meta_a["relevant_prop"] != "idea_spark":
-                    u_a.update({k: meta_a[k] for k in ("subject", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood")})
-                u_a["visual_objective"] = f"Establish {u_a['subject']} acting on {u_a['relevant_prop']}"
-                u_a["desired_novelty_axis"] = "subject_action_setup"
-
-                u_b = dict(ev)
-                u_b["unit_id"] = f"{ev['event_id']}_b"
-                u_b["start_sec"] = mid_f
-                u_b["end_sec"] = en
-                u_b["duration_sec"] = round(en - mid_f, 3)
-                u_b["narration_text"] = span_b
-                u_b["narration_span_start"] = split_idx
-                u_b["narration_span_end"] = len(toks)
-                if meta_b["relevant_prop"] != "idea_spark":
-                    u_b.update({k: meta_b[k] for k in ("subject", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood")})
-                u_b["visual_objective"] = f"Reveal consequence {u_b['verb_action']} ({u_b['relevant_prop']})"
-                u_b["desired_novelty_axis"] = "internal_reveal_escalation" if meta_b["scene_family"] == u_a["scene_family"] else "environment_and_scale_shift"
-                out_units.extend([u_a, u_b])
-                continue
+                    u_b = dict(ev)
+                    u_b["unit_id"] = f"{ev['event_id']}_b"
+                    u_b["start_sec"] = mid_f
+                    u_b["end_sec"] = en
+                    u_b["duration_sec"] = round(en - mid_f, 3)
+                    u_b["narration_text"] = span_b
+                    u_b["narration_span_start"] = split_idx
+                    u_b["narration_span_end"] = len(toks)
+                    if meta_b["relevant_prop"] != "idea_spark":
+                        u_b.update({k: meta_b[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
+                    u_b["visual_objective"] = f"Reveal consequence {u_b['verb_action']} ({u_b['relevant_prop']})"
+                    u_b["desired_novelty_axis"] = "internal_reveal_escalation" if meta_b["scene_family"] == u_a["scene_family"] else "environment_and_scale_shift"
+                    out_units.extend([u_a, u_b])
+                    continue
 
         u = dict(ev)
         u["unit_id"] = ev["event_id"]
@@ -318,11 +436,19 @@ def split_long_visual_beats_by_actions(
         u["visual_objective"] = f"Show {ev['subject']} -> {ev['verb_action']} ({ev['relevant_prop']})"
         out_units.append(u)
 
-    # Merge tiny trailing fragments (<0.75s) into neighbor safely so frame count is healthy
+    # Merge tiny fragments (<0.72s) or adjacent ZDF identical-stage splits safely
     merged: List[Dict[str, Any]] = []
     for u in out_units:
-        if (u["end_sec"] - u["start_sec"]) < 0.72 and merged:
-            prev = merged[-1]
+        prev = merged[-1] if merged else None
+        same_zdf_stage = bool(
+            prev is not None
+            and u.get("selected_skill") == "zach-d-films"
+            and prev.get("scene_family") == u.get("scene_family")
+            and (float(u["end_sec"]) - float(prev["start_sec"])) <= 5.2
+            and not prev.get("contact_action")
+            and not u.get("contact_action")
+        )
+        if prev is not None and (((u["end_sec"] - u["start_sec"]) < 0.72) or same_zdf_stage):
             prev["end_sec"] = u["end_sec"]
             prev["duration_sec"] = round(prev["end_sec"] - prev["start_sec"], 3)
             prev["narration_text"] = (prev["narration_text"] + " " + u["narration_text"]).strip()
@@ -353,20 +479,34 @@ def generate_candidate_shot_set(
     is_last = (unit_idx == total_units - 1)
     rng = random.Random(seed + unit_idx * 97)
 
+    has_zdf_family_match = (
+        selected_skill == "zach-d-films"
+        and any(fam in g.get("families", ()) for g in pool)
+    )
+    nar_low = str(event.get("narration_text") or event.get("exact_narration_phrase") or "").lower()
+
     candidates: List[Dict[str, Any]] = []
     for g in pool:
         c = dict(g)
         c["background_theme"] = str(event.get("lighting_mood") or "day_editorial")
-        # Differentiate placement/focal options for multi-shot coverage inside same engine
         fams = c.get("families", ())
-        fam_match = (fam in fams) or (is_last and "payoff" in fams)
+        fam_match = (fam in fams)
+        if has_zdf_family_match and not fam_match:
+            # Never assign a foreign-archetype setup_type to mask a ZDF stage
+            continue
         if not fam_match and selected_skill == "zach-d-films" and prop not in ("roman_arena", "roman_ledger") and "roman" in c["setup"]:
             continue
 
         c["semantic_fit"] = 1.0 if fam_match else 0.35
+        if fam == "traction_machine_room":
+            is_brake_beat = any(k in nar_low for k in ("brake", "caliper", "clamp", "slow", "stop"))
+            if is_brake_beat and c["setup"] == "traction_caliper_brake_macro":
+                c["semantic_fit"] += 0.70
+            elif (not is_brake_beat) and c["setup"] == "traction_machine_room_drive":
+                c["semantic_fit"] += 0.45
         if is_first and ("hook" in c["setup"] or "macro" in c["setup"] or "departure" in c["setup"] or "assembled" in c["setup"]):
             c["semantic_fit"] += 0.35
-        if is_last and ("payoff" in c["setup"] or "arrival" in c["setup"] or "callout" in c["setup"] or "orbital" in c["setup"] or "horizon" in c["setup"]):
+        if is_last and ("payoff" in c["setup"] or "arrival" in c["setup"] or "callout" in c["setup"] or "orbital" in c["setup"] or "horizon" in c["setup"] or "landing_doors" in c["setup"]):
             c["semantic_fit"] += 0.45
         if verb == "reveal_cutaway" and ("cutaway" in c["setup"] or "core" in c["setup"] or "pcb" in c["setup"] or "separation" in c["setup"]):
             c["semantic_fit"] += 0.55
@@ -529,6 +669,30 @@ def select_sequence_with_diversity_constraints(
             else _select_transition_hint(unit, chosen, is_last=is_last, transition_policy=transition_policy)
         )
 
+        st_sec = round(float(unit["start_sec"]), 3)
+        en_sec = round(float(unit["end_sec"]), 3)
+        shot_dur = round(en_sec - st_sec, 3)
+
+        ca_raw = unit.get("contact_action")
+        contact_action = None
+        if isinstance(ca_raw, dict):
+            ca_copy = dict(ca_raw)
+            rel_hit = max(0.15, min(shot_dur - 0.12, float(ca_copy.get("hit_time_rel_sec", shot_dur * 0.44))))
+            ca_copy["hit_time_rel_sec"] = round(rel_hit, 3)
+            ca_copy["hit_time_sec"] = round(st_sec + rel_hit, 3)
+            contact_action = ca_copy
+
+        locked_kfs = None
+        cam_locked = False
+        if manual_override:
+            cam_locked = bool(manual_override.get("camera_locked", False))
+            if isinstance(manual_override.get("camera_path"), dict) and manual_override["camera_path"].get("keyframes"):
+                locked_kfs = manual_override["camera_path"]["keyframes"]
+                cam_locked = True
+            elif manual_override.get("locked_camera_keyframes"):
+                locked_kfs = manual_override["locked_camera_keyframes"]
+                cam_locked = True
+
         shot_entry: Dict[str, Any] = {
             "shot_id": f"shot_{idx:02d}",
             "index": idx,
@@ -539,9 +703,9 @@ def select_sequence_with_diversity_constraints(
             "narration_text": unit["narration_text"],
             "narration_span_start": unit["narration_span_start"],
             "narration_span_end": unit["narration_span_end"],
-            "start": round(float(unit["start_sec"]), 3),
-            "end": round(float(unit["end_sec"]), 3),
-            "duration": round(float(unit["end_sec"]) - float(unit["start_sec"]), 3),
+            "start": st_sec,
+            "end": en_sec,
+            "duration": shot_dur,
             "setup_type": setup_name,
             "scene_family": unit["scene_family"],
             "scale_level": unit["scale_level"],
@@ -551,6 +715,10 @@ def select_sequence_with_diversity_constraints(
             "desired_novelty_axis": unit.get("desired_novelty_axis", ""),
             "callback_reason": chosen.get("callback_reason"),
             "manual": bool(manual_override),
+            "camera_locked": cam_locked,
+            "locked_camera_keyframes": locked_kfs,
+            "semantic_relation": unit.get("semantic_relation"),
+            "unsupported_exact_domain": unit.get("unsupported_exact_domain"),
             "camera": {
                 "framing": chosen["framing"],
                 "angle": chosen["angle"],
@@ -562,6 +730,7 @@ def select_sequence_with_diversity_constraints(
             "staging": {
                 "action": f"{unit['subject']} {unit['verb_action']} ({unit['relevant_prop']})",
                 "subject": unit["subject"],
+                "character_id": unit.get("character_id"),
                 "verb_action": unit["verb_action"],
                 "visual_metaphor": unit["relevant_prop"],
                 "secondary_prop": unit["grounded_props"][1] if len(unit["grounded_props"]) > 1 else unit["relevant_prop"],
@@ -572,6 +741,8 @@ def select_sequence_with_diversity_constraints(
                 "silhouette_tag": chosen["silhouette"],
                 "pose_tag": chosen["pose"],
                 "background_theme": chosen["background_theme"],
+                "contact_action": contact_action,
+                "intentional_hold": bool(unit.get("verb_action") == "strike_halt" and "slow" in str(unit.get("narration_text", "")).lower()),
                 "character_expression": (
                     "curious_smirk" if idx == 0 else
                     "surprised_wide" if unit.get("has_contrast") else
@@ -703,11 +874,13 @@ def plan_editorial_coverage(
     if max_hold is None:
         max_hold = 3.5 if eff_energy == "dynamic" else (4.8 if eff_energy == "balanced" else 6.5)
 
+    full_script_low = " ".join(str(b.get("text") or "") for b in (parsed_script.get("beats") or [])).lower()
     units = split_long_visual_beats_by_actions(
         list(visual_events.get("events", [])),
         preset=eff_energy,
         max_shot_dur=max_hold,
         fps=fps,
+        full_script_low=full_script_low,
     )
     shots, div_summary = select_sequence_with_diversity_constraints(
         units=units,
