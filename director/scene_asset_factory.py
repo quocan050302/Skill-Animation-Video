@@ -51,6 +51,23 @@ ENTITY_BOUNDS_M: Dict[str, Tuple[float, float, float]] = {
     "route_street": (3.0, 2.0, 3.0),
     "exploded_device": (1.8, 2.8, 1.8),
     "idea_spark": (0.90, 1.45, 0.75),
+    "tacoma_bridge_hook_rig": (6.5, 4.8, 1.8),
+    "tacoma_wide_establish_rig": (14.5, 5.2, 2.2),
+    "tacoma_roadway_wave_rig": (8.5, 4.6, 1.8),
+    "tacoma_girder_wind_rig": (6.5, 3.6, 2.2),
+    "tacoma_torsion_span_rig": (9.5, 4.6, 2.0),
+    "tacoma_shore_onlooker_rig": (2.8, 2.2, 4.5),
+    "tacoma_collapse_span_rig": (10.5, 5.5, 2.4),
+    "tacoma_aftermath_rig": (14.5, 5.2, 2.2),
+    "skyscraper_street_hook_rig": (3.2, 8.8, 3.2),
+    "skyscraper_skyline_wide_rig": (4.5, 9.2, 4.5),
+    "skyscraper_wind_vortex_rig": (3.6, 8.8, 3.2),
+    "skyscraper_plumb_drift_rig": (3.2, 9.0, 2.8),
+    "skyscraper_office_interior_rig": (3.8, 2.8, 3.6),
+    "skyscraper_tmd_cutaway_rig": (2.6, 2.9, 2.4),
+    "skyscraper_counterphase_rig": (2.8, 2.9, 2.4),
+    "skyscraper_before_after_rig": (4.2, 6.8, 2.4),
+    "skyscraper_dusk_resolution_rig": (4.5, 9.2, 4.5),
 }
 
 
@@ -299,6 +316,69 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 10.5, "z_min": -8.5, "z_max": 14.0},
         "collider_boxes": [],
     },
+    "zach3d:skyscraper_street_hook_stage": {
+        "capabilities": ["flexing_tower_tiers", "static_reference_tower", "street_observer_human"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "rooftop_sway_apex", "world_pos": [-0.25, 7.6, -3.2], "radius_m": 0.75},
+        "bounds": {"x_min": -6.0, "x_max": 6.0, "y_min": 0.12, "y_max": 10.5, "z_min": -6.0, "z_max": 8.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_skyline_wide_stage": {
+        "capabilities": ["city_skyline_blocks", "moving_vehicles", "flexing_tower_tiers"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "tower_mid_profile", "world_pos": [0.0, 5.4, -0.4], "radius_m": 0.85},
+        "bounds": {"x_min": -10.0, "x_max": 10.0, "y_min": 0.12, "y_max": 12.5, "z_min": -8.0, "z_max": 13.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_wind_vortex_stage": {
+        "capabilities": ["windward_vortex_ribbons", "flexing_tower_tiers"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "windward_facade_vortex", "world_pos": [0.0, 5.6, -0.4], "radius_m": 0.75},
+        "bounds": {"x_min": -8.0, "x_max": 8.0, "y_min": 0.12, "y_max": 11.5, "z_min": -6.5, "z_max": 9.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_plumb_drift_stage": {
+        "capabilities": ["plumb_reference_mast", "lateral_cantilever_flex"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "plumb_drift_tip", "world_pos": [0.0, 7.8, -1.0], "radius_m": 0.65},
+        "bounds": {"x_min": -7.5, "x_max": 7.5, "y_min": 0.12, "y_max": 11.5, "z_min": -6.5, "z_max": 9.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_office_interior_stage": {
+        "capabilities": ["office_interior", "swinging_pendant_lamp", "shifting_window_horizon", "worker_brace_reaction"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "office_pendant_lamp", "world_pos": [-0.35, 1.76, -0.15], "radius_m": 0.35},
+        "bounds": {"x_min": -4.0, "x_max": 4.0, "y_min": 0.12, "y_max": 2.9, "z_min": -2.5, "z_max": 4.2},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_tmd_cutaway_stage": {
+        "capabilities": ["layered_cutaway", "tuned_mass_damper_sphere", "hydraulic_pistons"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "damper_pendulum_sphere", "world_pos": [0.0, 1.32, 0.25], "radius_m": 0.55},
+        "bounds": {"x_min": -5.0, "x_max": 5.0, "y_min": 0.12, "y_max": 5.0, "z_min": -4.0, "z_max": 6.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_counterphase_stage": {
+        "capabilities": ["counterphase_oscillation", "opposing_force_bars", "hydraulic_pistons"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "counterphase_tower_frame", "world_pos": [0.0, 2.45, 0.5], "radius_m": 0.60},
+        "bounds": {"x_min": -5.0, "x_max": 5.0, "y_min": 0.12, "y_max": 5.0, "z_min": -4.0, "z_max": 6.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_before_after_stage": {
+        "capabilities": ["split_undamped_vs_damped_towers", "amplitude_contrast"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "damped_tower_top", "world_pos": [1.35, 6.2, 0.0], "radius_m": 0.70},
+        "bounds": {"x_min": -9.0, "x_max": 9.0, "y_min": 0.12, "y_max": 10.5, "z_min": -6.0, "z_max": 12.5},
+        "collider_boxes": [],
+    },
+    "zach3d:skyscraper_dusk_resolution_stage": {
+        "capabilities": ["dusk_skyline_overview", "gentle_controlled_flex"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "rooftop_sway_apex", "world_pos": [0.0, 6.8, -1.2], "radius_m": 0.85},
+        "bounds": {"x_min": -10.5, "x_max": 10.5, "y_min": 0.12, "y_max": 12.5, "z_min": -8.0, "z_max": 13.5},
+        "collider_boxes": [],
+    },
     "zach3d:studio_demonstrator_stage": {
         "capabilities": ["human_character", "studio_gear_pedestal"],
         "fidelity_mode": "stylized_schematic",
@@ -319,14 +399,44 @@ def build_character_and_prop_registry(
     has_roman = any(ev.get("scene_family") == "roman_historical" for ev in events)
     has_boston = any(str(ev.get("scene_family") or "").startswith("boston_") for ev in events)
     has_tacoma = any(str(ev.get("scene_family") or "").startswith("tacoma_") for ev in events)
-    has_modern_human = (not has_boston and not has_tacoma) and any(
+    has_skyscraper = any(str(ev.get("scene_family") or "").startswith("skyscraper_") for ev in events)
+    has_modern_human = (not has_boston and not has_tacoma and not has_skyscraper) and any(
         "human" in str(ev.get("subject", ""))
         or ev.get("scene_family") in ("human_device", "elevator_lobby_button", "elevator_landing_doors", "human_studio")
         for ev in events
     )
 
     characters: Dict[str, Dict[str, Any]] = {}
-    if has_tacoma:
+    if has_skyscraper:
+        characters["char_street_observer_01"] = {
+            "character_id": "char_street_observer_01",
+            "role": "street_observer",
+            "outfit_style": "modern_casual_jacket",
+            "height_m": 1.74,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x2563EB,
+            "shirt_material_id": "mat_skyscraper_street_2563eb",
+            "pants_hex": 0x1E293B,
+            "collar_hex": 0xF1F5F9,
+            "skin_hex": 0xD9A484,
+            "allowed_states": ["notice_gaze", "step_back_brace", "braced_hold"],
+        }
+        characters["char_office_worker_01"] = {
+            "character_id": "char_office_worker_01",
+            "role": "office_worker",
+            "outfit_style": "modern_office_shirt",
+            "height_m": 1.74,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x0EA5E9,
+            "shirt_material_id": "mat_skyscraper_office_0ea5e9",
+            "pants_hex": 0x1E293B,
+            "collar_hex": 0xF8FAFC,
+            "skin_hex": 0xD9A484,
+            "allowed_states": ["notice_gaze", "step_back_brace", "braced_hold"],
+        }
+    elif has_tacoma:
         characters["char_onlooker_1940_01"] = {
             "character_id": "char_onlooker_1940_01",
             "role": "shore_onlooker_1940",
@@ -545,6 +655,24 @@ def _map_family_to_generator(
             return "zach3d:tacoma_collapse_plunge_stage"
         if fam == "tacoma_aftermath" or prop == "tacoma_aftermath_rig":
             return "zach3d:tacoma_aftermath_stage"
+        if fam == "skyscraper_street_hook" or prop == "skyscraper_street_hook_rig":
+            return "zach3d:skyscraper_street_hook_stage"
+        if fam == "skyscraper_skyline_wide" or prop == "skyscraper_skyline_wide_rig":
+            return "zach3d:skyscraper_skyline_wide_stage"
+        if fam == "skyscraper_wind_vortex" or prop == "skyscraper_wind_vortex_rig":
+            return "zach3d:skyscraper_wind_vortex_stage"
+        if fam == "skyscraper_plumb_drift" or prop == "skyscraper_plumb_drift_rig":
+            return "zach3d:skyscraper_plumb_drift_stage"
+        if fam == "skyscraper_office_interior" or prop == "skyscraper_office_interior_rig":
+            return "zach3d:skyscraper_office_interior_stage"
+        if fam == "skyscraper_tmd_cutaway" or prop == "skyscraper_tmd_cutaway_rig":
+            return "zach3d:skyscraper_tmd_cutaway_stage"
+        if fam == "skyscraper_counterphase" or prop == "skyscraper_counterphase_rig":
+            return "zach3d:skyscraper_counterphase_stage"
+        if fam == "skyscraper_before_after" or prop == "skyscraper_before_after_rig":
+            return "zach3d:skyscraper_before_after_stage"
+        if fam == "skyscraper_dusk_resolution" or prop == "skyscraper_dusk_resolution_rig":
+            return "zach3d:skyscraper_dusk_resolution_stage"
         if fam == "airplane_window" or prop == "airplane_window_bleed":
             return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":

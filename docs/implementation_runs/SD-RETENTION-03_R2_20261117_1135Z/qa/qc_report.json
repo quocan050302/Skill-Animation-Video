@@ -1,0 +1,1004 @@
+{
+  "schema_version": "0.5.0",
+  "overall_status": "PASS",
+  "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+  "subjective_visual_review": "NOT_VERIFIED",
+  "subjective_editorial_listening": "NOT_VERIFIED",
+  "subjective_voice_quality_status": "NOT_VERIFIED",
+  "viewer_retention_status": "NOT_VERIFIED",
+  "selected_skill": "zach-d-films",
+  "selection_mode": "explicit",
+  "checks": {
+    "style_lock_provenance": {
+      "status": "PASS",
+      "inspected_file_count": 27,
+      "violations": []
+    },
+    "preview_1080p_stream": {
+      "status": "PASS",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30.0,
+      "duration_sec": 38.3,
+      "has_audio": true
+    },
+    "final_4k_stream": {
+      "status": "PASS",
+      "ffprobe": {
+        "width": 2160,
+        "height": 3840,
+        "codec_name": "h264",
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "fps": 30.0,
+        "duration_sec": 38.3,
+        "size_bytes": 46174896,
+        "audio_codec": "aac",
+        "audio_sample_rate": "48000",
+        "audio_channels": 2
+      }
+    },
+    "truthful_4k_declaration": {
+      "status": "PASS",
+      "declaration": "native_4k",
+      "native_4k": true,
+      "high_freq_edge_ratio_vs_1080p_bilinear": 1.1993,
+      "has_subpixel_4k_detail": true
+    },
+    "decoded_frames_and_cuts": {
+      "status": "PASS",
+      "distinct_setups_verified": 9,
+      "novel_scene_count": 9,
+      "motion_scores": [
+        {
+          "shot_id": "shot_00",
+          "frame_mad": 9.276,
+          "luma_std": 57.56
+        },
+        {
+          "shot_id": "shot_01",
+          "frame_mad": 15.385,
+          "luma_std": 59.53
+        },
+        {
+          "shot_id": "shot_02",
+          "frame_mad": 33.538,
+          "luma_std": 63.15
+        },
+        {
+          "shot_id": "shot_03",
+          "frame_mad": 15.402,
+          "luma_std": 62.87
+        },
+        {
+          "shot_id": "shot_04",
+          "frame_mad": 6.516,
+          "luma_std": 51.25
+        },
+        {
+          "shot_id": "shot_05",
+          "frame_mad": 9.517,
+          "luma_std": 64.71
+        },
+        {
+          "shot_id": "shot_06",
+          "frame_mad": 16.321,
+          "luma_std": 55.83
+        },
+        {
+          "shot_id": "shot_07",
+          "frame_mad": 9.856,
+          "luma_std": 60.16
+        },
+        {
+          "shot_id": "shot_08",
+          "frame_mad": 7.936,
+          "luma_std": 51.17
+        }
+      ]
+    },
+    "audio_levels_and_ducking": {
+      "status": "PASS",
+      "rms_dbfs": -16.66,
+      "peak_dbfs": -2.48,
+      "integrated_lufs": -14.1,
+      "true_peak_dbtp": -2.5,
+      "audio_qc_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/audio/audio_qc_report.json",
+      "checks_summary": {
+        "playable_stream_final": "PASS",
+        "playable_stream_preview": "PASS",
+        "lufs_and_true_peak_post_encode": "PASS",
+        "peak_and_clip": "PASS",
+        "duration_and_sync": "PASS",
+        "missing_expected_cues": "PASS",
+        "sfx_onsets": "PASS",
+        "voice_music_intelligibility": "PASS",
+        "music_loop_boundaries": "PASS",
+        "licenses_and_credits": "PASS",
+        "stem_reproducibility": "PASS"
+      }
+    },
+    "scene_diversity_and_retention": {
+      "status": "PASS",
+      "subjective_visual_review": "NOT_VERIFIED",
+      "scene_diversity_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/scene_diversity_report.json",
+      "visual_qc_timeline_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/visual_qc_timeline.json",
+      "checks_summary": {
+        "visual_skill_lock": "PASS",
+        "adjacent_repetition_guard": "PASS",
+        "intra_shot_motion": "PASS",
+        "transition_continuity": "PASS",
+        "camera_execution_audit": "PASS",
+        "scene_novelty_metrics": "PASS"
+      }
+    },
+    "camera_execution": {
+      "status": "PASS",
+      "camera_execution_trace_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/camera_execution_trace.json",
+      "worst_pos_err_m": 0.0,
+      "worst_ori_err_deg": 0.162,
+      "worst_fov_err_deg": 0.0,
+      "worst_contact_err_m": null,
+      "issues": []
+    },
+    "editorial_retention_finish": {
+      "status": "PASS",
+      "editorial_qa_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/editorial_qa_report.json",
+      "editorial_attention_timeline_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/editorial_attention_timeline.json",
+      "subjective_voice_quality_status": "NOT_VERIFIED",
+      "viewer_retention_status": "NOT_VERIFIED",
+      "checks_summary": {
+        "prosody_delivery": "PASS",
+        "word_alignment": "PASS",
+        "overlay_render": "PASS",
+        "annotation_tracking": "PASS",
+        "sfx_editorial_sync": "PASS",
+        "editorial_fatigue": "PASS"
+      }
+    },
+    "visual_storytelling": {
+      "status": "PASS",
+      "visual_storytelling_qa_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/visual_storytelling_qa_report.json",
+      "subjective_visual_review": "NOT_VERIFIED",
+      "checks_summary": {
+        "story_action_coverage": "PASS",
+        "reveal_order_decoded": "PASS",
+        "spatiotemporal_variety": "PASS",
+        "world_state_causality": "PASS",
+        "period_integrity": "PASS",
+        "motion_dynamics": "PASS",
+        "physical_and_character_telemetry": "PASS",
+        "pointer_tracking": "PASS",
+        "caption_layout": "PASS",
+        "historical_claims": "PASS"
+      }
+    },
+    "pointer_tracking": {
+      "schema_version": "sd-pointer-tracking-2",
+      "status": "PASS",
+      "planned_pointer_overlays": 6,
+      "checked_settled_tips": 11,
+      "justified_skips": [
+        {
+          "time_sec": 12.466,
+          "overlay_id": "ov_03",
+          "reason": "offscreen"
+        },
+        {
+          "time_sec": 12.883,
+          "overlay_id": "ov_03",
+          "reason": "offscreen"
+        },
+        {
+          "time_sec": 13.6,
+          "overlay_id": "ov_03",
+          "reason": "offscreen"
+        }
+      ],
+      "worst_tip_target_error_px": 13.29,
+      "max_allowed_error_px": 36.0,
+      "samples": [
+        {
+          "time_sec": 0.867,
+          "overlay_id": "ov_00",
+          "role": "curiosity_headline",
+          "target_semantic_id": "rooftop_sway_apex",
+          "anchor_px": [
+            566.1,
+            271.5
+          ],
+          "tip_xy": [
+            566.1,
+            271.5
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 1.265,
+          "overlay_id": "ov_00",
+          "role": "curiosity_headline",
+          "target_semantic_id": "rooftop_sway_apex",
+          "anchor_px": [
+            512.2,
+            266.7
+          ],
+          "tip_xy": [
+            512.2,
+            266.7
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 1.734,
+          "overlay_id": "ov_00",
+          "role": "curiosity_headline",
+          "target_semantic_id": "rooftop_sway_apex",
+          "anchor_px": [
+            436.1,
+            256.1
+          ],
+          "tip_xy": [
+            436.1,
+            256.1
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 8.183,
+          "overlay_id": "ov_02",
+          "role": "explanation",
+          "target_semantic_id": "windward_facade_vortex",
+          "anchor_px": [
+            687.1,
+            1058.9
+          ],
+          "tip_xy": [
+            687.5,
+            1045.8
+          ],
+          "tip_target_error_px": 13.15,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 8.683,
+          "overlay_id": "ov_02",
+          "role": "explanation",
+          "target_semantic_id": "windward_facade_vortex",
+          "anchor_px": [
+            552.3,
+            1074.4
+          ],
+          "tip_xy": [
+            555.7,
+            1061.7
+          ],
+          "tip_target_error_px": 13.16,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 9.233,
+          "overlay_id": "ov_02",
+          "role": "explanation",
+          "target_semantic_id": "windward_facade_vortex",
+          "anchor_px": [
+            461.2,
+            1080.4
+          ],
+          "tip_xy": [
+            466.4,
+            1068.3
+          ],
+          "tip_target_error_px": 13.13,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 23.233,
+          "overlay_id": "ov_04",
+          "role": "explanation",
+          "target_semantic_id": "damper_pendulum_sphere",
+          "anchor_px": [
+            494.2,
+            1042.9
+          ],
+          "tip_xy": [
+            491.4,
+            1029.9
+          ],
+          "tip_target_error_px": 13.28,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 23.26,
+          "overlay_id": "ov_04",
+          "role": "explanation",
+          "target_semantic_id": "damper_pendulum_sphere",
+          "anchor_px": [
+            489.2,
+            1039.9
+          ],
+          "tip_xy": [
+            486.5,
+            1026.9
+          ],
+          "tip_target_error_px": 13.29,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 25.258,
+          "overlay_id": "ov_05",
+          "role": "curiosity_headline",
+          "target_semantic_id": "counterphase_tower_frame",
+          "anchor_px": [
+            632.8,
+            560.4
+          ],
+          "tip_xy": [
+            632.8,
+            560.4
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 25.465,
+          "overlay_id": "ov_05",
+          "role": "curiosity_headline",
+          "target_semantic_id": "counterphase_tower_frame",
+          "anchor_px": [
+            544,
+            548
+          ],
+          "tip_xy": [
+            544,
+            548
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 26.317,
+          "overlay_id": "ov_05",
+          "role": "curiosity_headline",
+          "target_semantic_id": "counterphase_tower_frame",
+          "anchor_px": [
+            283.7,
+            527.8
+          ],
+          "tip_xy": [
+            283.7,
+            527.8
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        }
+      ],
+      "issues": []
+    },
+    "physical_and_character_telemetry": {
+      "status": "PASS",
+      "physics_summary": {
+        "max_vertex_disp_m": 0.7883,
+        "max_deck_roll_span_rad": 0.0,
+        "collapse_onset_observed_sec": null,
+        "cables_attached_all": true,
+        "nan_detected": false
+      },
+      "character_grounding": {
+        "status": "PASS",
+        "checked_samples": 15,
+        "worst_penetration_m": 0.0,
+        "worst_stance_slide_m": 0.0,
+        "max_root_speed_mps": 0.146,
+        "issues": []
+      },
+      "issues": []
+    },
+    "decoded_visual_quality": {
+      "status": "PASS",
+      "subjective_visual_quality": "NOT_VERIFIED",
+      "HUMAN_REVIEW_REQUIRED": true,
+      "decoded_visual_quality_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/decoded_visual_quality_report.json",
+      "reports": {
+        "subject_visibility_by_shot": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/subject_visibility_by_shot.json",
+        "camera_compensated_motion_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/camera_compensated_motion_report.json",
+        "mobile_qa_320_360_390_1080": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_skyscraper_20261117/enhanced_B/mobile_qa_320_360_390_1080.json"
+      },
+      "issues": []
+    },
+    "cinematic_composition": {
+      "schema_version": "sd-cinematic-composition-qa-2",
+      "status": "PASS",
+      "subjective_visual_quality": "NOT_VERIFIED",
+      "HUMAN_REVIEW_REQUIRED": true,
+      "checked_runtime_frames": 77,
+      "decoded_visual_evidence_status": "PASS",
+      "unique_framings_count": 9,
+      "unique_angles_count": 9,
+      "unique_moves_count": 9,
+      "frames": [
+        {
+          "shot_id": "shot_00",
+          "framing": "MS_StreetUpTilt",
+          "physical_action": "street_observer_rooftop_sway_hook",
+          "salient_action_anchor": "rooftop_sway_apex",
+          "salient_action_world_pos": [
+            -0.25,
+            7.6,
+            -3.2
+          ],
+          "salient_action_extent_world": [
+            1.8,
+            1.5,
+            1.65
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 44.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.18,
+          "shot_visual_purpose": "hero_visual_anomaly",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_01",
+          "framing": "VWS_SkylineContext",
+          "physical_action": "skyline_scale_establish",
+          "salient_action_anchor": "tower_mid_profile",
+          "salient_action_world_pos": [
+            0.0,
+            5.4,
+            -0.4
+          ],
+          "salient_action_extent_world": [
+            2.04,
+            1.7,
+            1.87
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 32.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.12,
+          "shot_visual_purpose": "wide_scale_context",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_02",
+          "framing": "MCU_VortexFacade",
+          "physical_action": "crosswind_vortex_excitation",
+          "salient_action_anchor": "windward_facade_vortex",
+          "salient_action_world_pos": [
+            0.0,
+            5.6,
+            -0.4
+          ],
+          "salient_action_extent_world": [
+            1.8,
+            1.5,
+            1.65
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 40.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.16,
+          "shot_visual_purpose": "causal_mechanism_focus",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_03",
+          "framing": "MS_PlumbComparison",
+          "physical_action": "flexural_roof_drift_gauge",
+          "salient_action_anchor": "plumb_drift_tip",
+          "salient_action_world_pos": [
+            0.0,
+            7.8,
+            -1.0
+          ],
+          "salient_action_extent_world": [
+            1.56,
+            1.3,
+            1.43
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 38.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.15,
+          "shot_visual_purpose": "causal_mechanism_focus",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_04",
+          "framing": "MCU_OfficeSway",
+          "physical_action": "interior_office_reaction",
+          "salient_action_anchor": "office_pendant_lamp",
+          "salient_action_world_pos": [
+            -0.35,
+            1.76,
+            -0.15
+          ],
+          "salient_action_extent_world": [
+            0.84,
+            0.7,
+            0.77
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 44.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.18,
+          "shot_visual_purpose": "grounded_character_response",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": [
+            300.0,
+            480.0,
+            780.0,
+            980.0
+          ],
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_05",
+          "framing": "ECU_DamperCutaway",
+          "physical_action": "tuned_mass_damper_cutaway_reveal",
+          "salient_action_anchor": "damper_pendulum_sphere",
+          "salient_action_world_pos": [
+            0.0,
+            1.32,
+            0.25
+          ],
+          "salient_action_extent_world": [
+            1.32,
+            1.1,
+            1.21
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 40.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.16,
+          "shot_visual_purpose": "causal_mechanism_focus",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_06",
+          "framing": "MCU_CounterPhase",
+          "physical_action": "counterphase_damper_cancellation",
+          "salient_action_anchor": "counterphase_tower_frame",
+          "salient_action_world_pos": [
+            0.0,
+            2.45,
+            0.5
+          ],
+          "salient_action_extent_world": [
+            1.44,
+            1.2,
+            1.32
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 48.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.2,
+          "shot_visual_purpose": "opposing_structural_motion",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_07",
+          "framing": "WS_SplitBeforeAfter",
+          "physical_action": "damped_vs_undamped_comparison",
+          "salient_action_anchor": "damped_tower_top",
+          "salient_action_world_pos": [
+            1.35,
+            6.2,
+            0.0
+          ],
+          "salient_action_extent_world": [
+            1.68,
+            1.4,
+            1.54
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 38.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.15,
+          "shot_visual_purpose": "causal_mechanism_focus",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_08",
+          "framing": "WS_DuskContextReveal",
+          "physical_action": "skyscraper_dusk_resolution",
+          "salient_action_anchor": "rooftop_sway_apex",
+          "salient_action_world_pos": [
+            0.0,
+            6.8,
+            -1.2
+          ],
+          "salient_action_extent_world": [
+            2.04,
+            1.7,
+            1.87
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 34.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.14,
+          "shot_visual_purpose": "aftermath_scale_resolution",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
+          "collisions": [],
+          "composition_ok": true
+        }
+      ],
+      "issues": []
+    },
+    "factual_and_licensing_integrity": {
+      "status": "PASS",
+      "fact_checks": [
+        {
+          "rule": "factual_tone_audit",
+          "status": "PASS",
+          "note": "Claims use explanatory/hedged phrasing with zero fabricated citations."
+        }
+      ],
+      "third_party_ripped_assets": 0
+    }
+  },
+  "ffprobe_final_4k": {
+    "width": 2160,
+    "height": 3840,
+    "codec_name": "h264",
+    "pix_fmt": "yuv420p",
+    "r_frame_rate": "30/1",
+    "fps": 30.0,
+    "duration_sec": 38.3,
+    "size_bytes": 46174896,
+    "audio_codec": "aac",
+    "audio_sample_rate": "48000",
+    "audio_channels": 2
+  }
+}

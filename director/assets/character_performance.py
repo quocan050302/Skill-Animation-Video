@@ -103,7 +103,8 @@ export function evaluateCharacterPose(t, actionPlan = {}) {
 
     const leftIsSwing = (stepIdx % 2 === 0);
     stanceFoot = moveT <= 0.01 ? 'both' : (leftIsSwing ? 'right' : 'left');
-    phaseLabel = moveT < 0.18 ? 'notice_anticipation' : 'retreat_stride';
+    const uMove = smooth(clamp((t - onset) / Math.max(0.25, dur * 0.25), 0, 1));
+    phaseLabel = moveT < 0.08 ? 'detect_threat' : (moveT < 0.22 ? 'orient_head_torso' : (moveT < 0.36 ? 'weight_shift' : (actualDist < retreatDist * 0.97 ? 'step_recoil_retreat' : 'recover_hold')));
 
     // Swing foot moves from rear (+hipX) to front (-hipX) with mid-swing knee lift
     const swingHip = lerp(stanceHipEnd * scaleMove, stanceHipStart * scaleMove, sFrac);
@@ -120,14 +121,22 @@ export function evaluateCharacterPose(t, actionPlan = {}) {
       rShX = 0.44 * (frac - 0.5); lShX = -0.44 * (frac - 0.5);
     }
     lElX = -0.88; rElX = -0.88;
-    spineX = 0.14 * uReact;
+    spineX = 0.14 * uMove;
     headY = lerp(0.0, -0.42, Math.sin(u * Math.PI) * 0.75);
     headX = 0.06;
   } else if (intent === 'brace' || intent === 'take_step') {
-    // Grounded 4-phase reaction: look -> startle weight shift -> exact step back (left foot) -> braced hold
-    const uLook = smooth(clamp((t - onset * 0.45) / 0.35, 0, 1));
+    // Explicit 5-phase reaction: detect_threat -> orient_head_torso -> weight_shift -> step_recoil_retreat -> recover_hold
+    const uDetect = smooth(clamp(t / Math.max(0.18, onset * 0.5), 0, 1));
+    const uLook = smooth(clamp((t - onset * 0.40) / 0.32, 0, 1));
+    const uWeight = smooth(clamp((t - onset * 0.72) / 0.24, 0, 1));
     const uStep = smooth(clamp((t - onset) / 0.62, 0, 1));
-    phaseLabel = uStep < 0.02 ? 'notice_gaze' : (uStep < 0.96 ? 'step_back_brace' : 'braced_hold');
+    phaseLabel = t < onset * 0.40
+      ? 'detect_threat'
+      : (t < onset * 0.80
+        ? 'orient_head_torso'
+        : (uStep < 0.12
+          ? 'weight_shift'
+          : (uStep < 0.96 ? 'step_recoil_retreat' : 'recover_hold')));
     stanceFoot = (uStep > 0.04 && uStep < 0.96) ? 'right' : 'both';
     stanceEpoch = uStep > 0.04 ? (uStep >= 0.96 ? 2 : 1) : 0;
 
@@ -149,10 +158,10 @@ export function evaluateCharacterPose(t, actionPlan = {}) {
     lKnX = lerp(0.10, 0.24, uStep) + swingArc * 0.48;
     lAnX = -(lHipX + lKnX) * 0.85;
 
-    spineX = 0.08 * uStep - 0.06 * Math.sin(uLook * Math.PI);
+    spineX = 0.08 * uStep - 0.06 * Math.sin(uLook * Math.PI) + 0.04 * uWeight;
     chestY = 0.14 * uLook;
     headY = 0.22 * uLook;
-    headX = -0.06 * uLook;
+    headX = -0.06 * uLook - 0.04 * uDetect;
     lShX = lerp(0.05, -0.52, uStep);
     rShX = lerp(0.05, -0.44, uStep);
     lShZ = lerp(0.16, 0.34, uStep);
@@ -200,13 +209,14 @@ export function evaluateCharacterPose(t, actionPlan = {}) {
 
   return {
     t: Number(Number(t || 0).toFixed(4)),
+    reaction_onset_sec: Number(onset.toFixed(3)),
     root_pos: [rootX, groundY, rootZ],
     root_yaw: rootYaw,
     stance_foot: stanceFoot,
     stance_epoch: stanceEpoch,
     phase_label: phaseLabel,
     action_intent: intent,
-    away_vec: [awayX, awayZ],
+    away_vec: [Number(awayX.toFixed(4)), Number(awayZ.toFixed(4))],
     pose: {
       drop,
       spine: [spineX, spineY, 0],
@@ -289,10 +299,39 @@ export function getCharacterPerformanceTelemetry(human, evalRes, stanceTracker =
     }
   }
 
+  const weightShiftVal = stFoot === 'left' ? -1.0 : (stFoot === 'right' ? 1.0 : 0.0);
+  const txDir = Number(threatWorld[0] || 0) - _tmpPelvis.x;
+  const tzDir = Number(threatWorld[2] || 0) - _tmpPelvis.z;
+  const tyDir = Number(threatWorld[1] || 1.4) - _tmpPelvis.y;
+  const dirLen = Math.max(1e-4, Math.hypot(txDir, tyDir, tzDir));
   return {
     action_intent: evalRes?.action_intent || 'brace',
+    character_intent: evalRes?.action_intent || 'brace',
     action_phase: evalRes?.phase_label || 'idle_stance',
+    weight_shift: Number(weightShiftVal.toFixed(2)),
     stance_foot: stFoot,
+    foot_contacts: {
+      left_planted: stFoot === 'left' || stFoot === 'both' || lErr <= 0.035,
+      right_planted: stFoot === 'right' || stFoot === 'both' || rErr <= 0.035,
+      stance_foot: stFoot,
+    },
+    contact_state: stFoot === 'both' ? 'double_support' : `${stFoot}_stance`,
+    look_at_target_world: [
+      Number((threatWorld[0] || 0).toFixed(3)),
+      Number((threatWorld[1] || 1.4).toFixed(3)),
+      Number((threatWorld[2] || -4.5).toFixed(3)),
+    ],
+    danger_direction_world: [
+      Number((txDir / dirLen).toFixed(4)),
+      Number((tyDir / dirLen).toFixed(4)),
+      Number((tzDir / dirLen).toFixed(4)),
+    ],
+    retreat_trajectory_world: [
+      Number((evalRes?.away_vec?.[0] ?? 0.0).toFixed(4)),
+      0.0,
+      Number((evalRes?.away_vec?.[1] ?? 1.0).toFixed(4)),
+    ],
+    reaction_cue_time: Number((evalRes?.reaction_onset_sec ?? 0.4).toFixed(3)),
     world_pelvis: [Number(_tmpPelvis.x.toFixed(4)), Number(_tmpPelvis.y.toFixed(4)), Number(_tmpPelvis.z.toFixed(4))],
     left_foot_world: [Number(_tmpLFoot.x.toFixed(4)), Number(_tmpLFoot.y.toFixed(4)), Number(_tmpLFoot.z.toFixed(4))],
     right_foot_world: [Number(_tmpRFoot.x.toFixed(4)), Number(_tmpRFoot.y.toFixed(4)), Number(_tmpRFoot.z.toFixed(4))],

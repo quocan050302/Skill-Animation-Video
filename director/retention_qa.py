@@ -183,9 +183,19 @@ def audit_overlay_render(
                 patch_base = rgb_base[py0:py1, px0:px1].astype(np.float32)
                 roi_mad = float(np.mean(np.abs(patch - patch_base)))
                 pct_changed = float(np.mean(np.mean(np.abs(patch - patch_base), axis=2) > 8.0))
+
+                # T25 anti-spoof: verify ROI delta isn't merely background motion under an unrendered overlay
+                mask_outside = np.ones((480, 270), dtype=bool)
+                mask_outside[py0:py1, px0:px1] = False
+                mask_outside[330:400, :] = False  # exclude caption band
+                bg_mad_outside = float(np.mean(np.abs(rgb.astype(np.float32) - rgb_base.astype(np.float32))[mask_outside])) if mask_outside.any() else 0.0
                 if roi_mad < 2.2 or pct_changed < 0.03:
                     issues.append(
                         f"ON/OFF diff proof failed for {ov.get('overlay_id')} at {t_mid:.2f}s (roi_mad={roi_mad:.2f}, pct={pct_changed:.3f})"
+                    )
+                elif bg_mad_outside > 2.5 and roi_mad <= bg_mad_outside * 1.15 and max(grad, grad_y) < 2.8:
+                    issues.append(
+                        f"T25: ON/OFF diff in {ov.get('overlay_id')} caused by background motion without rendered overlay (roi_mad={roi_mad:.2f} <= bg_mad={bg_mad_outside:.2f}, grad={max(grad, grad_y):.2f})"
                     )
             except Exception as exc:
                 issues.append(f"Baseline decode fail at {t_mid:.2f}s: {exc}")
@@ -363,11 +373,20 @@ def audit_editorial_fatigue(editorial_timeline: Dict[str, Any]) -> Dict[str, Any
     }
 
 
+def _pcm_sha256(wav_path: Path) -> Optional[str]:
+    if not wav_path.exists() or wav_path.stat().st_size == 0:
+        return None
+    import hashlib
+    arr, _ = sf.read(str(wav_path), dtype="float32")
+    return hashlib.sha256(np.ascontiguousarray(arr).tobytes()).hexdigest()
+
+
 def compare_ab_versions(
     run_a: Path,
     run_b: Path,
     out_dir: Path,
     sample_times: Optional[List[float]] = None,
+    require_voice_parity: bool = False,
 ) -> Dict[str, Any]:
     """Run honest decoded A/B comparison (Version A baseline vs Version B enhanced)."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -378,6 +397,13 @@ def compare_ab_versions(
 
     rep_a = json.loads(rep_a_p.read_text(encoding="utf-8")) if rep_a_p.exists() else {}
     rep_b = json.loads(rep_b_p.read_text(encoding="utf-8")) if rep_b_p.exists() else {}
+
+    # T26: Check VO stem PCM parity when isolating visual/camera/editorial changes
+    vo_a = _pcm_sha256(run_a / "audio" / "voice.wav") or _pcm_sha256(run_a / "audio" / "vo.wav")
+    vo_b = _pcm_sha256(run_b / "audio" / "voice.wav") or _pcm_sha256(run_b / "audio" / "vo.wav")
+    voice_parity = (vo_a == vo_b) if (vo_a and vo_b) else None
+    if require_voice_parity and voice_parity is not True:
+        raise ValueError(f"T26: A/B visual-isolation rejected due to mismatched voice PCM SHA ({vo_a} vs {vo_b})")
 
     diff_frames: List[Dict[str, Any]] = []
     ab_alignment = build_ab_alignment(run_a, run_b, out_dir, sample_times=sample_times)
@@ -407,6 +433,9 @@ def compare_ab_versions(
         "version_b_dir": str(run_b.resolve()),
         "subjective_preference_status": "NOT_VERIFIED",
         "viewer_retention_status": "NOT_VERIFIED",
+        "voice_pcm_sha256_a": vo_a,
+        "voice_pcm_sha256_b": vo_b,
+        "voice_pcm_parity": voice_parity,
         "voice_metrics_comparison": {
             "version_a": ma,
             "version_b": mb,

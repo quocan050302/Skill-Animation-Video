@@ -1,0 +1,25 @@
+TASK: zdf_motion01_matrix
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_zdf_motion01 -v
+STATUS: PASS (exit=0, elapsed=14.05s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_t01_t02_t03_single_authority_camera_and_collision_tamper (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t01_t02_t03_single_authority_camera_and_collision_tamper)
+T01/T02/T03: Planned camera_path == Three.js WebGL telemetry; tamper pos & collider fail closed. ... ok
+test_t04_t05_transition_truth_and_anti_spoofing (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t04_t05_transition_truth_and_anti_spoofing)
+T04/T05: Planned transitions start unverified; hard-cut spoofed as zoom_through or pre-True FAILS. ... ok
+test_t06_t07_t08_character_identity_button_ik_and_layered_cutaway_webgl (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t06_t07_t08_character_identity_button_ik_and_layered_cutaway_webgl)
+T06/T07/T08: Real Three.js IK fingertip-to-button contact + LayeredCutaway + identity lock. ... ok
+test_t09_t10_mixed_domain_dispatch_and_unsupported_domain_reporting (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t09_t10_mixed_domain_dispatch_and_unsupported_domain_reporting)
+T09/T10: Per-shot multi-domain routing (Roman->phone->cosmos) & bicycle unsupported-domain guard. ... ok
+test_t11_t12_non_adjacent_clone_and_caption_only_motion_traps (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t11_t12_non_adjacent_clone_and_caption_only_motion_traps)
+T11/T12: Catch non-adjacent duplicates with renamed metadata AND catch caption-only fake motion. ... ok
+test_t13_to_t20_audio_sync_style_lock_disk_determinism_and_camera_lock (tests.test_zdf_motion01.TestZdfMotion01Matrix.test_t13_to_t20_audio_sync_style_lock_disk_determinism_and_camera_lock)
+T13/T14/T16/T17/T18/T19/T20: Button SFX contact lock, style-lock error, seed determinism, disk guard, camera lock. ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 13.688s
+
+OK
+

@@ -51,9 +51,17 @@ def find_curiosity_beats(
     f_low = str(first.get("narration_text") or "").lower()
     hook_text = ""
     hook_target = str((first.get("required_anchors") or [""])[0] or "")
+    hook_secondary: Optional[str] = None
+    hook_ptr_shape = "impact_arrow"
     if "tacoma" in full_low or "galloping gertie" in full_low or ("bridge" in full_low and "twist" in full_low):
         hook_text = "THE ROAD / WAS MOVING!"
         hook_target = "bridge_midspan_twist"
+        hook_ptr_shape = "impact_arrow"
+    elif any(k in full_low for k in ("skyscraper", "sway in the wind", "tuned mass damper")):
+        hook_text = "THE BUILDING / IS MOVING!"
+        hook_target = hook_target or "rooftop_sway_apex"
+        hook_secondary = "static_skyline_ref"
+        hook_ptr_shape = "sway_bracket"
     elif "boston" in full_low and "molasses" in full_low:
         hook_text = "WATCH THE / ALLEYWALL!" if "alley" in f_low else "SOMETHING / SHOOK BOSTON"
         hook_target = hook_target or "street_hero_look"
@@ -61,13 +69,19 @@ def find_curiosity_beats(
         hook_text = "WHY THAT / TINY HOLE?"
         hook_target = hook_target or "middle_bleed_hole"
     else:
-        toks = [t for t in re.findall(r"[A-Za-z0-9']+", str(first.get("narration_text") or "")) if len(t) >= 3]
-        if len(toks) >= 4:
-            hook_text = f"{toks[0].upper()} {toks[1].upper()} / {toks[2].upper()} {toks[3].upper()}?"
-        elif toks:
-            hook_text = f"LOOK / CLOSER!"
+        # Neutral domain-generalized semantic headline templates (mechanism / contradiction / detail)
+        if any(k in f_low for k in ("despite", "without", "even though", "but ", "impossible", "quiet")):
+            hook_text = "HIDDEN / MECHANISM"
+        elif any(k in f_low for k in ("damage", "fail", "crack", "snap", "collapse", "overload")):
+            hook_text = "CRITICAL / STRESS POINT"
         else:
-            hook_text = "HOW DID / IT HAPPEN?"
+            toks = [t for t in re.findall(r"[A-Za-z0-9']+", str(first.get("narration_text") or "")) if len(t) >= 3]
+            if len(toks) >= 4:
+                hook_text = f"{toks[0].upper()} {toks[1].upper()} / {toks[2].upper()} {toks[3].upper()}?"
+            elif toks:
+                hook_text = "HOW IT / ACTUALLY WORKS"
+            else:
+                hook_text = "HOW DID / IT HAPPEN?"
 
     selected.append({
         "beat_index": 0,
@@ -76,7 +90,8 @@ def find_curiosity_beats(
         "headline_kind": "hook",
         "label": hook_text,
         "target_anchor_id": hook_target or "subject_primary_feature",
-        "pointer_shape": "impact_arrow",
+        "secondary_anchor_id": hook_secondary,
+        "pointer_shape": hook_ptr_shape,
         "start_hint": round(max(0.15, float(first.get("start_sec", 0.0)) + 0.15), 3),
         "end_hint": round(min(float(first.get("end_sec", 3.0)) - 0.15, float(first.get("start_sec", 0.0)) + 2.25), 3),
         "spoiler_risk": "guarded",
@@ -92,19 +107,28 @@ def find_curiosity_beats(
             intent = str(ev.get("editorial_intent") or "").lower()
             if intent == "twist_escalation" or any(
                 k in act or k in ev_low
-                for k in ("started twisting", "violent twist", "gave way", "rupture", "torsion", "fail-safe", "backup")
+                for k in ("started twisting", "violent twist", "gave way", "rupture", "torsion", "fail-safe", "backup", "opposite phase", "counterphase")
             ):
                 twist_idx = idx
                 break
         if twist_idx is not None:
             tw = story_actions[twist_idx]
             tw_low = str(tw.get("narration_text") or "").lower()
-            if "twist" in tw_low or "torsion" in str(tw.get("physical_action") or "").lower():
+            tw_act = str(tw.get("physical_action") or "").lower()
+            tw_secondary: Optional[str] = None
+            tw_ptr = "impact_arrow"
+            if "twist" in tw_low or "torsion" in tw_act:
                 tw_label = "THEN IT / STARTED TWISTING"
-            elif "gave way" in tw_low or "rupture" in str(tw.get("physical_action") or "").lower():
+                tw_secondary = "deck_twist_edge_r"
+                tw_ptr = "torsion_bracket"
+            elif "counterphase" in tw_act or "opposite" in tw_low:
+                tw_label = "OPPOSITE / PHASE SWING!"
+                tw_secondary = "counterphase_tower_frame"
+                tw_ptr = "torsion_bracket"
+            elif "gave way" in tw_low or "rupture" in tw_act:
                 tw_label = "THEN THE / SEAM BLEW"
             else:
-                tw_label = "WAIT / LOOK HERE!"
+                tw_label = "KEY / TURNING POINT"
             tw_target = str((tw.get("required_anchors") or [""])[0] or "")
             selected.append({
                 "beat_index": twist_idx,
@@ -113,7 +137,8 @@ def find_curiosity_beats(
                 "headline_kind": "twist",
                 "label": tw_label,
                 "target_anchor_id": tw_target or "bridge_midspan_twist",
-                "pointer_shape": "impact_arrow",
+                "secondary_anchor_id": tw_secondary,
+                "pointer_shape": tw_ptr,
                 "start_hint": round(float(tw.get("start_sec", 0.0)) + 0.12, 3),
                 "end_hint": round(min(float(tw.get("end_sec", 20.0)) - 0.14, float(tw.get("start_sec", 0.0)) + 2.30), 3),
                 "spoiler_risk": "authorized_twist",
@@ -151,14 +176,49 @@ def plan_attention_pointer(
         )
 
     role = str(beat.get("role") or EditorialRole.EXPLANATION.value)
-    if role == EditorialRole.CURIOSITY_HEADLINE.value or role == EditorialRole.WARNING_DANGER.value:
-        ptr = "impact_arrow"
+    explicit_ptr = beat.get("pointer_shape")
+    secondary_anchor = beat.get("secondary_anchor_id")
+    if explicit_ptr:
+        ptr = str(explicit_ptr)
+    elif role == EditorialRole.CURIOSITY_HEADLINE.value or role == EditorialRole.WARNING_DANGER.value:
+        ptr = "torsion_bracket" if (role == EditorialRole.WARNING_DANGER.value and anchor_id in ("bridge_midspan_twist", "deck_twist_edge_l")) else "impact_arrow"
     elif role == EditorialRole.VERIFIED_FACT.value:
         ptr = "mini_fact_tag"
     elif role == EditorialRole.AFTERMATH_SOBER.value or role == EditorialRole.LOCATION_TIME.value:
         ptr = "none"
     else:
         ptr = "curved_leader"
+
+    # Grounded semantic target metadata (R2.5 Pointer Meaning)
+    target_region_world = list(beat.get("target_region_world") or [0.0, 2.0, 0.0])
+    if geometry_anchors and isinstance(geometry_anchors.get(anchor_id), dict):
+        ga = geometry_anchors[anchor_id]
+        if isinstance(ga.get("world_pos"), list):
+            target_region_world = list(ga["world_pos"])
+    mesh_map = {
+        "bridge_midspan_twist": ["intact_roadway_ribbon", "left_curb_ribbon", "right_curb_ribbon"],
+        "deck_twist_edge_l": ["left_curb_ribbon", "left_girder_ribbon"],
+        "deck_twist_edge_r": ["right_curb_ribbon", "right_girder_ribbon"],
+        "plate_girder_windward": ["left_girder_ribbon", "wind_vortex_ribbons"],
+        "collapse_break_seam": ["falling_center_chunks", "break_seam_fracture"],
+        "rooftop_sway_apex": ["hero_tower_crown", "hero_tower_mullions"],
+        "plumb_drift_tip": ["hero_tower_crown", "red_plumb_reference_mast"],
+        "windward_facade_vortex": ["wind_vortex_ribbons", "hero_tower_tiers"],
+        "damper_pendulum_sphere": ["tmd_sphere", "hydraulic_pistons"],
+        "counterphase_tower_frame": ["penthouse_frame", "opposing_force_bars"],
+        "damped_tower_top": ["damped_tower", "undamped_tower"],
+    }
+    target_meshes = mesh_map.get(anchor_id, [anchor_id])
+    pointer_reason = str(
+        beat.get("pointer_reason")
+        or (
+            "Highlights opposed left/right deck torsion displacement across whole center span"
+            if anchor_id in ("bridge_midspan_twist", "deck_twist_edge_l")
+            else ("Highlights lateral roof sway relative to fixed vertical reference"
+                  if anchor_id in ("rooftop_sway_apex", "plumb_drift_tip")
+                  else f"Draws viewer eye directly to physical feature `{anchor_id}`")
+        )
+    )
 
     # Alternate box/pointer side dynamically away from lower caption zone & center obstruction
     idx = int(beat.get("beat_index", 0) or 0)
@@ -176,6 +236,15 @@ def plan_attention_pointer(
 
     return {
         "anchor_id": anchor_id,
+        "secondary_anchor_id": secondary_anchor,
+        "target_semantic_id": anchor_id,
+        "target_mesh_ids": target_meshes,
+        "target_region_world": target_region_world,
+        "target_region_screen": None,
+        "target_motion_vector": [0.0, 0.0],
+        "is_feature_visible": True,
+        "pointer_reason": pointer_reason,
+        "do_not_pointer_to_this_if_target_ambiguous": True,
         "pointer_shape": ptr,
         "preferred_side": preferred_side,
         "placement_box": slot_box,

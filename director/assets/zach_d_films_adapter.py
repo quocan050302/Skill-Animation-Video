@@ -25,6 +25,7 @@ from .zdf_boston_molasses_scenes import BOSTON_MOLASSES_SCENES_JS
 from .physical_motion_primitives import PHYSICAL_MOTION_PRIMITIVES_JS
 from .character_performance import CHARACTER_PERFORMANCE_JS
 from .zdf_tacoma_bridge_scenes import TACOMA_BRIDGE_SCENES_JS
+from .zdf_skyscraper_scenes import SKYSCRAPER_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -932,6 +933,8 @@ const SKY_THEMES = {
   tacoma_overcast: { top: 0x4b5f73, mid: 0x7b90a4, horizon: 0xb4c2cf, floorC: 0x364a59, sun: 2.05, hemi: 0.86 },
   tacoma_storm: { top: 0x2b3b4e, mid: 0x4c6074, horizon: 0x8c9aa6, floorC: 0x22323f, sun: 1.90, hemi: 0.76 },
   tacoma_aftermath: { top: 0x354354, mid: 0x64788c, horizon: 0xa4b3c0, floorC: 0x283846, sun: 1.75, hemi: 0.82 },
+  city_crisp_day: { top: 0x1e4e8c, mid: 0x4b83c3, horizon: 0xa8c8ea, floorC: 0x263244, sun: 2.25, hemi: 0.85 },
+  city_dusk: { top: 0x131b3a, mid: 0x38335e, horizon: 0xb86f56, floorC: 0x1e2538, sun: 1.80, hemi: 0.65 },
 };
 
 function skyMaterial(theme = 'day') {
@@ -1237,6 +1240,134 @@ window.renderAtTime = (rawT) => {
   }
   fadeEl.style.opacity = f;
   return idx;
+};
+
+const MATTE_HEX = {
+  causal_feature: 0x00ff00,
+  character: 0x0000ff,
+  subject: 0xff0000,
+  environment: 0x282828,
+};
+
+function resolveSemanticRole(obj, sceneRef) {
+  let cur = obj;
+  while (cur && cur !== sceneRef) {
+    if (cur.userData && typeof cur.userData.semanticRole === 'string' && cur.userData.semanticRole) {
+      return cur.userData.semanticRole;
+    }
+    cur = cur.parent;
+  }
+  if (sceneRef?.userData?.sky === obj) return 'environment';
+  if (obj.material && obj.material.isShadowMaterial) return 'environment';
+  if (obj.geometry && obj.geometry.boundingBox == null && obj.geometry.computeBoundingBox) {
+    obj.geometry.computeBoundingBox();
+  }
+  const bb = obj.geometry && obj.geometry.boundingBox;
+  if (bb) {
+    const sx = bb.max.x - bb.min.x;
+    const sy = bb.max.y - bb.min.y;
+    const sz = bb.max.z - bb.min.z;
+    if (((sx >= 6.0 || sz >= 6.0) && sy < 0.65 && obj.position.y <= 0.35) || sx > 18 || sz > 18) return 'environment';
+  }
+  return 'subject';
+}
+
+window.renderMatteAtTime = (rawT) => {
+  const idx = window.renderAtTime(rawT);
+  const t = Math.max(0, Math.min(rawT, DURATION - 1e-4));
+  const def = SHOTS[idx];
+  const shot = getShot(idx);
+  const lt = Math.max(0, t - def.start);
+  shot.update(lt, t, {});
+  const scene = shot.scene;
+  const cam = shot.camera;
+
+  const ovBoxes = [];
+  const tel = window.__LAST_RENDER_TELEMETRY__ || {};
+  const ovItems = (tel.overlay && tel.overlay.overlays) || [];
+  for (const item of ovItems) {
+    if (item && item.visible && Array.isArray(item.label_bbox) && item.label_bbox.length === 4) {
+      ovBoxes.push(item.label_bbox);
+    }
+  }
+  if (capEl && capEl.textContent && capEl.textContent.trim().length > 0) {
+    const r = capEl.getBoundingClientRect();
+    if (r.width > 2 && r.height > 2) {
+      ovBoxes.push([Number(r.left.toFixed(1)), Number(r.top.toFixed(1)), Number(r.right.toFixed(1)), Number(r.bottom.toFixed(1))]);
+    }
+  }
+
+  const saved = [];
+  const tempMats = [];
+  const prevBg = scene.background;
+  const prevSkyVis = scene.userData && scene.userData.sky ? scene.userData.sky.visible : true;
+  const prevTone = renderer.toneMapping;
+  const prevOvDisp = overlayCtrl && overlayCtrl.svg ? overlayCtrl.svg.style.display : '';
+  const prevCapDisp = capEl ? capEl.style.display : '';
+  const prevFadeDisp = fadeEl ? fadeEl.style.display : '';
+
+  let dataUrl = '';
+  try {
+    if (overlayCtrl && overlayCtrl.svg) overlayCtrl.svg.style.display = 'none';
+    if (capEl) capEl.style.display = 'none';
+    if (fadeEl) fadeEl.style.display = 'none';
+    if (scene.userData && scene.userData.sky) scene.userData.sky.visible = false;
+    scene.background = new THREE.Color(0x000000);
+    renderer.toneMapping = THREE.NoToneMapping;
+
+    scene.traverse((obj) => {
+      if (!(obj.isMesh || obj.isInstancedMesh)) return;
+      if (scene.userData && scene.userData.sky === obj) return;
+      if (obj.material && obj.material.isShadowMaterial) {
+        saved.push([obj, obj.material, obj.visible]);
+        obj.visible = false;
+        return;
+      }
+      const role = resolveSemanticRole(obj, scene);
+      const hex = MATTE_HEX[role] ?? MATTE_HEX.subject;
+      const origMat = obj.material;
+      const clipPlanes = origMat && !Array.isArray(origMat) ? origMat.clippingPlanes : null;
+      const side = origMat && !Array.isArray(origMat) ? origMat.side : THREE.FrontSide;
+      const mMat = new THREE.MeshBasicMaterial({
+        color: hex,
+        side: side ?? THREE.FrontSide,
+        clippingPlanes: clipPlanes || null,
+      });
+      saved.push([obj, origMat, obj.visible]);
+      tempMats.push(mMat);
+      obj.material = mMat;
+    });
+
+    const prevTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(scene, cam);
+    dataUrl = renderer.domElement.toDataURL('image/png');
+    renderer.setRenderTarget(prevTarget);
+  } finally {
+    for (const [obj, origMat, origVis] of saved) {
+      obj.material = origMat;
+      obj.visible = origVis;
+    }
+    for (const tm of tempMats) tm.dispose();
+    scene.background = prevBg;
+    if (scene.userData && scene.userData.sky) scene.userData.sky.visible = prevSkyVis;
+    renderer.toneMapping = prevTone;
+    if (overlayCtrl && overlayCtrl.svg) overlayCtrl.svg.style.display = prevOvDisp;
+    if (capEl) capEl.style.display = prevCapDisp;
+    if (fadeEl) fadeEl.style.display = prevFadeDisp;
+  }
+
+  return {
+    time_sec: Number(t.toFixed(4)),
+    shot_index: idx,
+    shot_id: def.id,
+    dataUrl,
+    overlay_boxes_1080: ovBoxes,
+    camera: tel.camera || null,
+    physical_motion: tel.physical_motion || null,
+    character_performance: tel.character_performance || null,
+  };
 };
 
 window.SHORT_DIRECTOR_READY = document.fonts.ready.then(() => { window.renderAtTime(0); return true; });
@@ -1566,7 +1697,7 @@ function shot_{i}({{ makeStage }}) {{
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
       const bTel = bridge.update(lt, {dur}, {upd_args});
-      const splash = bTel.collapse_active ? clamp((lt - {round(dur * 0.38, 3)}) / 0.9, 0, 1) : 0.0;
+      const splash = bTel.collapse_active ? (bTel.splash_progress || 0.0) : 0.0;
       env.update(lt, splash);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
@@ -1578,6 +1709,138 @@ function shot_{i}({{ makeStage }}) {{
           locationId: '{loc_id}',
           physicalAction: '{phys_act}',
           structuralState: bTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen.startswith("zach3d:skyscraper_"):
+        if gen == "zach3d:skyscraper_street_hook_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'city_crisp_day', sunDir: [-4, 9, 6] }});
+  const rig = makeSkyscraperStreetHookRig(makeHuman, {char_spec_json});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 60);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rig.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.26, camTel, anchors,
+        physicalMotion: rig.getPhysicalState(),
+        characterPerformance: res?.characterPerformance || rig.getCharTelemetry(),
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'skyscraper_street_plaza',
+          physicalAction: 'street_observer_rooftop_sway_hook',
+          actorCount: 1,
+          structuralState: res?.physicalMotion || null,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen in ("zach3d:skyscraper_skyline_wide_stage", "zach3d:skyscraper_wind_vortex_stage", "zach3d:skyscraper_plumb_drift_stage", "zach3d:skyscraper_dusk_resolution_stage"):
+            mode_m = {
+                "zach3d:skyscraper_skyline_wide_stage": ("city_crisp_day", "skyline_wide", "skyline_scale_establish", "skyscraper_skyline_district"),
+                "zach3d:skyscraper_wind_vortex_stage": ("city_crisp_day", "wind_vortex", "crosswind_vortex_excitation", "skyscraper_mid_facade_airstream"),
+                "zach3d:skyscraper_plumb_drift_stage": ("city_crisp_day", "plumb_drift", "flexural_roof_drift_gauge", "skyscraper_upper_crown_plumb_gauge"),
+                "zach3d:skyscraper_dusk_resolution_stage": ("city_dusk", "skyline_wide", "skyscraper_dusk_resolution", "skyscraper_city_dusk_skyline"),
+            }[gen]
+            sky_s, rig_m, act_s, loc_s = mode_m
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 7.0, skyTheme: '{sky_s}', sunDir: [-4, 9, 6] }});
+  const rig = makeSkyscraperExteriorRig({{ mode: '{rig_m}' }});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 44);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const pTel = rig.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rig.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.28, camTel, anchors,
+        physicalMotion: rig.getPhysicalState(),
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: '{loc_s}',
+          physicalAction: '{act_s}',
+          structuralState: pTel,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:skyscraper_office_interior_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.0, skyTheme: 'lab_studio', sunDir: [-2, 6, 4] }});
+  const rig = makeSkyscraperOfficeInteriorRig(makeHuman, {char_spec_json});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 44);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rig.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.30, camTel, anchors,
+        physicalMotion: rig.getPhysicalState(),
+        characterPerformance: res?.characterPerformance || rig.getCharTelemetry(),
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'skyscraper_upper_office_interior',
+          physicalAction: 'interior_office_reaction',
+          actorCount: 1,
+          structuralState: res?.physicalMotion || null,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        damper_mode = "before_after" if gen == "zach3d:skyscraper_before_after_stage" else ("counterphase" if gen == "zach3d:skyscraper_counterphase_stage" else "cutaway")
+        sky_dm = "city_crisp_day" if damper_mode == "before_after" else "lab_studio"
+        act_dm = "damped_vs_undamped_comparison" if damper_mode == "before_after" else ("counterphase_damper_cancellation" if damper_mode == "counterphase" else "tuned_mass_damper_cutaway_reveal")
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: '{sky_dm}', sunDir: [-3, 7, 5] }});
+  const rig = makeSkyscraperDamperCutawayRig({{ mode: '{damper_mode}' }});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 42);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const dTel = rig.update(lt, {dur});
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = rig.getAnchorsTelemetry(c);
+      return {{
+        bloom: 0.34, camTel, anchors,
+        physicalMotion: rig.getPhysicalState(),
+        cutaway: rig.cutaway ? rig.cutaway.getTelemetry() : null,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'skyscraper_penthouse_cutaway',
+          physicalAction: '{act_dm}',
+          cutawayState: dTel,
         }}),
       }};
     }}
@@ -1656,9 +1919,13 @@ function shot_{i}({{ makeStage }}) {{
 }}"""
 
     if gen == "zach3d:boston_tank_leak_stage":
+        is_scale_pay = (s.get("setup_type") == "boston_tank_scale_payoff")
+        sky_t = "boston_amber" if is_scale_pay else "boston_overcast"
+        act_t = "overwhelming_volume_payoff" if is_scale_pay else "chronic_seam_seepage"
+        loc_t = "usia_tank_monolith_scale_1919" if is_scale_pay else "usia_tank_base_1915"
         return f"""
 function shot_{i}({{ makeStage }}) {{
-  const scene = makeStage({{ shadowSize: 3.8, skyTheme: 'boston_overcast', sunDir: [-3, 6, 4] }});
+  const scene = makeStage({{ shadowSize: 3.8, skyTheme: '{sky_t}', sunDir: [-3, 6, 4] }});
   const street = makeNorthEndStreet1919({{ streetLength: 12.0, includeCart: false }});
   scene.add(street.root);
   const tank = makeMolassesStorageTank1919({{ radius: 1.65, height: 3.25 }});
@@ -1683,8 +1950,8 @@ function shot_{i}({{ makeStage }}) {{
       return {{
         bloom: 0.30, camTel, anchors,
         narrativeAction: getNarrativeActionTelemetry({{
-          locationId: 'usia_tank_base_1915',
-          physicalAction: 'chronic_seam_seepage',
+          locationId: '{loc_t}',
+          physicalAction: '{act_t}',
           actorCount: crowd.actors.length,
           structuralState: {{ ...sTel, ...wTel }},
         }}),
@@ -2425,7 +2692,11 @@ import {
 } from './boston_molasses_scenes.js';
 import {
   makePugetSoundEnvironment, makeTacomaSuspensionBridgeRig, makeTacomaShoreOnlookerRig
-} from './tacoma_bridge_scenes.js';"""
+} from './tacoma_bridge_scenes.js';
+import {
+  makeSkyscraperStreetHookRig, makeSkyscraperExteriorRig,
+  makeSkyscraperOfficeInteriorRig, makeSkyscraperDamperCutawayRig
+} from './skyscraper_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -2503,6 +2774,9 @@ def generate_engine_project(
     tacoma_p = src_dst / "tacoma_bridge_scenes.js"
     tacoma_p.write_text(TACOMA_BRIDGE_SCENES_JS, encoding="utf-8")
 
+    sky_p = src_dst / "skyscraper_scenes.js"
+    sky_p.write_text(SKYSCRAPER_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
 
@@ -2546,7 +2820,8 @@ def generate_engine_project(
     display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
     column-gap: 0.28em; row-gap: 0.14em; text-align: center;
     font: 700 60px/1.15 'Cap', sans-serif; color: #fff; letter-spacing: 0.01em;
-    text-shadow: 0 0 4px rgba(0,0,0,.78), 0 4px 16px rgba(0,0,0,.72);
+    text-shadow: -2px -2px 0 rgba(6,9,17,.92), 2px -2px 0 rgba(6,9,17,.92), -2px 2px 0 rgba(6,9,17,.92), 2px 2px 0 rgba(6,9,17,.92), 0 6px 18px rgba(0,0,0,.88);
+    background: rgba(9, 13, 22, 0.34); border-radius: 18px; padding: 6px 14px;
     z-index: 15; pointer-events: none;
   }
   #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 20; }

@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 from .assets.style_params import build_style_params
 from .camera_choreographer import build_camera_plan
 from .character_performance import plan_character_action
+from .cinematic_composition import design_frame_for_action, score_visual_progression, write_frame_design_intent
 from .cinematic_composition_qa import audit_cinematic_composition
 from .editorial_overlay import build_editorial_timeline
 from .physical_motion import plan_contact_schedule, plan_motion_intent
@@ -244,7 +245,7 @@ def build_storyboard_and_bible(
                     "grounded_props": sc.get("staging", {}).get("grounded_props", []),
                 }
                 sub_spec = _classify_narrative_action_unit(sub_ev, i, len(raw_shots), full_script_low_sag)
-                sub_nev_id = f"nev_{i:03d}"
+                sub_nev_id = f"nev_sub_{i:03d}"
                 matched_nev = {
                     **matched_nev,
                     "narrative_event_id": sub_nev_id,
@@ -407,6 +408,23 @@ def build_storyboard_and_bible(
         editorial_timeline=ed_timeline,
         raw_traces=None,
     )
+    frame_intent_items = [
+        design_frame_for_action(
+            sh,
+            editorial_layout=[o for o in ed_timeline.get("overlays", []) if o.get("shot_id") == sh.get("shot_id")],
+        )
+        for sh in shots
+    ]
+    for sh, f_intent in zip(shots, frame_intent_items):
+        sh["salient_action_anchor"] = f_intent["salient_action_anchor"]
+        sh["salient_action_extent_world"] = f_intent["salient_action_extent_world"]
+        sh["preferred_on_screen_rect"] = f_intent["preferred_on_screen_rect"]
+        sh["minimum_visible_feature_px"] = f_intent["minimum_visible_feature_px"]
+        sh["camera_compensation_baseline"] = f_intent["camera_compensation_baseline"]
+        sh["subject_screen_occupancy_min"] = f_intent["subject_screen_occupancy_min"]
+        sh["shot_visual_purpose"] = f_intent["shot_visual_purpose"]
+        sh["camera_safe_rects"] = f_intent["camera_safe_rects"]
+    write_frame_design_intent(run_dir, storyboard, frame_intent_items)
     roles_used = sorted({str(o.get("role")) for o in ed_timeline.get("overlays", []) if o.get("role")})
     storyboard["editorial_timeline_summary"] = {
         "schema_version": ed_timeline["schema_version"],

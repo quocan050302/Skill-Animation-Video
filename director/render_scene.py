@@ -200,6 +200,31 @@ def render_stills_and_shots(
                     f"Camera execution trace FAILED accuracy/collision check: {cam_trace_doc['failures'][:6]}"
                 )
 
+        # 3c. Deterministic Semantic Object-ID Matte Extraction (3 samples per shot: start/peak/end)
+        matte_times: List[float] = []
+        for s in shots:
+            st, en = float(s["start"]), float(s["end"])
+            dur_s = max(0.2, en - st)
+            t0_m = round(min(total_dur - 0.04, st + min(0.10, dur_s * 0.14)), 3)
+            tp_m = round(min(total_dur - 0.03, st + dur_s * 0.52), 3)
+            t2_m = round(min(total_dur - 0.02, max(tp_m + 0.04, en - min(0.10, dur_s * 0.14))), 3)
+            matte_times.extend([t0_m, tp_m, t2_m])
+        mattes_dir = run_dir / "qa" / "mattes"
+        _run_render_node(
+            node_bin=node_bin,
+            render_mjs=render_mjs,
+            args=[
+                "mattes",
+                engine_project["entry_html"],
+                str(mattes_dir),
+                ",".join(f"{t:.3f}" for t in sorted(set(matte_times))),
+                "1",
+                webgl_backend,
+            ],
+            browser_exe=browser_exe,
+            log_path=logs_dir / "mattes_render.log",
+        )
+
     # 4. Determine Native 4K vs Explicit Upscale
     scale = 2 if use_native_4k else 1
     total_frames = int(round(total_dur * fps))

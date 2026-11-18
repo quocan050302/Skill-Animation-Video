@@ -44,6 +44,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "tacoma_wide_strait_aerial",
+            "families": ("tacoma_wide_establish",),
+            "framing": "VWS_StraitTowerSpan",
+            "angle": "high_shore_towers_oblique",
+            "move": "tower_span_arc_sweep",
+            "focal_mm": 28,
+            "placement": "east_tower_strait_horizon",
+            "silhouette": "twin_towers_puget_narrows",
+            "pose": "strait_crosswind_buildup",
+            "novel_non_template": True,
+        },
+        {
             "setup": "tacoma_roadway_wave_car",
             "families": ("tacoma_roadway_wave",),
             "framing": "MS_DeckChase",
@@ -77,6 +89,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "placement": "twisting_opposite_lanes",
             "silhouette": "opposed_deck_edges_cables",
             "pose": "torsional_flutter_escalation",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "tacoma_torsion_twist_longitudinal",
+            "families": ("tacoma_torsion_twist",),
+            "framing": "WS_TorsionLongitudinal",
+            "angle": "high_cable_quarter",
+            "move": "torsion_reveal_crane",
+            "focal_mm": 32,
+            "placement": "twisting_opposite_lanes",
+            "silhouette": "opposed_deck_edges_cables",
+            "pose": "extreme_opposed_edge_roll",
             "novel_non_template": True,
         },
         {
@@ -116,6 +140,126 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "tacoma_aftermath_truss_legacy",
+            "families": ("tacoma_aftermath",),
+            "framing": "VWS_StraitPayoff",
+            "angle": "aerial_strait_panorama",
+            "move": "slow_ascending_tilt",
+            "focal_mm": 20,
+            "placement": "gap_between_towers",
+            "silhouette": "standing_towers_empty_water",
+            "pose": "bridge_collapse_aftermath",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_street_hook_tilt",
+            "families": ("skyscraper_street_hook",),
+            "framing": "MS_StreetUpTilt",
+            "angle": "street_level_upward_3q",
+            "move": "upward_gaze_tilt",
+            "focal_mm": 28,
+            "placement": "foreground_observer_tower_above",
+            "silhouette": "pedestrian_upward_swaying_crown",
+            "pose": "street_observer_rooftop_sway_hook",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_skyline_wide_establish",
+            "families": ("skyscraper_skyline_wide",),
+            "framing": "VWS_SkylineContext",
+            "angle": "elevated_skyline_oblique",
+            "move": "skyline_parallax_glide",
+            "focal_mm": 24,
+            "placement": "slender_tower_over_blocks",
+            "silhouette": "urban_blocks_hero_tower",
+            "pose": "skyline_scale_establish",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_wind_vortex_facade",
+            "families": ("skyscraper_wind_vortex",),
+            "framing": "MCU_VortexFacade",
+            "angle": "windward_upper_three_quarter",
+            "move": "vortex_wake_sweep",
+            "focal_mm": 35,
+            "placement": "windward_upper_tiers",
+            "silhouette": "curling_vortex_ribbons_facade",
+            "pose": "crosswind_vortex_excitation",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_plumb_drift_gauge",
+            "families": ("skyscraper_plumb_drift",),
+            "framing": "MS_PlumbComparison",
+            "angle": "upper_crown_profile_axis",
+            "move": "lateral_drift_track",
+            "focal_mm": 38,
+            "placement": "roof_vs_red_plumb_axis",
+            "silhouette": "cantilever_offset_red_plumb",
+            "pose": "flexural_roof_drift_gauge",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_office_interior_sway",
+            "families": ("skyscraper_office_interior",),
+            "framing": "MCU_OfficeSway",
+            "angle": "interior_three_quarter_window",
+            "move": "gentle_office_dolly",
+            "focal_mm": 32,
+            "placement": "lamp_left_worker_right",
+            "silhouette": "swinging_pendant_braced_worker",
+            "pose": "interior_office_reaction",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_tmd_cutaway_reveal",
+            "families": ("skyscraper_tmd_cutaway",),
+            "framing": "ECU_DamperCutaway",
+            "angle": "penthouse_section_35deg",
+            "move": "peel_orbit_reveal",
+            "focal_mm": 42,
+            "placement": "center_pendulum_sphere",
+            "silhouette": "cutaway_steel_cage_pendulum",
+            "pose": "tuned_mass_damper_cutaway_reveal",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_counterphase_vectors",
+            "families": ("skyscraper_counterphase",),
+            "framing": "MCU_CounterPhase",
+            "angle": "axial_penthouse_oppose",
+            "move": "opposing_vector_glide",
+            "focal_mm": 40,
+            "placement": "sphere_vs_frame_vectors",
+            "silhouette": "counterphase_force_bars_pendulum",
+            "pose": "counterphase_damper_cancellation",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_split_before_after",
+            "families": ("skyscraper_before_after",),
+            "framing": "WS_SplitBeforeAfter",
+            "angle": "front_split_comparison",
+            "move": "subtle_compare_push",
+            "focal_mm": 34,
+            "placement": "undamped_left_damped_right",
+            "silhouette": "twin_towers_sway_vs_steady",
+            "pose": "damped_vs_undamped_comparison",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "skyscraper_dusk_safe_skyline",
+            "families": ("skyscraper_dusk_resolution",),
+            "framing": "WS_DuskContextReveal",
+            "angle": "heroic_dusk_pullback",
+            "move": "pull_back_crane",
+            "focal_mm": 26,
+            "placement": "center_dusk_tower",
+            "silhouette": "evening_skyline_gentle_flex",
+            "pose": "skyscraper_dusk_resolution",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_street_hook_crowd",
             "families": ("boston_street_hook",),
             "framing": "WS_StreetHero",
@@ -125,6 +269,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "placement": "left_brick_alley",
             "silhouette": "1919_cobblestone_street_crowd",
             "pose": "street_rumble_foreshadow",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_street_hook_alley_pan",
+            "families": ("boston_street_hook",),
+            "framing": "MS_AlleyHorizon",
+            "angle": "low_cobblestone_upward",
+            "move": "alley_track_pan",
+            "focal_mm": 34,
+            "placement": "right_storefront_curb",
+            "silhouette": "horse_cart_approaching_shadow",
+            "pose": "mystery_suspense_crowd_freeze",
             "novel_non_template": True,
         },
         {
@@ -152,6 +308,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "boston_tank_scale_payoff",
+            "families": ("boston_tank_leak_seep",),
+            "framing": "WS_MonolithTank",
+            "angle": "wide_heroic_upward_tilt",
+            "move": "crane_scale_climb",
+            "focal_mm": 28,
+            "placement": "right_towering_tank_cylinder",
+            "silhouette": "monolithic_riveted_tank_horizon",
+            "pose": "overwhelming_volume_payoff",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_tank_rupture_blast",
             "families": ("boston_tank_rupture",),
             "framing": "MCU_RivetBurst",
@@ -161,6 +329,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "placement": "center_burst_seam",
             "silhouette": "sheared_plates_molasses_burst",
             "pose": "tank_panel_rupture",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_tank_rupture_surge",
+            "families": ("boston_tank_rupture",),
+            "framing": "WS_TankCollapse",
+            "angle": "wide_low_wharf_angle",
+            "move": "whip_tilt_rupture_follow",
+            "focal_mm": 28,
+            "placement": "lower_rivet_apron",
+            "silhouette": "gushing_molasses_flood_front",
+            "pose": "tank_wall_blowout",
             "novel_non_template": True,
         },
         {
@@ -200,6 +380,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "boston_elevated_rail_truss_tilt",
+            "families": ("boston_elevated_rail_impact",),
+            "framing": "MCU_BentGirder",
+            "angle": "low_under_trestle_upward",
+            "move": "impact_tilt_reframe",
+            "focal_mm": 30,
+            "placement": "buckled_steel_girder",
+            "silhouette": "tilted_elevated_track_wagon",
+            "pose": "trestle_truss_deflection",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_rescue_aftermath_still",
             "families": ("boston_rescue_aftermath",),
             "framing": "MS_RespectfulWide",
@@ -209,6 +401,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "placement": "centered_lantern_crew",
             "silhouette": "calm_sludge_responders_lanterns",
             "pose": "rescue_and_settling_aftermath",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_rescue_lantern_wade",
+            "families": ("boston_rescue_aftermath",),
+            "framing": "MCU_LanternWade",
+            "angle": "low_lantern_oblique",
+            "move": "lantern_wade_push",
+            "focal_mm": 42,
+            "placement": "right_rescuer_lantern",
+            "silhouette": "responders_wading_thick_sludge",
+            "pose": "active_molasses_rescue_effort",
             "novel_non_template": True,
         },
         {
@@ -688,6 +892,8 @@ def split_long_visual_beats_by_actions(
                     u_a["narration_span_end"] = split_idx
                     if meta_a["relevant_prop"] not in ("idea_spark", "atom_crystal"):
                         u_a.update({k: meta_a[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
+                    if u_a.get("scene_family") != ev.get("scene_family"):
+                        u_a.pop("contact_action", None)
                     u_a["visual_objective"] = f"Establish {u_a['subject']} acting on {u_a['relevant_prop']}"
                     u_a["desired_novelty_axis"] = "subject_action_setup"
 
@@ -701,6 +907,8 @@ def split_long_visual_beats_by_actions(
                     u_b["narration_span_end"] = len(toks)
                     if meta_b["relevant_prop"] not in ("idea_spark", "atom_crystal"):
                         u_b.update({k: meta_b[k] for k in ("subject", "character_id", "verb_action", "relevant_prop", "grounded_props", "scene_family", "scale_level", "lighting_mood", "semantic_relation", "unsupported_exact_domain", "fallback_reason")})
+                    if u_b.get("scene_family") != ev.get("scene_family"):
+                        u_b.pop("contact_action", None)
                     u_b["visual_objective"] = f"Reveal consequence {u_b['verb_action']} ({u_b['relevant_prop']})"
                     u_b["desired_novelty_axis"] = "internal_reveal_escalation" if meta_b["scene_family"] == u_a["scene_family"] else "environment_and_scale_shift"
                     out_units.extend([u_a, u_b])
@@ -724,8 +932,10 @@ def split_long_visual_beats_by_actions(
             and prev.get("scene_family") == u.get("scene_family")
             and prev.get("relevant_prop") == u.get("relevant_prop")
             and (float(u["end_sec"]) - float(prev["start_sec"])) <= 6.5
-            and not prev.get("contact_action")
-            and not u.get("contact_action")
+            and (
+                (not prev.get("contact_action") and not u.get("contact_action"))
+                or (u.get("scene_family") == "boston_elevated_rail_impact" and (float(u["end_sec"]) - float(prev["start_sec"])) <= 4.5)
+            )
         )
         if prev is not None and (((u["end_sec"] - u["start_sec"]) < 0.72) or same_zdf_stage):
             prev["end_sec"] = u["end_sec"]
@@ -777,12 +987,42 @@ def generate_candidate_shot_set(
             continue
 
         c["semantic_fit"] = 1.0 if fam_match else 0.35
+        if fam == "boston_street_hook":
+            is_suspense = ("nobody" in nar_low or "expected" in nar_low or "unlike" in nar_low) and ("1919" not in nar_low)
+            if (is_suspense or unit_idx > 0) and c["setup"] == "boston_street_hook_alley_pan":
+                c["semantic_fit"] += 0.70
+            elif (not is_suspense and unit_idx == 0) and c["setup"] == "boston_street_hook_crowd":
+                c["semantic_fit"] += 0.65
+        if fam == "boston_tank_rupture":
+            is_blowout_follow = any(k in nar_low for k in ("gave way", "walls gave", "flood", "poured", "surge"))
+            if is_blowout_follow and c["setup"] == "boston_tank_rupture_surge":
+                c["semantic_fit"] += 0.45
+            elif (not is_blowout_follow) and c["setup"] == "boston_tank_rupture_blast":
+                c["semantic_fit"] += 0.55
+        if fam == "boston_elevated_rail_impact":
+            is_girder_focus = any(k in nar_low for k in ("buckled", "support", "girder", "railway", "trestle"))
+            if is_girder_focus and c["setup"] == "boston_elevated_rail_truss_tilt":
+                c["semantic_fit"] += 0.45
+            elif (not is_girder_focus) and c["setup"] == "boston_elevated_rail_crush":
+                c["semantic_fit"] += 0.55
         if fam == "boston_wave_street_flow":
-            is_speed_beat = any(k in nar_low for k in ("35", "faster", "race", "speed", "horse", "per hour"))
+            is_speed_beat = any(k in nar_low for k in ("35", "faster", "race", "speed", "horse", "per hour", "tore through", "neighborhood"))
             if is_speed_beat and c["setup"] == "boston_wave_speed_sweep":
                 c["semantic_fit"] += 0.80
             elif (not is_speed_beat) and c["setup"] == "boston_wave_chase_street":
                 c["semantic_fit"] += 0.65
+        if fam == "boston_tank_leak_seep":
+            is_scale_payoff = any(k in nar_low for k in ("poisonous", "enough of it"))
+            if is_scale_payoff and c["setup"] == "boston_tank_scale_payoff":
+                c["semantic_fit"] += 0.85
+            elif (not is_scale_payoff) and c["setup"] == "boston_tank_leak_seep_cu":
+                c["semantic_fit"] += 0.70
+        if fam == "boston_rescue_aftermath":
+            is_active_rescue = ("rescuer" in nar_low or "struggled" in nar_low) and not any(k in nar_low for k in ("twenty-one", "21", "died", "150"))
+            if is_active_rescue and c["setup"] == "boston_rescue_lantern_wade":
+                c["semantic_fit"] += 0.80
+            elif (not is_active_rescue) and c["setup"] == "boston_rescue_aftermath_still":
+                c["semantic_fit"] += 0.70
         if fam == "traction_machine_room":
             is_brake_beat = any(k in nar_low for k in ("brake", "caliper", "clamp", "slow", "stop"))
             if is_brake_beat and c["setup"] == "traction_caliper_brake_macro":
@@ -943,6 +1183,26 @@ def select_sequence_with_diversity_constraints(
                 if cand["setup"] != history[-1]["setup_type"]:
                     best_score, chosen, rationale = sc, cand, rsn + " (anti_clone_override)"
                     break
+
+        # Enforce strict non-adjacent camera triplet rotation so consecutive shots never clone (framing, angle, move)
+        prev_triplet = (history[-1]["framing"], history[-1]["angle"], history[-1]["movement"]) if history else None
+        cur_triplet = (chosen["framing"], chosen["angle"], chosen["move"])
+        if prev_triplet is not None and cur_triplet == prev_triplet:
+            swapped = False
+            for sc, cand, rsn in ranked[1:]:
+                if (cand["framing"], cand["angle"], cand["move"]) != prev_triplet:
+                    best_score, chosen, rationale = sc, cand, rsn + " (anti_triplet_override)"
+                    swapped = True
+                    break
+            if not swapped:
+                chosen = dict(chosen)
+                alt_moves = ("reframe_track_sweep", "arc_pull_alt", "slow_tilt_shift")
+                fr = str(chosen["framing"])
+                chosen["framing"] = ("MCU_" + fr.split("_", 1)[-1]) if not fr.startswith("MCU") else ("WS_" + fr.split("_", 1)[-1])
+                ang = str(chosen["angle"])
+                chosen["angle"] = f"{ang}_reverse" if not ang.endswith("_reverse") else f"{ang}_alt"
+                chosen["move"] = alt_moves[idx % len(alt_moves)]
+                rationale = rationale + " (synthetic_triplet_rotate)"
 
         # Honor explicit manual shot lock if provided in --visual-plan-in and validated for this skill
         manual_override = manual_shots[idx] if idx < len(manual_shots) and isinstance(manual_shots[idx], dict) and manual_shots[idx].get("manual") else None

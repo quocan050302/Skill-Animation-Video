@@ -12,7 +12,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-SCHEMA_VERSION = "sd-cinematic-composition-1"
+SCHEMA_VERSION = "sd-cinematic-composition-2"
+
+PURPOSE_DEFAULT_MAP = {
+    "curiosity_hook": ("hero_visual_anomaly", 0.18, 44.0),
+    "context_establish": ("wide_scale_context", 0.12, 32.0),
+    "mechanism_explanation": ("causal_mechanism_focus", 0.16, 40.0),
+    "twist_escalation": ("opposing_structural_motion", 0.20, 48.0),
+    "human_reaction": ("grounded_character_response", 0.18, 44.0),
+    "structural_collapse": ("sequential_failure_plunge", 0.20, 48.0),
+    "aftermath_takeaway": ("aftermath_scale_resolution", 0.14, 34.0),
+}
 
 
 def _boxes_overlap(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float], pad: float = 12.0) -> bool:
@@ -31,13 +41,19 @@ def design_frame_for_action(
     phone_safe_zone: Tuple[float, float, float, float] = (88.0, 170.0, 992.0, 1520.0),
     editorial_layout: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """Compute portrait 9:16 framing plan separating negative-space overlay band from hero action."""
+    """Compute portrait 9:16 framing plan with grounded R2 action anchor, dynamic extent, & occupancy floors."""
     sid = str(shot.get("shot_id") or "")
     cam = shot.get("camera") or {}
     framing = str(shot.get("framing") or cam.get("framing") or "MS_Hero")
     act = str(shot.get("physical_action") or (action_path or {}).get("physical_action") or "action")
-    # Default central subject occupancy band in 1080x1920 lower-mid portrait region [220..860, 520..1240]
-    subj_box = subject_bound or (220.0, 520.0, 860.0, 1240.0)
+    intent = str(shot.get("editorial_intent") or (action_path or {}).get("editorial_intent") or "mechanism_explanation")
+    fa = shot.get("focal_anchor") or (shot.get("camera_path") or {}).get("focal_anchor") or {}
+    anchor_id = str(fa.get("anchor_id") or "stage_center")
+    world_pos = list(fa.get("world_pos") or [0.0, 1.2, 0.0])
+    radius_m = float(fa.get("radius_m") or 0.45)
+
+    # Dynamic multi-phase action bounding envelope (normalized on 1080x1920 logical canvas)
+    subj_box = subject_bound or (200.0, 490.0, 880.0, 1260.0)
     sx0, sy0, sx1, sy1 = phone_safe_zone
 
     # Upper negative space reserved for display headlines & facts cleanly above hero action band
@@ -55,10 +71,24 @@ def design_frame_for_action(
         if pbox[3] > 1345.0:
             collisions.append(f"Overlay {ov.get('overlay_id')} intrudes into lower caption zone (y>{1345})")
 
+    purpose_label, min_occ, min_feat_360 = PURPOSE_DEFAULT_MAP.get(intent, ("causal_mechanism_focus", 0.15, 38.0))
     return {
         "shot_id": sid,
         "framing": framing,
         "physical_action": act,
+        "salient_action_anchor": anchor_id,
+        "salient_action_world_pos": world_pos,
+        "salient_action_extent_world": [round(radius_m * 2.4, 3), round(radius_m * 2.0, 3), round(radius_m * 2.2, 3)],
+        "preferred_on_screen_rect": [round(v, 1) for v in subj_box],
+        "camera_safe_rects": {
+            "hero_action_1080": [round(v, 1) for v in subj_box],
+            "headline_band_1080": neg_space_box,
+            "caption_safe_1080": [88.0, 1280.0, 992.0, 1520.0],
+        },
+        "minimum_visible_feature_px": min_feat_360,
+        "camera_compensation_baseline": "world_anchor_homography_residual",
+        "subject_screen_occupancy_min": min_occ,
+        "shot_visual_purpose": purpose_label,
         "subject_box_1080": list(subj_box),
         "negative_space_box_1080": neg_space_box,
         "face_protect_box_1080": list(face_protect) if face_protect else None,
@@ -133,3 +163,40 @@ def write_composition_report(run_dir: Optional[Path], report: Dict[str, Any]) ->
             encoding="utf-8",
         )
     return report
+
+
+def write_frame_design_intent(
+    run_dir: Optional[Path],
+    storyboard: Dict[str, Any],
+    frames_composition: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Persist R2.2 grounded `frame_design_intent.json` mapping salient action bounds to portrait safe rects."""
+    doc = {
+        "schema_version": "sd-frame-design-intent-1",
+        "selected_skill": storyboard.get("selected_skill"),
+        "aspect_ratio": storyboard.get("aspect_ratio", "9:16"),
+        "shots_count": len(frames_composition),
+        "shots": [
+            {
+                "shot_id": fc.get("shot_id"),
+                "framing": fc.get("framing"),
+                "physical_action": fc.get("physical_action"),
+                "shot_visual_purpose": fc.get("shot_visual_purpose"),
+                "salient_action_anchor": fc.get("salient_action_anchor"),
+                "salient_action_world_pos": fc.get("salient_action_world_pos"),
+                "salient_action_extent_world": fc.get("salient_action_extent_world"),
+                "preferred_on_screen_rect": fc.get("preferred_on_screen_rect"),
+                "camera_safe_rects": fc.get("camera_safe_rects"),
+                "minimum_visible_feature_px": fc.get("minimum_visible_feature_px"),
+                "camera_compensation_baseline": fc.get("camera_compensation_baseline"),
+                "subject_screen_occupancy_min": fc.get("subject_screen_occupancy_min"),
+            }
+            for fc in frames_composition
+        ],
+    }
+    if run_dir is not None:
+        (run_dir / "frame_design_intent.json").write_text(
+            json.dumps(doc, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    return doc

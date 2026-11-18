@@ -450,14 +450,14 @@ def ensure_kit_dependencies(kit_dir: Path) -> Tuple[bool, List[str]]:
 
 
 class DiskBudgetGuard:
-    """Target-aware disk headroom guard keeping >= max(4 GiB, 20% of initial free space)."""
+    """Target-aware disk headroom guard keeping >= max(10 GiB, 25% of projected temporary usage)."""
 
     def __init__(self, target_dir: Path, initial_free_bytes: Optional[int] = None) -> None:
         self.target_dir = target_dir
         target_dir.mkdir(parents=True, exist_ok=True)
         usage = shutil.disk_usage(str(target_dir))
         self.initial_free_bytes = int(initial_free_bytes if initial_free_bytes is not None else usage.free)
-        self.default_headroom_bytes = max(4 * (1024 ** 3), int(self.initial_free_bytes * 0.20))
+        self.default_headroom_bytes = 10 * (1024 ** 3)
 
     @staticmethod
     def estimate_render_bytes(duration_sec: float, native_4k: bool = True, workers: int = 2) -> int:
@@ -474,10 +474,10 @@ class DiskBudgetGuard:
         b_full = DiskBudgetGuard.estimate_render_bytes(duration_sec, native_4k=True, workers=workers)
         return a_1080 + b_full + 96 * 1024 * 1024
 
-    def check(self, required_bytes: int, headroom_bytes: Optional[int] = None) -> Dict[str, Any]:
+    def check(self, required_bytes: int, headroom_bytes: Optional[int] = None, free_bytes_override: Optional[int] = None) -> Dict[str, Any]:
         usage = shutil.disk_usage(str(self.target_dir))
-        free_b = int(usage.free)
-        headroom = int(headroom_bytes if headroom_bytes is not None else self.default_headroom_bytes)
+        free_b = int(free_bytes_override if free_bytes_override is not None else usage.free)
+        headroom = int(headroom_bytes if headroom_bytes is not None else max(self.default_headroom_bytes, int(required_bytes * 0.25)))
         needed_total = int(required_bytes) + headroom
         ok = free_b >= needed_total
         return {

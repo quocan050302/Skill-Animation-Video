@@ -195,6 +195,43 @@ export class EditorialOverlayController {
       return { tip_xy: [Number(tipX.toFixed(1)), Number(tipY.toFixed(1))], tip_target_error_px: Number(errPx.toFixed(2)) };
     };
 
+    const drawSpanBracket = (g, ax, ay, bx, by, colFill, strokeOuter, enterU, isTorsion = true) => {
+      const prog = easeOutCubic(Math.min(1, enterU * 1.45));
+      const mx = (ax + bx) * 0.5;
+      const my = (ay + by) * 0.5;
+      const x1 = lerp(mx, ax, prog);
+      const y1 = lerp(my, ay, prog);
+      const x2 = lerp(mx, bx, prog);
+      const y2 = lerp(my, by, prog);
+      const ctrlY = my + (isTorsion ? -78 : -52);
+      const dArc = `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${mx.toFixed(1)} ${ctrlY.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+      g.appendChild(el('path', {
+        d: dArc, fill: 'none', stroke: strokeOuter, 'stroke-width': '16', 'stroke-linecap': 'round', opacity: '0.92',
+      }));
+      g.appendChild(el('path', {
+        d: dArc, fill: 'none', stroke: colFill, 'stroke-width': '7.5', 'stroke-linecap': 'round', opacity: '0.98',
+      }));
+      for (const [ex, ey, dirSign] of [[x1, y1, -1], [x2, y2, 1]]) {
+        g.appendChild(el('circle', {
+          cx: ex.toFixed(1), cy: ey.toFixed(1), r: '14',
+          fill: colFill, stroke: strokeOuter, 'stroke-width': '4.5',
+        }));
+        if (isTorsion) {
+          // Opposed up/down tick arrows visibly communicating left/right opposed edge rotation
+          const ayEnd = ey + dirSign * 42 * prog;
+          g.appendChild(el('line', {
+            x1: ex.toFixed(1), y1: ey.toFixed(1), x2: ex.toFixed(1), y2: ayEnd.toFixed(1),
+            stroke: strokeOuter, 'stroke-width': '12', 'stroke-linecap': 'round',
+          }));
+          g.appendChild(el('line', {
+            x1: ex.toFixed(1), y1: ey.toFixed(1), x2: ex.toFixed(1), y2: ayEnd.toFixed(1),
+            stroke: colFill, 'stroke-width': '6', 'stroke-linecap': 'round',
+          }));
+        }
+      }
+      return { tip_xy: [Number(ax.toFixed(1)), Number(ay.toFixed(1))], tip_target_error_px: 0.0 };
+    };
+
     if (String(tl.callout_mode || 'smart') !== 'off') {
       for (const ov of overlays) {
         if (t < ov.start || t > ov.end) continue;
@@ -337,12 +374,21 @@ export class EditorialOverlayController {
           const totalTxtH = l2 ? fontSz * 2.18 : fontSz * 1.12;
           textBBox = [bx0, by0, bx1, by0 + totalTxtH];
 
+          const secAnc = ov.secondary_anchor_id ? anchorsMap[ov.secondary_anchor_id] : null;
+          const secPx = (secAnc && secAnc.in_front && !secAnc.occluded)
+            ? [clamp(secAnc.u * 1080, 48, 1032), clamp(secAnc.v * 1920, 120, 1650)]
+            : null;
           if (anchorPx) {
             const ax = anchorPx[0];
             const ay = anchorPx[1];
             const startX = ax >= cxMid ? clamp(cxMid + 140, bx0 + 40, bx1 - 40) : clamp(cxMid - 140, bx0 + 40, bx1 - 40);
             const startY = by0 + totalTxtH + 16;
-            ptrRes = drawImpactArrow(g, startX, startY, ax, ay, '#ef4444', '#060911', enter, true);
+            if ((ptrShape === 'torsion_bracket' || ptrShape === 'sway_bracket') && secPx) {
+              drawImpactArrow(g, startX, startY, (ax + secPx[0]) * 0.5, (ay + secPx[1]) * 0.5 - 32, '#ef4444', '#060911', enter, false);
+              ptrRes = drawSpanBracket(g, ax, ay, secPx[0], secPx[1], '#facc15', '#060911', enter, ptrShape === 'torsion_bracket');
+            } else {
+              ptrRes = drawImpactArrow(g, startX, startY, ax, ay, '#ef4444', '#060911', enter, true);
+            }
           }
         } else if (role === 'location_time') {
           // Subtle minimal context chip (no big border/arrow) clamped cleanly inside SAFE x bounds
@@ -369,17 +415,25 @@ export class EditorialOverlayController {
           const boxX0 = (bx0 + cardW > SAFE.x1 - 10) ? clamp(SAFE.x1 - cardW - 10, SAFE.x0 + 10, bx0) : bx0;
           if (anchorPx) {
             const [ax, ay] = anchorPx;
-            const rOuter = 66 + (1 - enter) * 24;
-            g.appendChild(el('circle', {
-              cx: ax, cy: ay, r: (rOuter * 0.72).toFixed(1),
-              fill: 'none', stroke: '#ef4444', 'stroke-width': '6.5',
-            }));
-            g.appendChild(el('circle', {
-              cx: ax, cy: ay, r: (rOuter * 1.05).toFixed(1),
-              fill: 'none', stroke: '#fef2f2', 'stroke-width': '2.5', opacity: '0.80',
-            }));
-            const sx = boxX0 + cardW * 0.5 < ax ? (boxX0 + cardW) : boxX0;
-            ptrRes = drawImpactArrow(g, sx, by0 + bh * 0.5, ax, ay, '#ef4444', '#060911', enter, true);
+            const secAncW = ov.secondary_anchor_id ? anchorsMap[ov.secondary_anchor_id] : null;
+            const secPxW = (secAncW && secAncW.in_front && !secAncW.occluded)
+              ? [clamp(secAncW.u * 1080, 48, 1032), clamp(secAncW.v * 1920, 120, 1650)]
+              : null;
+            if ((ptrShape === 'torsion_bracket' || ptrShape === 'sway_bracket') && secPxW) {
+              ptrRes = drawSpanBracket(g, ax, ay, secPxW[0], secPxW[1], '#ef4444', '#060911', enter, ptrShape === 'torsion_bracket');
+            } else {
+              const rOuter = 66 + (1 - enter) * 24;
+              g.appendChild(el('circle', {
+                cx: ax, cy: ay, r: (rOuter * 0.72).toFixed(1),
+                fill: 'none', stroke: '#ef4444', 'stroke-width': '6.5',
+              }));
+              g.appendChild(el('circle', {
+                cx: ax, cy: ay, r: (rOuter * 1.05).toFixed(1),
+                fill: 'none', stroke: '#fef2f2', 'stroke-width': '2.5', opacity: '0.80',
+              }));
+              const sx = boxX0 + cardW * 0.5 < ax ? (boxX0 + cardW) : boxX0;
+              ptrRes = drawImpactArrow(g, sx, by0 + bh * 0.5, ax, ay, '#ef4444', '#060911', enter, true);
+            }
           }
           g.appendChild(el('rect', {
             x: boxX0, y: by0, width: cardW, height: bh, rx: 14,
@@ -455,13 +509,21 @@ export class EditorialOverlayController {
           // EXPLANATION / TRANSITION_EMPHASIS: lighter tracked leader + crisp outlined label
           if (anchorPx) {
             const [ax, ay] = anchorPx;
-            const rOuter = 44 + (1 - enter) * 18;
-            g.appendChild(el('circle', {
-              cx: ax, cy: ay, r: rOuter.toFixed(1),
-              fill: 'none', stroke: accent, 'stroke-width': '4',
-              'stroke-dasharray': `${(2 * Math.PI * rOuter * enter).toFixed(1)} 320`,
-            }));
-            ptrRes = drawImpactArrow(g, bx0 + bw * 0.5 < ax ? bx1 : bx0, by0 + bh * 0.5, ax, ay, accent, '#090d16', enter, false);
+            const secAncE = ov.secondary_anchor_id ? anchorsMap[ov.secondary_anchor_id] : null;
+            const secPxE = (secAncE && secAncE.in_front && !secAncE.occluded)
+              ? [clamp(secAncE.u * 1080, 48, 1032), clamp(secAncE.v * 1920, 120, 1650)]
+              : null;
+            if ((ptrShape === 'torsion_bracket' || ptrShape === 'sway_bracket') && secPxE) {
+              ptrRes = drawSpanBracket(g, ax, ay, secPxE[0], secPxE[1], accent, '#090d16', enter, ptrShape === 'torsion_bracket');
+            } else {
+              const rOuter = 44 + (1 - enter) * 18;
+              g.appendChild(el('circle', {
+                cx: ax, cy: ay, r: rOuter.toFixed(1),
+                fill: 'none', stroke: accent, 'stroke-width': '4',
+                'stroke-dasharray': `${(2 * Math.PI * rOuter * enter).toFixed(1)} 320`,
+              }));
+              ptrRes = drawImpactArrow(g, bx0 + bw * 0.5 < ax ? bx1 : bx0, by0 + bh * 0.5, ax, ay, accent, '#090d16', enter, false);
+            }
           }
           const eTxt = el('text', {
             x: bx0 + bw * 0.5, y: by0 + 44, 'text-anchor': 'middle',
@@ -490,6 +552,8 @@ export class EditorialOverlayController {
           overlay_id: ov.overlay_id,
           type: ov.type || 'focus_ring',
           anchor_id: ov.anchor_id || null,
+          secondary_anchor_id: ov.secondary_anchor_id || null,
+          target_semantic_id: ov.target_semantic_id || ov.anchor_id || null,
           pointer_shape: ptrShape,
           role,
           variant_id: ov.variant_id || 'legacy',
@@ -501,6 +565,12 @@ export class EditorialOverlayController {
           hidden_reason: null,
           anchor_px: anchorPx,
           anchor_projected_xy: anchorPx,
+          target_region_screen: anchorPx ? [
+            Number(Math.max(0, anchorPx[0] - 45).toFixed(1)),
+            Number(Math.max(0, anchorPx[1] - 45).toFixed(1)),
+            Number(Math.min(1080, anchorPx[0] + 45).toFixed(1)),
+            Number(Math.min(1920, anchorPx[1] + 45).toFixed(1)),
+          ] : null,
           tip_xy: ptrRes.tip_xy,
           tip_target_error_px: ptrRes.tip_target_error_px,
           contrast_estimate: Number(ov.contrast_ratio_min || 5.0),

@@ -62,14 +62,17 @@ def plan_character_action(
         retreat_dist = 0.20
 
     return {
-        "schema_version": "sd-char-perf-1",
+        "schema_version": "sd-char-perf-2",
         "primary_intent": intent,
-        "phases": phases,
+        "character_intent": intent,
+        "phases": ["detect_threat", "orient_head_torso", "weight_shift", "step_recoil_retreat", "recover_hold"] if intent == "brace" else phases,
         "duration_sec": round(dur, 3),
         "ground_y": float(ground_y),
         "threat_world": [float(v) for v in threat],
+        "look_at_target_world": [float(v) for v in threat],
         "retreat_distance_m": retreat_dist,
         "reaction_onset_sec": round(min(0.45, dur * 0.14), 3),
+        "reaction_cue_time": round(min(0.45, dur * 0.14), 3),
         "step_cadence_hz": 1.85 if intent == "retreat" else 1.25,
     }
 
@@ -156,6 +159,12 @@ def validate_character_grounding(
             issues.append(
                 f"N19: Retreat character moving toward threat (dot={float(move_dot_threat):.3f}) at t={t:.2f}s"
             )
+
+        look_tgt = cp.get("look_at_target_world")
+        if intent in ("brace", "look_at", "inspect") and "look_at_target_world" in cp and not (
+            isinstance(look_tgt, list) and len(look_tgt) == 3 and all(math.isfinite(float(x)) for x in look_tgt)
+        ):
+            issues.append(f"Missing or non-finite look_at_target_world for reactive character at t={t:.2f}s")
 
     if require_motion:
         for sid, pts in by_shot_xz.items():

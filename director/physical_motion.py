@@ -84,6 +84,22 @@ def plan_motion_intent(
             "fidelity_disclosure": "stylized_illustrative",
             "seed": int(seed),
         }
+    elif "skyscraper_" in gen or "damper" in act or "counterphase" in act or "sway" in act or "drift" in act:
+        is_interior = "office_interior" in gen
+        is_tmd = "tmd_" in gen or "counterphase" in gen
+        spec = {
+            "motion_type": (
+                "interior_pendulum_sway" if is_interior
+                else ("tuned_mass_damper_counterphase" if is_tmd
+                      else ("damped_vs_undamped_comparison" if "before_after" in gen else "flexural_tower_sway"))
+            ),
+            "duration_sec": dur,
+            "amplitude": 0.46 if not is_interior else 0.24,
+            "freq_hz": 0.36,
+            "min_vertex_disp_m": 0.14,
+            "fidelity_disclosure": "stylized_illustrative",
+            "seed": int(seed),
+        }
     else:
         spec = {
             "motion_type": "damped_articulation",
@@ -112,7 +128,22 @@ def plan_contact_schedule(
         if isinstance(ca, dict) and ca.get("hit_time_sec") is not None:
             hit_abs = float(ca["hit_time_sec"])
         elif "collapse" in act:
-            hit_abs = round(st + dur * 0.38, 3)
+            onset_rel = round(dur * 0.38, 3)
+            # Match evaluateCollapseTrajectory(t, onsetT, { baseY: 2.45, floorY: -0.28, gravity: 9.81 * 0.62 })
+            drop_t = math.sqrt((2.0 * abs(-0.28 - 2.45)) / (9.81 * 0.62))
+            water_rel = round(min(dur - 0.08, onset_rel + drop_t), 3)
+            hit_abs = round(st + onset_rel, 3)
+            sched.append({
+                "shot_id": sh.get("shot_id"),
+                "narrative_event_id": sh.get("narrative_event_id"),
+                "physical_action": act,
+                "collapse_onset_rel_sec": onset_rel,
+                "water_impact_rel_sec": water_rel,
+                "water_impact_abs_sec": round(st + water_rel, 3),
+                "hit_time_sec": hit_abs,
+                "hit_time_rel_sec": onset_rel,
+            })
+            continue
         elif "twist" in act or "torsion" in act:
             hit_abs = round(st + dur * 0.28, 3)
         if hit_abs is not None:
@@ -159,3 +190,38 @@ def plan_physics_telemetry(
         "cables_attached_all": cables_attached_all,
         "nan_detected": nan_detected,
     }
+
+
+def validate_world_state_continuity(
+    storyboard: Dict[str, Any],
+    raw_traces: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Fail-closed T17 guard ensuring collapsed/ruptured world state never resets intact."""
+    issues: List[str] = []
+    collapsed_seen = False
+    intact_fams = {
+        "tacoma_hook_telephoto", "tacoma_wide_establish", "tacoma_roadway_wave",
+        "tacoma_under_deck_girder", "tacoma_torsion_twist", "tacoma_shore_onlooker",
+    }
+    for sh in (storyboard.get("shots") or []):
+        fam = str(sh.get("scene_family") or "")
+        gen = str(sh.get("procedural_generator") or "")
+        if fam == "tacoma_collapse_plunge" or "collapse" in gen:
+            collapsed_seen = True
+            continue
+        if collapsed_seen and fam in intact_fams:
+            issues.append(f"T17: Shot {sh.get('shot_id')} ({fam}) resets bridge intact after collapse")
+
+    # Runtime trace continuity check
+    collapse_trace_seen = False
+    for rec in (raw_traces or []):
+        ph = (rec.get("telemetry") or {}).get("physical_motion") or {}
+        if ph.get("collapse_active"):
+            collapse_trace_seen = True
+        elif collapse_trace_seen and str(ph.get("motion_type") or "") == "torsion_span":
+            # In aftermath, roll must stay <= 0.08 rad rather than returning to intact full rolling deck
+            roll = float(ph.get("deck_roll_span_rad") or 0.0)
+            if roll > 0.08:
+                issues.append(f"T17: Trace at t={rec.get('time')}s reverted to rolling intact bridge (roll={roll:.3f})")
+
+    return {"status": "FAIL" if issues else "PASS", "issues": issues}

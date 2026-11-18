@@ -87,62 +87,146 @@ def _zdf_keyframes_for_generator(
         ]
 
     if gen == "zach3d:tacoma_hook_telephoto_stage":
+        # Oblique telephoto looking straight down the undulating continuous roadway + 1940 sedan
         return [
-            {"t_norm": 0.0, "pos": [-3.65, 3.45, 2.35], "look": [0.20, 2.45, 0.0], "fov": 26, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 0.55, "pos": [-3.35, 3.38, 2.15], "look": [0.10, 2.45, 0.0], "fov": 26, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 1.0, "pos": [-3.05, 3.30, 1.98], "look": [0.0, 2.45, 0.0], "fov": 25, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.0, "pos": [-4.25, 3.35, 2.35], "look": [0.0, 2.48, 0.0], "fov": 28, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [-3.65, 3.30, 2.08], "look": [0.0, 2.48, 0.0], "fov": 28, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [-3.05, 3.25, 1.88], "look": [0.0, 2.48, 0.0], "fov": 27, "roll": 0.0, "ease": "cubic"},
         ]
 
     if gen == "zach3d:tacoma_wide_establish_stage":
+        # Framing fills center portrait band with towers & full span without 75% empty sea
+        if setup == "tacoma_wide_strait_aerial":
+            return [
+                {"t_norm": 0.0, "pos": [2.85, 4.95, 7.25], "look": [-0.35, 2.55, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.50, "pos": [1.35, 4.75, 7.65], "look": [-0.20, 2.55, 0.0], "fov": 41, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.45, 4.55, 8.05], "look": [0.0, 2.55, 0.0], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            ]
         return [
-            {"t_norm": 0.0, "pos": [-3.25, 5.20, 8.85], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 0.50, "pos": [-0.45, 5.45, 9.15], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [2.45, 5.65, 9.45], "look": [0.0, 2.40, 0.0], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [-2.65, 4.45, 7.65], "look": [0.0, 2.55, 0.0], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [0.0, 4.55, 7.90], "look": [0.0, 2.55, 0.0], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [2.45, 4.65, 8.15], "look": [0.0, 2.55, 0.0], "fov": 40, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:tacoma_roadway_wave_stage":
         return [
-            {"t_norm": 0.0, "pos": [-2.85, 3.55, 2.85], "look": [0.0, 2.45, 0.0], "fov": 36, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 0.50, "pos": [-1.25, 3.45, 3.15], "look": [0.0, 2.45, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [0.95, 3.38, 2.95], "look": [0.0, 2.45, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [-2.35, 3.32, 2.55], "look": [0.0, 2.45, 0.0], "fov": 35, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-0.75, 3.28, 2.75], "look": [0.0, 2.45, 0.0], "fov": 34, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.95, 3.22, 2.55], "look": [0.0, 2.45, 0.0], "fov": 34, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:tacoma_under_deck_girder_stage":
         return [
-            {"t_norm": 0.0, "pos": [-1.05, 1.55, 3.85], "look": [0.0, 2.22, 0.28], "fov": 43, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 0.52, "pos": [0.05, 1.48, 3.65], "look": [0.0, 2.22, 0.28], "fov": 42, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [0.95, 1.58, 3.85], "look": [0.0, 2.22, 0.28], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [-0.95, 1.85, 3.15], "look": [0.0, 2.28, 0.25], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.0, 1.82, 2.95], "look": [0.0, 2.28, 0.25], "fov": 39, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.90, 1.88, 3.10], "look": [0.0, 2.28, 0.25], "fov": 40, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:tacoma_torsion_twist_stage":
+        # Longitudinal 3/4 view down deck axis so opposing left/right deck edges stay inside 9:16 frame & tilted!
+        if setup == "tacoma_torsion_twist_longitudinal":
+            return [
+                {"t_norm": 0.0, "pos": [3.55, 3.75, 3.85], "look": [0.15, 2.48, 0.0], "fov": 44, "roll": 0.008, "ease": "quintic"},
+                {"t_norm": 0.50, "pos": [2.65, 3.55, 3.65], "look": [0.15, 2.48, 0.0], "fov": 43, "roll": -0.01, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [1.85, 3.42, 3.55], "look": [0.15, 2.48, 0.0], "fov": 44, "roll": 0.006, "ease": "quintic"},
+            ]
         return [
-            {"t_norm": 0.0, "pos": [-2.35, 3.45, 3.65], "look": [0.0, 2.42, 0.25], "fov": 38, "roll": -0.01, "ease": "quintic"},
-            {"t_norm": 0.50, "pos": [-0.35, 3.25, 3.35], "look": [0.0, 2.42, 0.25], "fov": 36, "roll": 0.015, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [1.75, 3.35, 3.55], "look": [0.0, 2.42, 0.25], "fov": 37, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [-3.75, 3.65, 3.75], "look": [0.20, 2.48, 0.0], "fov": 43, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-2.85, 3.52, 3.55], "look": [0.20, 2.48, 0.0], "fov": 42, "roll": 0.012, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-1.95, 3.45, 3.65], "look": [0.20, 2.48, 0.0], "fov": 43, "roll": -0.006, "ease": "quintic"},
         ]
 
     if gen == "zach3d:tacoma_shore_onlooker_stage":
         return [
-            {"t_norm": 0.0, "pos": [-1.25, 1.85, 3.55], "look": [0.15, 1.38, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 0.52, "pos": [-0.85, 1.80, 3.85], "look": [0.15, 1.40, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 1.0, "pos": [-0.45, 1.76, 4.10], "look": [0.15, 1.42, -0.55], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.0, "pos": [-1.15, 1.72, 3.15], "look": [0.18, 1.32, -0.35], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.52, "pos": [-0.85, 1.68, 3.45], "look": [0.18, 1.32, -0.35], "fov": 36, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [-0.55, 1.66, 3.70], "look": [0.18, 1.32, -0.35], "fov": 36, "roll": 0.0, "ease": "cubic"},
         ]
 
     if gen == "zach3d:tacoma_collapse_plunge_stage":
         return [
-            {"t_norm": 0.0, "pos": [1.85, 4.35, 7.85], "look": [0.20, 2.15, 0.0], "fov": 46, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 0.45, "pos": [1.35, 3.85, 7.65], "look": [0.20, 1.75, 0.0], "fov": 47, "roll": 0.01, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [0.95, 3.35, 7.45], "look": [0.20, 1.15, 0.0], "fov": 48, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [0.15, 4.15, 8.35], "look": [-0.30, 1.65, 0.0], "fov": 52, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.45, "pos": [0.0, 3.70, 8.05], "look": [-0.28, 1.40, 0.0], "fov": 52, "roll": 0.01, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.15, 3.15, 7.75], "look": [-0.25, 1.05, 0.0], "fov": 52, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:tacoma_aftermath_stage":
         return [
-            {"t_norm": 0.0, "pos": [-1.45, 4.65, 7.25], "look": [0.0, 2.10, 0.0], "fov": 40, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 0.55, "pos": [0.0, 5.45, 8.85], "look": [0.0, 1.95, 0.0], "fov": 42, "roll": 0.0, "ease": "cubic"},
-            {"t_norm": 1.0, "pos": [1.55, 6.10, 10.25], "look": [0.0, 1.85, 0.0], "fov": 43, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.0, "pos": [-1.15, 3.45, 7.35], "look": [0.0, 1.15, 0.0], "fov": 42, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [0.0, 3.75, 8.05], "look": [0.0, 1.10, 0.0], "fov": 42, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [1.15, 4.05, 8.75], "look": [0.0, 1.05, 0.0], "fov": 43, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:skyscraper_street_hook_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.10, 1.10, 5.25], "look": [-0.20, 3.75, -2.20], "fov": 62, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [-1.85, 1.14, 5.10], "look": [-0.20, 3.85, -2.20], "fov": 62, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [-1.65, 1.18, 4.95], "look": [-0.20, 3.95, -2.20], "fov": 61, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:skyscraper_skyline_wide_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-3.80, 6.20, 11.50], "look": [0.0, 4.40, -0.80], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [0.20, 6.40, 11.20], "look": [0.0, 4.40, -0.80], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [3.60, 6.60, 10.90], "look": [0.0, 4.40, -0.80], "fov": 46, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_wind_vortex_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.40, 5.80, 4.20], "look": [0.0, 5.80, -0.80], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-0.80, 6.00, 3.80], "look": [0.0, 5.80, -0.80], "fov": 41, "roll": 0.008, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.00, 5.90, 4.00], "look": [0.0, 5.80, -0.80], "fov": 42, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_plumb_drift_stage":
+        return [
+            {"t_norm": 0.0, "pos": [0.35, 5.20, 6.55], "look": [0.42, 5.45, -0.80], "fov": 49, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.55, 5.55, 6.15], "look": [0.45, 5.65, -0.80], "fov": 48, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.75, 5.75, 6.45], "look": [0.45, 5.70, -0.80], "fov": 49, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_office_interior_stage":
+        return [
+            {"t_norm": 0.0, "pos": [1.55, 1.48, 3.65], "look": [0.06, 1.24, -0.15], "fov": 48, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 0.55, "pos": [1.18, 1.44, 3.40], "look": [0.06, 1.24, -0.15], "fov": 47, "roll": 0.0, "ease": "cubic"},
+            {"t_norm": 1.0, "pos": [0.82, 1.40, 3.15], "look": [0.08, 1.24, -0.15], "fov": 46, "roll": 0.0, "ease": "cubic"},
+        ]
+
+    if gen == "zach3d:skyscraper_tmd_cutaway_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.40, 2.20, 5.15], "look": [0.0, 1.45, 0.05], "fov": 46, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [-0.65, 2.00, 4.75], "look": [0.0, 1.45, 0.05], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.45, 1.90, 4.85], "look": [0.0, 1.45, 0.05], "fov": 45, "roll": 0.008, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_counterphase_stage":
+        return [
+            {"t_norm": 0.0, "pos": [2.05, 2.15, 5.05], "look": [0.0, 1.75, 0.15], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [0.35, 2.05, 4.65], "look": [0.0, 1.75, 0.15], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-1.55, 2.00, 4.85], "look": [0.0, 1.75, 0.15], "fov": 45, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_before_after_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-0.35, 3.90, 10.60], "look": [0.0, 3.40, 0.0], "fov": 48, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [0.0, 4.00, 10.20], "look": [0.0, 3.40, 0.0], "fov": 47, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.35, 4.10, 10.45], "look": [0.0, 3.40, 0.0], "fov": 47, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:skyscraper_dusk_resolution_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.80, 5.20, 8.40], "look": [0.0, 4.60, -1.0], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [0.0, 5.80, 9.60], "look": [0.0, 4.60, -1.0], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [2.60, 6.40, 10.80], "look": [0.0, 4.60, -1.0], "fov": 46, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:boston_street_hook_stage":
+        if setup == "boston_street_hook_alley_pan":
+            return [
+                {"t_norm": 0.0, "pos": [1.95, 2.55, 3.65], "look": [-0.05, 1.32, -0.20], "fov": 45, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [1.55, 2.38, 3.25], "look": [-0.04, 1.34, -0.15], "fov": 44, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [1.15, 2.25, 2.85], "look": [-0.02, 1.35, -0.10], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            ]
         return [
             {"t_norm": 0.0, "pos": [-1.42, 1.52, 3.85], "look": [0.05, 1.32, 0.25], "fov": 38, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 0.52, "pos": [-0.62, 1.44, 3.05], "look": [0.02, 1.35, 0.22], "fov": 36, "roll": 0.0, "ease": "quintic"},
@@ -151,12 +235,18 @@ def _zdf_keyframes_for_generator(
 
     if gen == "zach3d:boston_molasses_reveal_stage":
         return [
-            {"t_norm": 0.0, "pos": [0.85, 1.08, 3.12], "look": [-0.08, 1.25, 0.12], "fov": 36, "roll": -0.01, "ease": "quintic"},
-            {"t_norm": 0.45, "pos": [0.18, 1.26, 2.45], "look": [0.0, 1.28, 0.15], "fov": 34, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [-0.46, 1.46, 2.10], "look": [0.02, 1.30, 0.15], "fov": 33, "roll": 0.008, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [1.65, 2.35, 4.45], "look": [0.0, 1.05, -0.35], "fov": 44, "roll": -0.008, "ease": "quintic"},
+            {"t_norm": 0.45, "pos": [0.75, 2.40, 4.05], "look": [0.0, 1.05, -0.25], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.25, 2.45, 3.85], "look": [0.0, 1.08, -0.20], "fov": 42, "roll": 0.006, "ease": "quintic"},
         ]
 
     if gen == "zach3d:boston_tank_leak_stage":
+        if setup == "boston_tank_scale_payoff":
+            return [
+                {"t_norm": 0.0, "pos": [-1.85, 1.82, 3.65], "look": [-0.20, 1.22, 0.45], "fov": 42, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [-1.35, 2.04, 3.45], "look": [-0.22, 1.24, 0.50], "fov": 41, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.88, 2.26, 3.25], "look": [-0.24, 1.26, 0.55], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            ]
         return [
             {"t_norm": 0.0, "pos": [0.95, 1.05, 2.75], "look": [-0.20, 1.08, 0.55], "fov": 36, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 0.55, "pos": [0.58, 1.32, 2.42], "look": [-0.18, 1.18, 0.55], "fov": 34, "roll": 0.0, "ease": "quintic"},
@@ -164,6 +254,12 @@ def _zdf_keyframes_for_generator(
         ]
 
     if gen == "zach3d:boston_tank_rupture_stage":
+        if setup == "boston_tank_rupture_surge":
+            return [
+                {"t_norm": 0.0, "pos": [1.95, 1.65, 4.15], "look": [0.0, 1.22, 0.42], "fov": 44, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.48, "pos": [0.85, 1.72, 3.75], "look": [0.0, 1.26, 0.45], "fov": 43, "roll": -0.008, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.65, 1.85, 3.55], "look": [0.0, 1.28, 0.45], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            ]
         return [
             {"t_norm": 0.0, "pos": [-1.25, 1.42, 2.85], "look": [0.0, 1.28, 0.45], "fov": 37, "roll": -0.008, "ease": "quintic"},
             {"t_norm": 0.48, "pos": [-0.32, 1.44, 2.38], "look": [0.0, 1.30, 0.45], "fov": 35, "roll": 0.012, "ease": "quintic"},
@@ -173,17 +269,23 @@ def _zdf_keyframes_for_generator(
     if gen == "zach3d:boston_wave_street_stage":
         if setup == "boston_wave_speed_sweep":
             return [
-                {"t_norm": 0.0, "pos": [1.55, 2.25, 5.15], "look": [-0.05, 1.05, 0.35], "fov": 40, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 0.52, "pos": [0.95, 2.02, 4.18], "look": [0.0, 1.06, 0.35], "fov": 38, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 1.0, "pos": [-0.95, 1.92, 3.45], "look": [0.0, 1.08, 0.30], "fov": 38, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.0, "pos": [1.55, 2.25, 5.45], "look": [-0.05, 1.05, 0.35], "fov": 41, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [0.95, 2.02, 4.65], "look": [0.0, 1.06, 0.35], "fov": 39, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.95, 1.96, 4.15], "look": [0.0, 1.08, 0.45], "fov": 39, "roll": 0.0, "ease": "quintic"},
             ]
         return [
-            {"t_norm": 0.0, "pos": [-0.24, 1.56, 3.15], "look": [0.0, 1.08, 0.35], "fov": 38, "roll": 0.0, "ease": "quintic"},
-            {"t_norm": 0.55, "pos": [-0.42, 1.72, 3.85], "look": [0.0, 1.10, 0.45], "fov": 39, "roll": -0.006, "ease": "quintic"},
-            {"t_norm": 1.0, "pos": [-0.58, 1.88, 4.55], "look": [0.0, 1.12, 0.55], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.0, "pos": [-0.24, 1.58, 3.65], "look": [0.0, 1.08, 0.35], "fov": 39, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [-0.42, 1.76, 4.35], "look": [0.0, 1.10, 0.50], "fov": 40, "roll": -0.006, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.58, 1.94, 5.05], "look": [0.0, 1.12, 0.65], "fov": 41, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:boston_elevated_rail_impact_stage":
+        if setup == "boston_elevated_rail_truss_tilt":
+            return [
+                {"t_norm": 0.0, "pos": [-1.65, 1.88, 4.05], "look": [0.08, 1.25, 0.05], "fov": 43, "roll": -0.008, "ease": "quintic"},
+                {"t_norm": 0.50, "pos": [-1.05, 1.80, 3.65], "look": [0.06, 1.28, 0.05], "fov": 42, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.35, 1.76, 3.35], "look": [0.04, 1.32, 0.05], "fov": 41, "roll": 0.008, "ease": "quintic"},
+            ]
         return [
             {"t_norm": 0.0, "pos": [2.22, 2.25, 4.35], "look": [-0.35, 1.95, 0.05], "fov": 40, "roll": 0.008, "ease": "quintic"},
             {"t_norm": 0.50, "pos": [1.75, 2.08, 3.72], "look": [-0.28, 1.92, 0.05], "fov": 39, "roll": 0.0, "ease": "quintic"},
@@ -191,6 +293,12 @@ def _zdf_keyframes_for_generator(
         ]
 
     if gen == "zach3d:boston_rescue_aftermath_stage":
+        if setup == "boston_rescue_lantern_wade":
+            return [
+                {"t_norm": 0.0, "pos": [1.18, 1.30, 2.78], "look": [0.05, 0.92, 0.22], "fov": 34, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [0.62, 1.24, 2.42], "look": [0.02, 0.90, 0.22], "fov": 33, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [0.12, 1.20, 2.18], "look": [0.0, 0.88, 0.20], "fov": 32, "roll": 0.0, "ease": "quintic"},
+            ]
         return [
             {"t_norm": 0.0, "pos": [-0.95, 1.56, 3.55], "look": [0.0, 0.96, 0.20], "fov": 36, "roll": 0.0, "ease": "cubic"},
             {"t_norm": 0.5, "pos": [-0.25, 1.48, 3.28], "look": [0.0, 0.94, 0.20], "fov": 36, "roll": 0.0, "ease": "cubic"},
