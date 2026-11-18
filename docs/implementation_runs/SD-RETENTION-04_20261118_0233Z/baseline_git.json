@@ -1,0 +1,22 @@
+{
+  "schema_version": "sd-retention04-baseline-git-1",
+  "utcstamp": "20261118_0233Z",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "head_sha": "233ace0871a8fa4654bccafdda52e377c2ac1f1a",
+  "origin_branch_sha": "233ace0871a8fa4654bccafdda52e377c2ac1f1a",
+  "master_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "ancestor_896689f_exit_code": 0,
+  "remote_url": "https://github.com/quocan050302/Skill-Animation-Video.git",
+  "submodule_status": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94 vendor/claude-animation-skills (heads/main)",
+  "dirty_before_audit": "",
+  "recent_commits": [
+    "233ace0 Merge pull request #1 from quocan050302/feat/sd-retention-03-r2-visual-quality",
+    "896689f feat(sd-retention-03-r2): Boston proof camera presets, Tacoma collapse framing & final validation closeout",
+    "b393789 feat(sd-retention-03-r2): decoded visual QA, readable action staging and skyscraper demo (WIP checkpoint)",
+    "8f53a7a feat(sd-retention-03): physical motion, grounded human FK, role-aware editorial & Tacoma Narrows 4K showcase",
+    "ab59289 feat(sd-retention-02): story-driven 3d scenes, voice fidelity and fail-closed editorial QA",
+    "3cea6e5 feat(sd-retention-01): expressive prosody, kinetic 3D overlays, synced SFX and airplane window demo",
+    "6d9f31e feat(zdf): ZDF-MOTION-01 single-authority camera, 2-source transitions, IK, cutaways & decoded QA",
+    "8a09f4e feat(short-director): add continuous shot direction, 3D scene novelty, and diversity QA (v0.4.0)"
+  ]
+}

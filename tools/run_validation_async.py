@@ -163,6 +163,14 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
             description="SD-RETENTION-03 human.js foot-lock grounding, non-slide retreat & N17-N19",
             resource_class="gpu",
         ),
+        ValidationTask(
+            task_id="sd_retention04_causality",
+            cmd=[py, "-m", "unittest", "tests.test_sd_retention04_causality", "-v"],
+            deps=["visual_storytelling_dir"],
+            timeout_sec=240.0,
+            description="SD-RETENTION-04.R1 CausalEvent graph, world-state conservation, semantic QA & N01-N20 traps",
+            resource_class="cpu",
+        ),
     ]
 
     if mode in ("focused", "full"):
@@ -197,6 +205,14 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 deps=["editorial_design_system", "curiosity_director", "cinematic_composition", "physical_motion", "character_performance", "storytelling_qa"],
                 timeout_sec=420.0,
                 description="SD-RETENTION-03.R2 decoded visual QA, Skyscraper E2E, third-domain generalization & T01-T32 traps",
+                resource_class="gpu",
+            ),
+            ValidationTask(
+                task_id="sd_retention04_camera_and_visual_proof",
+                cmd=[py, "-m", "unittest", "tests.test_sd_retention04_camera_and_visual_proof", "-v"],
+                deps=["sd_retention04_causality", "r2_decoded_and_traps"],
+                timeout_sec=420.0,
+                description="SD-RETENTION-04.R1 Q1-Q5 ActionCamera, N21-N40 traps & London 1952 live WebGL seek/matte proof",
                 resource_class="gpu",
             ),
         ])

@@ -1,0 +1,115 @@
+{
+  "schema_version": "sd-retention04-qa-summary-1",
+  "run_id": "SD-RETENTION-04_20261118_0233Z",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "pre_final_commit_head": "233ace0871a8fa4654bccafdda52e377c2ac1f1a",
+  "validation_gates": {
+    "async_dag_full": {
+      "overall_status": "PASS",
+      "discovered_count": 27,
+      "covered_count": 27,
+      "missing_modules": [],
+      "total_elapsed_sec": 600.27
+    },
+    "canonical_unittest_discover": {
+      "summary": "Ran 92 tests in 720.378s",
+      "status_line": "OK"
+    }
+  },
+  "london_1952_demo": {
+    "title": "The Day London Disappeared into Smog",
+    "enhanced_B": {
+      "overall_status": "WARN",
+      "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+      "native_4k": {
+        "ok": true,
+        "status": "PASS",
+        "path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_london_smog_20261118_0233Z\\enhanced_B\\final_4k.mp4",
+        "size_bytes": 52190384,
+        "sha256": "666eb7962a71357b8c119fa4ebf774f18b3d2d2c369cd89aad23e21627813ed8",
+        "width": 2160,
+        "height": 3840,
+        "fps": 30.0,
+        "duration_sec": 39.3333,
+        "video_codec": "h264",
+        "pix_fmt": "yuv420p",
+        "video_packets": 1180,
+        "has_audio": true,
+        "audio_codec": "aac",
+        "audio_packets": 1844,
+        "issues": []
+      },
+      "checks_status": {
+        "style_lock_provenance": "PASS",
+        "preview_1080p_stream": "PASS",
+        "final_4k_stream": "PASS",
+        "truthful_4k_declaration": "PASS",
+        "decoded_frames_and_cuts": "PASS",
+        "audio_levels_and_ducking": "PASS",
+        "scene_diversity_and_retention": "WARN",
+        "camera_execution": "PASS",
+        "editorial_retention_finish": "PASS",
+        "visual_storytelling": "PASS",
+        "pointer_tracking": "PASS",
+        "physical_and_character_telemetry": "PASS",
+        "decoded_visual_quality": "PASS",
+        "cinematic_composition": "PASS",
+        "semantic_causal_visual_evidence": "PASS",
+        "factual_and_licensing_integrity": "PASS"
+      },
+      "causal_gates": {
+        "visual_claim_coverage": "PASS",
+        "relative_motion_evidence": "PASS",
+        "claim_pointer_semantics": "PASS",
+        "causal_transition_visibility": "PASS",
+        "silent_comprehension_proxy": "PASS"
+      },
+      "claim_coverage_ratio": 1.0,
+      "camera_intent_mean_info_gain": 0.896,
+      "physics_disclosure": "visualized_physical_approximation: procedural 3D kinematics/shaders illustrate mechanism timing and spatial relationships; not CFD/FEM scientific solver"
+    },
+    "baseline_A": {
+      "overall_status": "WARN",
+      "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+      "checks_status": {
+        "style_lock_provenance": "PASS",
+        "preview_1080p_stream": "PASS",
+        "final_4k_stream": "PASS",
+        "truthful_4k_declaration": "PASS",
+        "decoded_frames_and_cuts": "PASS",
+        "audio_levels_and_ducking": "PASS",
+        "scene_diversity_and_retention": "WARN",
+        "camera_execution": "PASS",
+        "editorial_retention_finish": "PASS",
+        "visual_storytelling": "PASS",
+        "pointer_tracking": "PASS",
+        "physical_and_character_telemetry": "PASS",
+        "decoded_visual_quality": "PASS",
+        "cinematic_composition": "PASS",
+        "semantic_causal_visual_evidence": "PASS",
+        "factual_and_licensing_integrity": "PASS"
+      }
+    },
+    "ab_parity": {
+      "vo_pcm_identical": true,
+      "vo_pcm_sha256": "fcaed921c9077f99a394d9eb2684b2501aaa4024a4a4bb3fbb836b0b03dcc041",
+      "voice_stem_pcm_parity": true,
+      "alignment_status": "PASS",
+      "pairs_count": 8,
+      "sfx_counts": {
+        "version_a_cues": 14,
+        "version_b_cues": 21
+      },
+      "has_measurable_visual_diff": true
+    }
+  },
+  "honest_subjective_status": {
+    "subjective_visual_review": "NOT_VERIFIED",
+    "subjective_visual_quality": "NOT_VERIFIED",
+    "subjective_editorial_listening": "NOT_VERIFIED",
+    "subjective_voice_quality_status": "NOT_VERIFIED",
+    "viewer_retention_status": "NOT_VERIFIED",
+    "neural_prosody": false,
+    "word_anchor_confidence": "ESTIMATED"
+  }
+}

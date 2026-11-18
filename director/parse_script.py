@@ -441,15 +441,30 @@ def synthesize_and_align_voice(
 
     if backend == "user_file":
         assert user_voice_file is not None
-        subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", str(user_voice_file), "-ac", "1", "-ar", str(target_sr), str(vo_wav_path)],
-            check=True,
-        )
-        samples, sr = sf.read(str(vo_wav_path), dtype="float32")
-        if samples.ndim > 1:
-            samples = samples.mean(axis=1)
-        samples = _trim_silence(samples, sr)
-        sf.write(str(vo_wav_path), samples, sr)
+        import wave as _wave
+
+        copied_exact = False
+        if Path(user_voice_file).suffix.lower() == ".wav":
+            try:
+                with _wave.open(str(user_voice_file), "rb") as wf:
+                    if wf.getnchannels() == 1 and wf.getframerate() == target_sr and wf.getsampwidth() == 2:
+                        shutil.copy2(user_voice_file, vo_wav_path)
+                        copied_exact = True
+            except Exception:
+                copied_exact = False
+
+        if copied_exact:
+            samples, sr = sf.read(str(vo_wav_path), dtype="float32")
+        else:
+            subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", str(user_voice_file), "-ac", "1", "-ar", str(target_sr), str(vo_wav_path)],
+                check=True,
+            )
+            samples, sr = sf.read(str(vo_wav_path), dtype="float32")
+            if samples.ndim > 1:
+                samples = samples.mean(axis=1)
+            samples = _trim_silence(samples, sr)
+            sf.write(str(vo_wav_path), samples, sr)
 
         parakeet_dirs = glob.glob(str(kit_dir / "models" / "sherpa-onnx-nemo-parakeet*"))
         venv_py = kit_dir / ".venv" / "bin" / "python"

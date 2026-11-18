@@ -230,6 +230,24 @@ def extract_sound_events(
         elif proc_gen == "zach3d:skyscraper_dusk_resolution_stage":
             if density == "detailed":
                 _add(min(dur * 0.30, 0.45), "skyline_evening_resolve", "reveal_soft", "reveal", -15.5, 0.0, 0.80, 0.54, 3, f"{sid}.skyline_resolve", depth="far", uncert=0.04)
+        elif proc_gen == "zach3d:london_fog_street_hook_stage":
+            _add(min(dur * 0.25, 0.34), "midday_city_haze_wind", "wind_bridge_gust", "foley", -14.0, -0.05, 0.86, 0.66, 2, f"{sid}.london_midday_blackout_wind", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:london_coal_combustion_cutaway_stage":
+            _add(min(dur * 0.22, 0.28), "hearth_cutaway_open", "mechanical_click", "foley", -11.5, 0.0, 0.88, 0.72, 2, f"{sid}.hearth_cutaway", depth="near", uncert=0.025)
+            _add(min(dur * 0.55, dur - 0.16), "chimney_soot_updraft", "airflow_hiss", "foley", -12.5, 0.08, 0.88, 0.70, 2, f"{sid}.chimney_draft_plume", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:london_atmospheric_inversion_stage":
+            _add(min(dur * 0.28, 0.36), "inversion_layer_pressure_trap", "low_sting", "emphasis", -12.0, 0.0, 0.90, 0.76, 1, f"{sid}.thermal_inversion_cap", depth="far", uncert=0.025)
+            _add(min(dur * 0.62, dur - 0.18), "trapped_airflow_deflect", "airflow_hiss", "foley", -13.5, -0.06, 0.85, 0.66, 2, f"{sid}.smoke_deflection", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:london_bus_visibility_stage":
+            _add(min(dur * 0.24, 0.32), "double_decker_diesel_crawl", "motor_drive_hum", "foley", -12.5, -0.10, 0.90, 0.76, 2, f"{sid}.bus_crawl_headlight", depth="mid", uncert=0.025)
+            _add(min(dur * 0.56, dur - 0.16), "guide_lantern_footsteps", "step_gravel", "foley", -13.0, 0.12, 0.88, 0.72, 2, f"{sid}.lantern_guide_walk", depth="near", uncert=0.025)
+        elif proc_gen == "zach3d:london_pedestrian_reaction_stage":
+            _add(min(dur * 0.30, 0.42), "pedestrian_curb_brace_step", "footsteps_retreat", "foley", -12.5, -0.08, 0.90, 0.76, 2, f"{sid}.pedestrian_respiratory_brace", depth="near", uncert=0.025)
+            if "4,000" in nar or "deaths" in nar:
+                _add(min(dur * 0.62, dur - 0.18), "respiratory_warning_pulse", "warning_tension_pulse", "emphasis", -13.5, 0.0, 0.88, 0.70, 2, f"{sid}.excess_deaths_weight", depth="mid", uncert=0.03)
+        elif proc_gen == "zach3d:london_clean_air_aftermath_stage":
+            if density == "detailed":
+                _add(min(dur * 0.32, 0.48), "clean_air_recovery_resolve", "reveal_soft", "reveal", -15.0, 0.0, 0.84, 0.58, 3, f"{sid}.clean_air_act_recovery", depth="far", uncert=0.04)
         elif proc_gen == "zach3d:airplane_window_hole_stage":
             if "exploded" in setup or "layers" in nar or "three" in nar:
                 _add(min(dur * 0.25, 0.30), "window_layers_separate", "reveal_soft", "reveal", -12.0, 0.0, 0.92, 0.80, 2, f"{sid}.3pane_explode", depth="near", uncert=0.025)

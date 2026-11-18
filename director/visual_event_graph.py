@@ -54,6 +54,12 @@ DOMAIN_PROP_RULES: List[Tuple[str, str, str, Tuple[str, ...]]] = [
     ("data_chart", "data_trajectory", "chart_view", ("growth", "followers", "users", "stars", "revenue", "curve", "percent", "%", "metric", "q1", "q2", "q3", "q4")),
     ("route_street", "map_navigation", "city_aerial", ("route", "street", "avenue", "bridge", "station", "block", "trip", "km", "mile", "mi", "destination")),
     ("exploded_device", "mechanical_breakdown", "studio_assembly", ("anatomy", "layer", "layers", "casing", "shell", "housing", "switch", "exploded", "inside")),
+    ("fog_street_hook_rig", "fog_street_hook", "street_aerial", ("great smog", "killer fog", "pea soup fog", "midday darkness", "turned black at noon", "visibility dropped")),
+    ("coal_combustion_cutaway_rig", "coal_combustion_cutaway", "macro_object", ("coal smoke", "soft coal", "sulfur dioxide", "sulfurous", "chimneys", "fireplace", "hearth", "soot")),
+    ("atmospheric_inversion_rig", "atmospheric_inversion_cap", "industrial_scale", ("temperature inversion", "warm air lid", "warm air layer", "cold air trapped", "thermal inversion", "inversion")),
+    ("bus_visibility_dropoff_rig", "vehicle_visibility_dropoff", "human_environment", ("double-decker", "headlights", "conductors", "walked ahead", "blinded traffic", "visibility zero")),
+    ("pedestrian_smog_reaction_rig", "pedestrian_smog_reaction", "human_environment", ("coughing", "choking", "excess deaths", "respiratory", "lungs", "hospitals", "smog")),
+    ("clean_air_aftermath_rig", "air_quality_aftermath", "street_aerial", ("clean air act", "smokeless fuels", "1956", "reformed heating", "skies cleared")),
 ]
 
 # Mechanisms that lack a dedicated exact 3D archetype in ZDF and must fail closed or disclose stylized schematic
@@ -243,8 +249,20 @@ def classify_visual_clause(
         selected_skill == "zach-d-films"
         and any(k in full_script_low for k in ("skyscraper", "sway in the wind", "tuned mass damper", "mass damper"))
     )
+    is_atmospheric_smog_story = (
+        selected_skill == "zach-d-films"
+        and (
+            "temperature inversion" in full_script_low
+            or "great smog" in full_script_low
+            or "clean air act" in full_script_low
+            or (
+                any(k in full_script_low for k in ("smog", "coal smoke", "soot", "sulfur"))
+                and any(k in full_script_low for k in ("fog", "inversion", "visibility", "chimneys"))
+            )
+        )
+    )
 
-    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story and not is_skyscraper_story:
+    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story and not is_skyscraper_story and not is_atmospheric_smog_story:
         matched_props = ["schematic_mechanism"]
         families = ["schematic_mechanism"]
         scales = ["macro_object"]
@@ -395,6 +413,44 @@ def classify_visual_clause(
             families = ["boston_harbor_payoff"]
             scales = ["street_aerial"]
         unsupported_domain = None
+    elif is_atmospheric_smog_story:
+        is_clean_air_law = any(k in low for k in ("clean air", "1956", "smokeless", "banned", "changed the law", "reformed", "cleared"))
+        if is_clean_air_law and not any(k in low for k in ("inversion", "trapped")):
+            matched_props = ["clean_air_aftermath_rig"]
+            families = ["air_quality_aftermath"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("cough", "lungs", "breathing", "hospital", "deaths", "4,000", "elderly", "people", "pedestrian", "residents", "masks", "acidic")):
+            matched_props = ["pedestrian_smog_reaction_rig"]
+            families = ["pedestrian_smog_reaction"]
+            scales = ["human_environment"]
+        elif (beat_index == 0 and clause_index == 0) or (
+            any(k in low for k in ("disappeared", "noon", "midday", "afternoon", "blacked out", "december 1952", "1952"))
+            and not any(k in low for k in ("bus", "headlight", "inversion", "chimney", "cough", "deaths", "clean air", "1956"))
+        ):
+            matched_props = ["fog_street_hook_rig"]
+            families = ["fog_street_hook"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("inversion", "warm air", "cold air", "trapped", "lid", "ceiling", "vertical mixing", "cap", "settled over")):
+            matched_props = ["atmospheric_inversion_rig"]
+            families = ["atmospheric_inversion_cap"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("coal", "burning", "chimney", "fireplace", "hearth", "sulfur", "soot", "power station", "smoke poured")):
+            matched_props = ["coal_combustion_cutaway_rig"]
+            families = ["coal_combustion_cutaway"]
+            scales = ["macro_object"]
+        elif any(k in low for k in ("bus", "double-decker", "headlight", "traffic", "lantern", "conductor", "visibility", "could not see", "couldn't see", "feet ahead", "blinded", "road")):
+            matched_props = ["bus_visibility_dropoff_rig"]
+            families = ["vehicle_visibility_dropoff"]
+            scales = ["human_environment"]
+        elif prev_family in ("fog_street_hook", "coal_combustion_cutaway", "atmospheric_inversion_cap", "vehicle_visibility_dropoff", "pedestrian_smog_reaction", "air_quality_aftermath"):
+            matched_props = [f"{prev_family}_rig" if not prev_family.endswith("_aftermath") else "clean_air_aftermath_rig"]
+            families = [prev_family]
+            scales = ["human_environment"]
+        else:
+            matched_props = ["atmospheric_inversion_rig"]
+            families = ["atmospheric_inversion_cap"]
+            scales = ["industrial_scale"]
+        unsupported_domain = None
     else:
         for prop_id, fam, sc, kws in DOMAIN_PROP_RULES:
             if any(
@@ -518,7 +574,7 @@ def classify_visual_clause(
         subject = primary_prop
     elif primary_prop in ("cell_tower_wave", "subsea_fiber_cable", "datacenter_rack", "power_turbine", "schematic_mechanism"):
         subject = primary_prop
-    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage", "tacoma_bridge_hook_rig", "tacoma_wide_establish_rig", "tacoma_roadway_wave_rig", "tacoma_girder_wind_rig", "tacoma_torsion_span_rig", "tacoma_shore_onlooker_rig", "tacoma_collapse_span_rig", "tacoma_aftermath_rig", "skyscraper_street_hook_rig", "skyscraper_skyline_wide_rig", "skyscraper_wind_vortex_rig", "skyscraper_plumb_drift_rig", "skyscraper_office_interior_rig", "skyscraper_tmd_cutaway_rig", "skyscraper_counterphase_rig", "skyscraper_before_after_rig", "skyscraper_dusk_resolution_rig"):
+    elif primary_prop in ("north_end_street_1919", "molasses_gravity_wave", "tank_seam_leak_rig", "rivet_rupture_assembly", "molasses_gravity_current", "elevated_rail_impact_rig", "rescue_aftermath_rig", "steel_section_cutaway_rig", "boston_overview_stage", "tacoma_bridge_hook_rig", "tacoma_wide_establish_rig", "tacoma_roadway_wave_rig", "tacoma_girder_wind_rig", "tacoma_torsion_span_rig", "tacoma_shore_onlooker_rig", "tacoma_collapse_span_rig", "tacoma_aftermath_rig", "skyscraper_street_hook_rig", "skyscraper_skyline_wide_rig", "skyscraper_wind_vortex_rig", "skyscraper_plumb_drift_rig", "skyscraper_office_interior_rig", "skyscraper_tmd_cutaway_rig", "skyscraper_counterphase_rig", "skyscraper_before_after_rig", "skyscraper_dusk_resolution_rig", "fog_street_hook_rig", "coal_combustion_cutaway_rig", "atmospheric_inversion_rig", "bus_visibility_dropoff_rig", "pedestrian_smog_reaction_rig", "clean_air_aftermath_rig"):
         if primary_prop == "tacoma_shore_onlooker_rig":
             subject = "char_onlooker_1940_01"
             character_id = "char_onlooker_1940_01"
@@ -528,6 +584,9 @@ def classify_visual_clause(
         elif primary_prop == "skyscraper_office_interior_rig":
             subject = "char_office_worker_01"
             character_id = "char_office_worker_01"
+        elif primary_prop in ("pedestrian_smog_reaction_rig", "bus_visibility_dropoff_rig"):
+            subject = "char_london_pedestrian_01"
+            character_id = "char_london_pedestrian_01"
         else:
             subject = primary_prop
     elif primary_prop in ("cosmic_origin", "atom_crystal", "ocean_nature"):
@@ -1025,6 +1084,10 @@ def extract_semantic_visual_events(
     if any(str(ev["scene_family"]).startswith("skyscraper_") for ev in bound_events):
         disclosures.append(
             "Skyscraper wind sway and tuned mass damper visualization is an illustrative structural dynamics model (non-CFD/non-FEM); tuned mass dampers are installed in select tall buildings, not all structures."
+        )
+    if any(str(ev["scene_family"]) in ("fog_street_hook", "coal_combustion_cutaway", "atmospheric_inversion_cap", "vehicle_visibility_dropoff", "pedestrian_smog_reaction", "air_quality_aftermath") for ev in bound_events):
+        disclosures.append(
+            "Atmospheric temperature inversion and coal smog visualization is a stylized physics/historical depiction (visualized_physical_approximation; non-CFD/non-dispersion-solver); excess deaths reflect historical estimate framing."
         )
     unsupported_found = sorted({ev["unsupported_exact_domain"] for ev in bound_events if ev.get("unsupported_exact_domain")})
     if unsupported_found:

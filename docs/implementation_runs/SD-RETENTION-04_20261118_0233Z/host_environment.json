@@ -1,0 +1,89 @@
+{
+  "schema_version": "sd-retention04-host-env-1",
+  "preflight": {
+    "ok": true,
+    "os_name": "windows",
+    "arch": "AMD64",
+    "cpu_count": 12,
+    "recommended_workers": 4,
+    "disk_total_gb": 144.02,
+    "disk_free_gb": 49.64,
+    "disk_quota_min_gb": 1.5,
+    "ffmpeg_path": "C:\\Users\\QuocAn\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffmpeg.EXE",
+    "ffprobe_path": "C:\\Users\\QuocAn\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffprobe.EXE",
+    "node_path": "C:\\Program Files\\nodejs\\node.EXE",
+    "browser_executable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "webgl_backend": "d3d11",
+    "kit_ready": true,
+    "upstream_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+    "upstream_clean": true,
+    "voice_backends": {
+      "requested_lang": "en",
+      "requested_backend": "auto",
+      "selected_backend": "windows_sapi",
+      "selected_voice": "Microsoft David Desktop",
+      "backend_capabilities": {
+        "backend": "windows_sapi",
+        "voice_id": "Microsoft David Desktop",
+        "engine_type": "sapi5_desktop_concat",
+        "neural_prosody": false,
+        "ssml_supported": true,
+        "supported_controls": [
+          "rate",
+          "pitch",
+          "emphasis",
+          "break_ms",
+          "volume",
+          "sub_alias"
+        ],
+        "rate_range_mult": [
+          0.78,
+          1.25
+        ],
+        "pitch_range_semitones": [
+          -4.0,
+          4.0
+        ],
+        "supports_word_timestamps_native": false,
+        "capability_note": "Windows System.Speech SpeakSsml executes rate, pitch, emphasis and break pauses genuinely on waveform output; engine remains non-neural desktop concatenative voice."
+      },
+      "kokoro_installed": false,
+      "kokoro_supports_vietnamese": false,
+      "macos_say_en_available": false,
+      "macos_say_vi_available": false,
+      "windows_sapi_en_available": true,
+      "windows_sapi_voices": {
+        "en-us": [
+          "Microsoft David Desktop",
+          "Microsoft Zira Desktop"
+        ],
+        "en": [
+          "Microsoft David Desktop",
+          "Microsoft Zira Desktop"
+        ]
+      },
+      "parakeet_asr_installed": false
+    },
+    "native_4k_capabilities": {
+      "upstream_baseline_note": "Upstream quick skills and stick-figure render 1080x1920@30 via HyperFrames/Canvas; upstream zach-d-films renders 720x1280@30 and upscales to 1080x1920.",
+      "director_adapter_native_4k": {
+        "stick-figure": "native_2160x3840_vector_canvas2d",
+        "graph": "native_2160x3840_svg_dom_dpr2",
+        "minimalistic-graphics": "native_2160x3840_svg_dom_dpr2",
+        "map-route": "native_2160x3840_webgl_dpr2_or_labeled_upscale",
+        "breakdown": "native_2160x3840_webgl_dpr2_or_labeled_upscale",
+        "zach-d-films": "native_2160x3840_webgl_or_labeled_lanczos_upscale"
+      },
+      "selected_skill": "zach-d-films"
+    },
+    "notes": [
+      "Windows detected: WSL2 or native FFmpeg + Node + Playwright Chromium toolchain required.",
+      "Conservative parallel worker cap set to 4 (CPU cores=12, free disk=49.64 GiB).",
+      "Windows System.Speech SAPI verified installed desktop voice 'Microsoft David Desktop' for 'en' (non-neural concatenative backend; available=['Microsoft David Desktop', 'Microsoft Zira Desktop']).",
+      "QA audio library not present locally; native procedural audio engine active."
+    ],
+    "errors": [],
+    "qa_audio_root": null,
+    "qa_audio_status": "QA_LIBRARY_UNAVAILABLE"
+  }
+}

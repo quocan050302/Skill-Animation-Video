@@ -1,0 +1,73 @@
+{
+  "schema_version": "sd-historical-claims-1",
+  "topic": "The Day London Disappeared into Smog",
+  "claims": [
+    {
+      "claim_id": "claim_dates_dec5_9_1952",
+      "text": "The Great Smog blanketed London from December 5 to December 9, 1952 (5 days).",
+      "display_token": "DEC 5-9, 1952",
+      "canonical_value": "1952",
+      "secondary_value": "5-9",
+      "unit": "year_dates",
+      "uncertainty": "documented",
+      "source_note": "UK Met Office Great Smog 1952 archive"
+    },
+    {
+      "claim_id": "claim_coal_sulfur_smoke",
+      "text": "Residential coal fireplaces and coal power plants released dense soot and sulfur dioxide into humid winter air.",
+      "display_token": "COAL & SULFUR SMOKE",
+      "canonical_value": "sulfur",
+      "unit": "pollutant",
+      "uncertainty": "documented",
+      "source_note": "London Museum 1952 coal smoke overview"
+    },
+    {
+      "claim_id": "claim_temperature_inversion_1952",
+      "text": "A winter temperature inversion placed warmer air above cooler ground air, trapping emissions near the street.",
+      "display_token": "WARM AIR LID",
+      "canonical_value": "inversion",
+      "unit": "phenomenon",
+      "uncertainty": "documented",
+      "source_note": "UK Met Office temperature inversion explanation"
+    },
+    {
+      "claim_id": "claim_zero_visibility_Dec1952",
+      "text": "Dense smog cut street visibility so buses crawled behind conductors walking ahead with lanterns.",
+      "display_token": "NEAR-ZERO VISIBILITY",
+      "canonical_value": "visibility",
+      "unit": "qualitative_report",
+      "uncertainty": "documented",
+      "source_note": "London Transport Dec 1952 fog reports"
+    },
+    {
+      "claim_id": "claim_respiratory_impact",
+      "text": "Acidic sulfur and soot droplets irritated airways across densely populated districts.",
+      "display_token": "ACIDIC FOG DROPLETS",
+      "canonical_value": "acidic",
+      "unit": "health_impact",
+      "uncertainty": "documented",
+      "source_note": "UK Met Office health impact note"
+    },
+    {
+      "claim_id": "claim_excess_deaths_est_4000",
+      "text": "The December 1952 fog caused an estimated 4,000 excess deaths that month.",
+      "display_token": "~4,000 DEATHS EST.",
+      "canonical_value": "4,000",
+      "numeric_value": 4000,
+      "secondary_value": "4",
+      "unit": "estimated_excess_deaths",
+      "uncertainty": "estimated",
+      "source_note": "London City Hall Great Smog 1952 archive"
+    },
+    {
+      "claim_id": "claim_clean_air_act_1956",
+      "text": "Four years later, the Clean Air Act of 1956 initiated a gradual transition toward smokeless heating.",
+      "display_token": "CLEAN AIR ACT 1956",
+      "canonical_value": "1956",
+      "numeric_value": 1956,
+      "unit": "year",
+      "uncertainty": "documented",
+      "source_note": "UK Clean Air Act 1956 record"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+TASK: retention_audio_sync
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_retention_audio_sync -v
+STATUS: PASS (exit=0, elapsed=10.52s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_boston_1919_bespoke_sfx_sync_and_solemn_aftermath (tests.test_retention_audio_sync.TestRetentionAudioSync.test_boston_1919_bespoke_sfx_sync_and_solemn_aftermath) ... ok
+test_n14_non_zdf_engines_strictly_isolated_without_overlay_controller (tests.test_retention_audio_sync.TestRetentionAudioSync.test_n14_non_zdf_engines_strictly_isolated_without_overlay_controller) ... ok
+test_overlay_sfx_sync_and_negative_traps_n10_n11_n12 (tests.test_retention_audio_sync.TestRetentionAudioSync.test_overlay_sfx_sync_and_negative_traps_n10_n11_n12) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 4.828s
+
+OK
+

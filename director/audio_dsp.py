@@ -526,7 +526,7 @@ def _wind_bridge_gust(rng: np.random.Generator, dur: float = 0.68) -> np.ndarray
     u = np.minimum(1.0, t / dur)
     env = (np.sin(np.pi * u) ** 1.05) * 0.85
     gust = _bp(rng.standard_normal(n), 115.0, 780.0) * 0.58
-    whistle = _bp(rng.standard_normal(n), 320.0 + 90.0 * u, 680.0 + 140.0 * u) * 0.24
+    whistle = _bp(rng.standard_normal(n), 340.0, 760.0) * (0.20 + 0.08 * np.sin(np.pi * u))
     return _lp((gust + whistle) * env, 1300.0)
 
 

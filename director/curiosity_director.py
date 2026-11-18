@@ -62,6 +62,11 @@ def find_curiosity_beats(
         hook_target = hook_target or "rooftop_sway_apex"
         hook_secondary = "static_skyline_ref"
         hook_ptr_shape = "sway_bracket"
+    elif "temperature inversion" in full_low or "great smog" in full_low or ("smog" in full_low and "clean air" in full_low):
+        hook_text = "NOON LOOKED / LIKE MIDNIGHT!"
+        hook_target = hook_target or "streetlamp_halo_visibility"
+        hook_secondary = "lamppost_column_ref"
+        hook_ptr_shape = "impact_arrow"
     elif "boston" in full_low and "molasses" in full_low:
         hook_text = "WATCH THE / ALLEYWALL!" if "alley" in f_low else "SOMETHING / SHOOK BOSTON"
         hook_target = hook_target or "street_hero_look"
@@ -125,6 +130,10 @@ def find_curiosity_beats(
                 tw_label = "OPPOSITE / PHASE SWING!"
                 tw_secondary = "counterphase_tower_frame"
                 tw_ptr = "torsion_bracket"
+            elif "inversion" in tw_low or "thermal" in tw_act or "warm air" in tw_low:
+                tw_label = "TRAPPED BY / WARM AIR!"
+                tw_secondary = "st_pauls_dome_and_horizon_ref"
+                tw_ptr = "impact_arrow"
             elif "gave way" in tw_low or "rupture" in tw_act:
                 tw_label = "THEN THE / SEAM BLEW"
             else:
@@ -207,6 +216,13 @@ def plan_attention_pointer(
         "damper_pendulum_sphere": ["tmd_sphere", "hydraulic_pistons"],
         "counterphase_tower_frame": ["penthouse_frame", "opposing_force_bars"],
         "damped_tower_top": ["damped_tower", "undamped_tower"],
+        "streetlamp_halo_visibility": ["streetlamp_glow_halo", "vanishing_facade_massing"],
+        "chimney_flue_combustion": ["coal_firebox_cutaway", "sulfur_soot_plume_columns"],
+        "inversion_thermal_boundary": ["warm_inversion_air_band", "deflected_smog_plume"],
+        "bus_headlight_cone": ["double_decker_headlight_cone", "pedestrian_guide_lantern"],
+        "pedestrian_respiratory_brace": ["pedestrian_shielding_arm", "smog_aerosol_cloud"],
+        "pedestrian_respiratory_stance_zone": ["pedestrian_shielding_arm", "smog_aerosol_cloud"],
+        "smokeless_hearth_transition": ["clean_air_dome_silhouette", "smokeless_hearth_flue"],
     }
     target_meshes = mesh_map.get(anchor_id, [anchor_id])
     pointer_reason = str(
@@ -216,7 +232,9 @@ def plan_attention_pointer(
             if anchor_id in ("bridge_midspan_twist", "deck_twist_edge_l")
             else ("Highlights lateral roof sway relative to fixed vertical reference"
                   if anchor_id in ("rooftop_sway_apex", "plumb_drift_tip")
-                  else f"Draws viewer eye directly to physical feature `{anchor_id}`")
+                  else ("Highlights warm air inversion lid trapping rising sulfur/coal plumes over ground cold air"
+                        if anchor_id == "inversion_thermal_boundary"
+                        else f"Draws viewer eye directly to physical feature `{anchor_id}`"))
         )
     )
 

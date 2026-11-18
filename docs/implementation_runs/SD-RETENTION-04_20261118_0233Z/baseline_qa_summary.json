@@ -1,0 +1,219 @@
+{
+  "schema_version": "sd-retention04-baseline-qa-1",
+  "r2_summary_snapshot": {
+    "schema_version": "sd-r2-qa-summary-1",
+    "run_id": "SD-RETENTION-03_R2_20261117_1135Z",
+    "branch": "feat/sd-retention-03-r2-visual-quality",
+    "validation_gates": {
+      "async_dag_full": {
+        "command": "python tools/run_validation_async.py --mode full --workers 2 --log-dir docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/async_dag",
+        "overall_status": "PASS",
+        "discovered_modules_count": 25,
+        "covered_modules_count": 25,
+        "missing_modules": [],
+        "total_elapsed_sec": 497.38
+      },
+      "canonical_unittest_discover": {
+        "command": "python -m unittest discover -s tests -v",
+        "status": "OK",
+        "tests_run": 79,
+        "errors": 0,
+        "failures": 0,
+        "elapsed_sec": 613.33,
+        "log_path": "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/canonical_unittest_discover.log"
+      }
+    },
+    "rendered_proofs": {
+      "skyscraper_showcase": {
+        "host": "macOS 14.4.1 (checkpoint b393789)",
+        "mp4_storage": "LOCAL_ONLY_ON_HOST",
+        "overall_status": "PASS",
+        "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+        "native_4k": true,
+        "resolution": [
+          2160,
+          3840
+        ],
+        "duration_sec": 38.3,
+        "high_freq_edge_ratio_vs_1080p_bilinear": 1.1993,
+        "integrated_lufs": -14.1,
+        "true_peak_dbtp": -2.5,
+        "pointer_tracking": {
+          "status": "PASS",
+          "checked_settled_tips": 11,
+          "worst_tip_target_error_px": 13.29
+        },
+        "cinematic_composition": {
+          "status": "PASS",
+          "framings": 9,
+          "angles": 9,
+          "moves": 9,
+          "issues": []
+        },
+        "decoded_visual_quality": {
+          "status": "PASS",
+          "warnings": [],
+          "issues": []
+        },
+        "ab_vo_sha256_parity": true
+      },
+      "tacoma_1940_r2_proof": {
+        "host": "Windows (runs/sd_retention03_r2_tacoma_proof_20261118)",
+        "mp4_storage": "LOCAL_ONLY_GITIGNORED",
+        "overall_status": "WARN",
+        "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+        "native_4k": false,
+        "declaration": "upscaled_lanczos_from_1080x1920",
+        "duration_sec": 43.333,
+        "integrated_lufs": -15.3,
+        "true_peak_dbtp": -1.8,
+        "pointer_tracking": {
+          "status": "PASS",
+          "checked_settled_tips": 13,
+          "skips": 0,
+          "worst_tip_target_error_px": 13.26
+        },
+        "cinematic_composition": {
+          "status": "PASS",
+          "framings": 11,
+          "angles": 11,
+          "moves": 11,
+          "issues": []
+        },
+        "world_state_telemetry": {
+          "status": "PASS",
+          "max_vertex_disp_m": 2.73,
+          "max_deck_roll_span_rad": 0.3247,
+          "collapse_onset_observed_sec": 33.7335,
+          "cables_attached_all": true,
+          "nan_detected": false
+        },
+        "character_grounding": {
+          "status": "PASS",
+          "checked_samples": 8,
+          "worst_penetration_m": 0.0,
+          "worst_stance_slide_m": 0.0
+        },
+        "decoded_visual_quality": {
+          "status": "WARN",
+          "warnings": [
+            "Shot shot_06 low figure-ground edge separation (6.6 < 12.0)"
+          ],
+          "issues": []
+        }
+      },
+      "boston_1919_r2_proof": {
+        "host": "Windows (runs/sd_retention03_r2_boston_proof_20261118)",
+        "mp4_storage": "LOCAL_ONLY_GITIGNORED",
+        "overall_status": "WARN",
+        "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+        "native_4k": false,
+        "declaration": "upscaled_lanczos_from_1080x1920",
+        "duration_sec": 31.633,
+        "integrated_lufs": -15.4,
+        "true_peak_dbtp": -2.3,
+        "pointer_tracking": {
+          "status": "PASS",
+          "checked_settled_tips": 9,
+          "skips": 2,
+          "worst_tip_target_error_px": 13.52
+        },
+        "cinematic_composition": {
+          "status": "PASS",
+          "framings": 10,
+          "angles": 10,
+          "moves": 10,
+          "issues": []
+        },
+        "world_state_telemetry": {
+          "status": "PASS",
+          "max_vertex_disp_m": 2.0482,
+          "cables_attached_all": true,
+          "nan_detected": false
+        },
+        "character_grounding": {
+          "status": "PASS",
+          "checked_samples": 24,
+          "worst_penetration_m": 0.0143,
+          "worst_stance_slide_m": 0.001
+        },
+        "decoded_visual_quality": {
+          "status": "WARN",
+          "warnings": [
+            "Shot shot_03 low figure-ground edge separation (11.7 < 12.0)",
+            "Shot shot_07 low figure-ground edge separation (6.5 < 12.0)"
+          ],
+          "issues": []
+        }
+      }
+    },
+    "honest_subjective_status": {
+      "subjective_visual_review": "NOT_VERIFIED",
+      "subjective_visual_quality": "NOT_VERIFIED",
+      "subjective_editorial_listening": "NOT_VERIFIED",
+      "subjective_voice_quality_status": "NOT_VERIFIED",
+      "subjective_preference_status": "NOT_VERIFIED",
+      "viewer_retention_status": "NOT_VERIFIED",
+      "neural_prosody": false,
+      "word_anchor_confidence": "ESTIMATED"
+    }
+  },
+  "local_r2_proofs": {
+    "sd_retention03_r2_tacoma_proof_20261118": {
+      "overall_status": "WARN",
+      "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+      "checks_status": {
+        "style_lock_provenance": "PASS",
+        "preview_1080p_stream": "PASS",
+        "final_4k_stream": "PASS",
+        "truthful_4k_declaration": "PASS",
+        "decoded_frames_and_cuts": "PASS",
+        "audio_levels_and_ducking": "PASS",
+        "scene_diversity_and_retention": "PASS",
+        "camera_execution": "PASS",
+        "editorial_retention_finish": "PASS",
+        "visual_storytelling": "PASS",
+        "pointer_tracking": "PASS",
+        "physical_and_character_telemetry": "PASS",
+        "decoded_visual_quality": "WARN",
+        "cinematic_composition": "PASS",
+        "factual_and_licensing_integrity": "PASS"
+      },
+      "decoded_visual_quality_warnings": [
+        "Shot shot_06 low figure-ground edge separation (6.6 < 12.0)"
+      ]
+    },
+    "sd_retention03_r2_boston_proof_20261118": {
+      "overall_status": "WARN",
+      "release_status": "TECHNICAL_ACCEPTANCE_PASS",
+      "checks_status": {
+        "style_lock_provenance": "PASS",
+        "preview_1080p_stream": "PASS",
+        "final_4k_stream": "PASS",
+        "truthful_4k_declaration": "PASS",
+        "decoded_frames_and_cuts": "PASS",
+        "audio_levels_and_ducking": "PASS",
+        "scene_diversity_and_retention": "PASS",
+        "camera_execution": "PASS",
+        "editorial_retention_finish": "PASS",
+        "visual_storytelling": "PASS",
+        "pointer_tracking": "PASS",
+        "physical_and_character_telemetry": "PASS",
+        "decoded_visual_quality": "WARN",
+        "cinematic_composition": "PASS",
+        "factual_and_licensing_integrity": "PASS"
+      },
+      "decoded_visual_quality_warnings": [
+        "Shot shot_03 low figure-ground edge separation (11.7 < 12.0)",
+        "Shot shot_07 low figure-ground edge separation (6.5 < 12.0)"
+      ]
+    }
+  },
+  "honest_gaps_before_sd_retention_04": [
+    "No explicit CausalEvent graph / VisualEvidenceContract linking cause -> physical proof -> visible consequence -> next event",
+    "No Q1-Q5 CameraIntentContract explaining why the camera sits or moves relative to physical action or counterfactual loss",
+    "Overlays carry role & target_semantic_id but lack narrative_claim_id, semantic_region_of_change, why_this_overlay, and proof_target_id",
+    "Decoded visual QA checks figure-ground edge separation and pointer tip accuracy, yet lacks causal claim coverage, before/action/after state delta verification, and silent comprehension proxies",
+    "Host voice backend is Windows SAPI5 concatenative (Microsoft David Desktop, neural_prosody=false, word_anchor_confidence=ESTIMATED)"
+  ]
+}

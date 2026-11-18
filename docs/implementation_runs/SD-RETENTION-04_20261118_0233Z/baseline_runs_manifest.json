@@ -1,0 +1,183 @@
+{
+  "schema_version": "sd-retention04-baseline-runs-1",
+  "runs": {
+    "sd_retention01_airplane_window_20261117_1150Z": {
+      "local_present": false,
+      "storage_status": "NO_LOCAL_MP4",
+      "files": []
+    },
+    "sd_retention02_boston_molasses_20261117_0725Z": {
+      "local_present": false,
+      "storage_status": "NO_LOCAL_MP4",
+      "files": []
+    },
+    "sd_retention03_boston_repair_proof_20261117_1036Z": {
+      "local_present": true,
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "files": [
+        {
+          "path": "preview_1080.mp4",
+          "size_bytes": 13499712,
+          "sha256": "d289d9dd56045e243bed9548e506a0e3c9052bc0b00c3286f5f1b51b8bbf09b2"
+        },
+        {
+          "path": "final_4k.mp4",
+          "size_bytes": 35431309,
+          "sha256": "367c20c937ffa847a58778674ecd6813e4adb450a221ca98e2215290e3264a30"
+        },
+        {
+          "path": "qc_report.json",
+          "size_bytes": 15901,
+          "sha256": "5fec96d6e357f53b95a5e29ec84c7dcffe6154388c1fb4f2f807d4f9b9654b3d"
+        },
+        {
+          "path": "storyboard.json",
+          "size_bytes": 101899,
+          "sha256": "314c0a3bcc378557f059fb531cff0f93a9436b004c111997756d61d37a3ad6e7"
+        },
+        {
+          "path": "editorial_timeline.json",
+          "size_bytes": 40566,
+          "sha256": "cdd7e3294a360f8c05e44cd9924e3ff64fc3c5fb878dbb33b53470728929e27d"
+        },
+        {
+          "path": "audio/vo.wav",
+          "size_bytes": 2461098,
+          "sha256": "2de4faea191bb1e69037b5476ecfe2040ecce1246bbca45bc8cba785898a0b72"
+        }
+      ]
+    },
+    "sd_retention03_r2_boston_proof_20261118": {
+      "local_present": true,
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "files": [
+        {
+          "path": "preview_1080.mp4",
+          "size_bytes": 15150628,
+          "sha256": "1570b603c81e95920e2c1b6f38edfcec3a199261aee4b2fa2907463400dd8672"
+        },
+        {
+          "path": "final_4k.mp4",
+          "size_bytes": 39005392,
+          "sha256": "8d08881e50ded3aa00c5c780d9baf8c5c7dabaf6b407d5377c52ff6017c170fb"
+        },
+        {
+          "path": "qc_report.json",
+          "size_bytes": 29675,
+          "sha256": "b28137ca7237e98b0aea7b66d9ca57eedaba65de1b52caae43f6ec8378959c77"
+        },
+        {
+          "path": "storyboard.json",
+          "size_bytes": 122419,
+          "sha256": "ba271d7a34f7a8b4e7a76b2b0a67d1bc55721d63d88943ae97e4e7ec3a8c0691"
+        },
+        {
+          "path": "editorial_timeline.json",
+          "size_bytes": 43769,
+          "sha256": "220dae708be4ea976df4cf9b1bceb5b4d95368d136527d980ad2a774cbbfd46c"
+        },
+        {
+          "path": "decoded_visual_quality_report.json",
+          "size_bytes": 1944,
+          "sha256": "d786f027448a01fa3a38ce1072a3f441da71bc710916faa99ed1c84aab49995e"
+        },
+        {
+          "path": "audio/vo.wav",
+          "size_bytes": 2724194,
+          "sha256": "83df08eb2f9da6863d36ed19718e15e8cd87b0053b68546a98fa93ff0c314bdb"
+        }
+      ]
+    },
+    "sd_retention03_r2_tacoma_proof_20261118": {
+      "local_present": true,
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "files": [
+        {
+          "path": "preview_1080.mp4",
+          "size_bytes": 24172157,
+          "sha256": "c8c95aade2aa030c8dd357b745204fd09b00fcb26739cde70ead554529377b11"
+        },
+        {
+          "path": "final_4k.mp4",
+          "size_bytes": 65639928,
+          "sha256": "17350304a8fede5ec10409ab154c99c5128f053590ff6ca73cb4bf4928261476"
+        },
+        {
+          "path": "qc_report.json",
+          "size_bytes": 32944,
+          "sha256": "e8fafc7d410965ef520620ea30e882bc9b197ece3bd25004d8601e846e306cc7"
+        },
+        {
+          "path": "storyboard.json",
+          "size_bytes": 130777,
+          "sha256": "7de622ab49c13093c3396ae18b3b7a3b9c15d37a2fac7f9ec6b1624fc44c74db"
+        },
+        {
+          "path": "editorial_timeline.json",
+          "size_bytes": 60788,
+          "sha256": "cdef6faba0e1d5238e88d1ee7b234a50f82c4d87833165d95653756d5121ef35"
+        },
+        {
+          "path": "decoded_visual_quality_report.json",
+          "size_bytes": 1876,
+          "sha256": "1e78e28655a50e3c4b9ed7610df0d5efc52bd1905254d25eb7852c6ad360c3e6"
+        },
+        {
+          "path": "audio/vo.wav",
+          "size_bytes": 3756750,
+          "sha256": "f4d1139ca040f20b88857d3e543cb5c8e1509aec446493608b68f5c17cf94704"
+        }
+      ]
+    },
+    "sd_retention03_tacoma_bridge_20261117_1005Z": {
+      "local_present": false,
+      "storage_status": "NO_LOCAL_MP4",
+      "files": []
+    },
+    "zdf_motion01_elevator_20261117_0131Z": {
+      "local_present": true,
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "files": [
+        {
+          "path": "preview_1080.mp4",
+          "size_bytes": 11735524,
+          "sha256": "0679b8f2ce311e65e8d07f2f488c42ddb0a9b19771c07f57a92b4e945b7c1293"
+        },
+        {
+          "path": "final_4k.mp4",
+          "size_bytes": 38582706,
+          "sha256": "9b666523265939ea1f77c7ccef09fc365cf168c3811c746c193ffb3d45f516e9"
+        },
+        {
+          "path": "qc_report.json",
+          "size_bytes": 5034,
+          "sha256": "f7b30e985a7be92fc779455105e747b69baf030991b6769af67e9311697ac2d0"
+        },
+        {
+          "path": "storyboard.json",
+          "size_bytes": 66566,
+          "sha256": "d0304d1a7b6e3e8e13161d01cdb3198080a8814efc56a50cc1f4214959e9a63c"
+        },
+        {
+          "path": "audio/vo.wav",
+          "size_bytes": 2720776,
+          "sha256": "98fff5adcd190100f2f4226f669cc9860e3d2ecf0a92a1136a2289c3d78fbe1e"
+        }
+      ]
+    }
+  },
+  "doc_implementation_runs": [
+    "SD-RETENTION-01_20261117_1121Z",
+    "SD-RETENTION-02_20261117_0641Z",
+    "SD-RETENTION-03_R2_20261117_1135Z",
+    "SD-RETENTION-03_UNIFIED_20261117_0915Z",
+    "SD-RETENTION-04_20261118_0233Z",
+    "SD-VISUAL-01_20261116_1526Z",
+    "ZDF-MOTION-01_20261117_0131Z"
+  ],
+  "remote_macos_proof_note": {
+    "run": "runs/sd_retention03_r2_skyscraper_20261117",
+    "status": "UNAVAILABLE_LOCAL_MP4",
+    "evidence_present_in_repo": "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/"
+  }
+}

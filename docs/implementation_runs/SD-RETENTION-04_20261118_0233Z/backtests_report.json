@@ -1,0 +1,62 @@
+{
+  "schema_version": "sd-retention04-backtests-1",
+  "tacoma_1940_r2_proof": {
+    "run_dir": "runs/sd_retention03_r2_tacoma_proof_20261118",
+    "shots_count": 11,
+    "distinct_proof_types": [
+      "displacement_relative_to_fixed_reference",
+      "human_reaction_consequence",
+      "material_deformation",
+      "pressure_flow_difference",
+      "state_change_before_after"
+    ],
+    "world_state_conservation": "PASS",
+    "camera_intent_mean_info_gain": 0.853,
+    "semantic_qa_status": "WARN",
+    "checks_summary": {
+      "visual_claim_coverage": "PASS",
+      "relative_motion_evidence": "WARN",
+      "claim_pointer_semantics": "PASS",
+      "causal_transition_visibility": "PASS",
+      "silent_comprehension_proxy": "PASS"
+    },
+    "blocking_issues": [],
+    "advisory_warnings": [
+      "Advisory: Shot shot_00 claims relative displacement without prominent `reference_fixed` pixels in matte"
+    ]
+  },
+  "boston_1919_r2_proof": {
+    "run_dir": "runs/sd_retention03_r2_boston_proof_20261118",
+    "shots_count": 10,
+    "distinct_proof_types": [
+      "contact_transfer",
+      "human_reaction_consequence",
+      "internal_mechanism_cutaway",
+      "material_deformation",
+      "particle_path_propagation",
+      "state_change_before_after"
+    ],
+    "world_state_conservation": "PASS",
+    "camera_intent_mean_info_gain": 0.87,
+    "semantic_qa_status": "FAIL",
+    "checks_summary": {
+      "visual_claim_coverage": "FAIL",
+      "relative_motion_evidence": "FAIL",
+      "claim_pointer_semantics": "PASS",
+      "causal_transition_visibility": "PASS",
+      "silent_comprehension_proxy": "FAIL"
+    },
+    "blocking_issues": [
+      "N02: Claim cev_001 requires matte role 'causal_feature' >= 0.004, got 0.0000 at t=5.79s",
+      "N02: Claim cev_004 requires matte role 'causal_feature' >= 0.004, got 0.0000 at t=15.21s",
+      "N04/N06: Shot shot_01 claims 'particle_path_propagation' yet physical telemetry reported negligible state change (vdisp=0.0000m)",
+      "N04/N06: Shot shot_04 claims 'material_deformation' yet physical telemetry reported negligible state change (vdisp=0.0000m)",
+      "Supported causal visual claim coverage 0.80 < 0.85"
+    ],
+    "advisory_warnings": []
+  },
+  "skyscraper_r2_proof_macos": {
+    "status": "UNAVAILABLE_LOCAL_MP4",
+    "note": "Skyscraper R2 MP4 stayed LOCAL_ONLY_ON_HOST (macOS); curated QA contact sheets verified in docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/"
+  }
+}

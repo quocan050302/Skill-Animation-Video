@@ -911,7 +911,7 @@ def _classify_shot_policy_tier(shot: Dict[str, Any]) -> str:
         return "aftermath_hold"
     if "establish" in purpose or "wide" in purpose or "establish" in gen or "overview" in gen or framing.startswith(("ws", "vws")):
         return "establishing_wide"
-    if "human" in purpose or "onlooker" in act or "onlooker" in gen:
+    if "human" in purpose or "onlooker" in act or "onlooker" in gen or "pedestrian" in act or "pedestrian" in gen:
         return "human_reaction"
     if "cutaway" in purpose or "macro" in purpose or "girder" in gen or "cutaway" in gen:
         return "explanatory_macro"

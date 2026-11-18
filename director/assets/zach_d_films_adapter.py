@@ -26,6 +26,7 @@ from .physical_motion_primitives import PHYSICAL_MOTION_PRIMITIVES_JS
 from .character_performance import CHARACTER_PERFORMANCE_JS
 from .zdf_tacoma_bridge_scenes import TACOMA_BRIDGE_SCENES_JS
 from .zdf_skyscraper_scenes import SKYSCRAPER_SCENES_JS
+from .zdf_london_smog_scenes import LONDON_SMOG_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -586,6 +587,10 @@ export function makeSmartphoneRig({ sent = false, scale = 1.0 } = {}) {
   tapRing.position.set(0, -0.11, 0.028);
   frontGlass.add(tapRing);
 
+  internals.traverse((o) => { if (o && o.userData) o.userData.semanticRole = 'causal_feature'; });
+  screen.userData.semanticRole = 'causal_feature';
+  tapRing.userData.semanticRole = 'causal_feature';
+
   g.scale.setScalar(scale);
   g.frontGlass = frontGlass;
   g.internals = internals;
@@ -637,6 +642,9 @@ export function makeRadioTowerRig() {
   }
   g.rfRings = rfRings;
   g.beacon = beacon;
+  hilltop.userData.semanticRole = 'reference_fixed';
+  beacon.userData.semanticRole = 'causal_feature';
+  rfRings.forEach((rm) => { rm.userData.semanticRole = 'causal_feature'; });
   return shadow(g);
 }
 
@@ -688,6 +696,8 @@ export function makeSubseaCableRig(seed = 23) {
   }
   g.cable = cable;
   g.pulses = pulses;
+  seabed.userData.semanticRole = 'reference_fixed';
+  cable.userData.semanticRole = 'causal_feature';
   return shadow(g);
 }
 
@@ -725,6 +735,9 @@ export function makeDatacenterRackBank(seed = 41) {
     packets.push(sp);
   }
   g.packets = packets;
+  floor.userData.semanticRole = 'environment';
+  trunk.userData.semanticRole = 'causal_feature';
+  packets.forEach((sp) => { sp.userData.semanticRole = 'causal_feature'; });
   return shadow(g);
 }
 
@@ -760,6 +773,9 @@ export function makePowerTurbineRig() {
   g.add(coilGlow);
   g.rotor = rotor;
   g.coilGlow = coilGlow;
+  plinth.userData.semanticRole = 'reference_fixed';
+  rotor.traverse((o) => { if (o && o.userData) o.userData.semanticRole = 'causal_feature'; });
+  coilGlow.userData.semanticRole = 'causal_feature';
   return shadow(g);
 }
 
@@ -801,6 +817,9 @@ export function makeCosmicGenesisRig(seed = 88) {
     g.add(s);
   }
   g.star = star; g.ring1 = ring1; g.ring2 = ring2; g.orbiters = orbiters;
+  star.userData.semanticRole = 'causal_feature';
+  ring1.userData.semanticRole = 'causal_feature';
+  orbiters.forEach((m) => { m.userData.semanticRole = 'causal_feature'; });
   return g;
 }
 
@@ -854,6 +873,7 @@ export function makeAnatomicalCutawayRig(isBrain = true) {
   root.cutaway = cutaway;
   root.lobes = lobes;
   root.representation = 'schematic/stylized';
+  lobes.forEach((l) => { l.userData.semanticRole = 'causal_feature'; });
   return root;
 }
 
@@ -882,6 +902,8 @@ export function makeVaultGearStage() {
     gears.push(gear);
   }
   g.gears = gears;
+  base.userData.semanticRole = 'reference_fixed';
+  gears.forEach((gr) => { gr.traverse((o) => { if (o && o.userData) o.userData.semanticRole = 'causal_feature'; }); });
   return shadow(g);
 }
 """
@@ -935,6 +957,9 @@ const SKY_THEMES = {
   tacoma_aftermath: { top: 0x354354, mid: 0x64788c, horizon: 0xa4b3c0, floorC: 0x283846, sun: 1.75, hemi: 0.82 },
   city_crisp_day: { top: 0x1e4e8c, mid: 0x4b83c3, horizon: 0xa8c8ea, floorC: 0x263244, sun: 2.25, hemi: 0.85 },
   city_dusk: { top: 0x131b3a, mid: 0x38335e, horizon: 0xb86f56, floorC: 0x1e2538, sun: 1.80, hemi: 0.65 },
+  london_smog_ochre: { top: 0x29251e, mid: 0x574c34, horizon: 0x8a7748, floorC: 0x262420, sun: 1.85, hemi: 0.72 },
+  london_inversion_twilight: { top: 0x1e293b, mid: 0x475569, horizon: 0xb45309, floorC: 0x1c1917, sun: 2.05, hemi: 0.78 },
+  london_clean_recovery: { top: 0x1d4ed8, mid: 0x60a5fa, horizon: 0xbae6fd, floorC: 0x334155, sun: 2.30, hemi: 0.86 },
 };
 
 function skyMaterial(theme = 'day') {
@@ -1244,6 +1269,9 @@ window.renderAtTime = (rawT) => {
 
 const MATTE_HEX = {
   causal_feature: 0x00ff00,
+  cause_source: 0x00e060,
+  effect_result: 0x20ff20,
+  reference_fixed: 0xe00050,
   character: 0x0000ff,
   subject: 0xff0000,
   environment: 0x282828,
@@ -1300,6 +1328,7 @@ window.renderMatteAtTime = (rawT) => {
   const saved = [];
   const tempMats = [];
   const prevBg = scene.background;
+  const prevFog = scene.fog;
   const prevSkyVis = scene.userData && scene.userData.sky ? scene.userData.sky.visible : true;
   const prevTone = renderer.toneMapping;
   const prevOvDisp = overlayCtrl && overlayCtrl.svg ? overlayCtrl.svg.style.display : '';
@@ -1313,11 +1342,17 @@ window.renderMatteAtTime = (rawT) => {
     if (fadeEl) fadeEl.style.display = 'none';
     if (scene.userData && scene.userData.sky) scene.userData.sky.visible = false;
     scene.background = new THREE.Color(0x000000);
+    scene.fog = null;
     renderer.toneMapping = THREE.NoToneMapping;
 
     scene.traverse((obj) => {
       if (!(obj.isMesh || obj.isInstancedMesh)) return;
       if (scene.userData && scene.userData.sky === obj) return;
+      if (obj.userData && obj.userData.matteSkip) {
+        saved.push([obj, obj.material, obj.visible]);
+        obj.visible = false;
+        return;
+      }
       if (obj.material && obj.material.isShadowMaterial) {
         saved.push([obj, obj.material, obj.visible]);
         obj.visible = false;
@@ -1332,6 +1367,7 @@ window.renderMatteAtTime = (rawT) => {
         color: hex,
         side: side ?? THREE.FrontSide,
         clippingPlanes: clipPlanes || null,
+        fog: false,
       });
       saved.push([obj, origMat, obj.visible]);
       tempMats.push(mMat);
@@ -1351,6 +1387,7 @@ window.renderMatteAtTime = (rawT) => {
     }
     for (const tm of tempMats) tm.dispose();
     scene.background = prevBg;
+    scene.fog = prevFog;
     if (scene.userData && scene.userData.sky) scene.userData.sky.visible = prevSkyVis;
     renderer.toneMapping = prevTone;
     if (overlayCtrl && overlayCtrl.svg) overlayCtrl.svg.style.display = prevOvDisp;
@@ -1628,6 +1665,190 @@ def _build_non_roman_scene_shot_code(
         "target_radius_m": 0.028,
         "button_depress_m": 0.008,
     })
+
+    if gen.startswith("zach3d:london_"):
+        if gen == "zach3d:london_fog_street_hook_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'london_smog_ochre', sunDir: [-3, 7, 5] }});
+  scene.fog = new THREE.FogExp2(0x736647, 0.045);
+  const rig = makeLondonStreetFogRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 44);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.34, exposure: 1.06, camTel, anchors,
+        physicalMotion: res.physicalMotion,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'trafalgar_midday_blackout_1952',
+          physicalAction: 'midday_street_visibility_blackout',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_coal_combustion_cutaway_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'london_inversion_twilight', sunDir: [-3, 6, 4] }});
+  const rig = makeCoalCombustionCutawayRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 40);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.36, exposure: 1.06, camTel, anchors,
+        cutaway: res.cutaway,
+        physicalMotion: res.physicalMotion,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'coal_hearth_and_chimney_cutaway',
+          physicalAction: 'coal_smoke_and_sulfur_emission',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_atmospheric_inversion_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'london_inversion_twilight', sunDir: [-3, 8, 5] }});
+  const rig = makeLondonAtmosphericInversionRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 47);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.32, exposure: 1.06, camTel, anchors,
+        physicalMotion: res.physicalMotion,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'city_skyline_inversion_cross_section',
+          physicalAction: 'thermal_inversion_lid_trapping',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_bus_visibility_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.0, skyTheme: 'london_smog_ochre', sunDir: [-3, 6, 5] }});
+  scene.fog = new THREE.FogExp2(0x7a6c49, 0.115);
+  const rig = makeLondonBusVisibilityRig(makeHuman, {{ charSpec: {char_spec_json}, dur: {dur} }});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 42);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.36, exposure: 1.08, camTel, anchors,
+        physicalMotion: res.physicalMotion,
+        characterPerformance: res.characterPerformance,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'london_intersection_zero_visibility',
+          physicalAction: 'vehicle_crawls_behind_lantern_guide',
+          actorCount: 1,
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_pedestrian_reaction_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'london_smog_ochre', sunDir: [-3, 6, 4] }});
+  scene.fog = new THREE.FogExp2(0x6e6243, 0.085);
+  const rig = makeLondonPedestrianReactionRig(makeHuman, {{ charSpec: {char_spec_json}, dur: {dur} }});
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 38);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.32, exposure: 1.08, camTel, anchors,
+        physicalMotion: res.physicalMotion,
+        characterPerformance: res.characterPerformance,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'city_curbside_respiratory_impact',
+          physicalAction: 'pedestrian_cough_and_airway_strain',
+          actorCount: 1,
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'london_clean_recovery', sunDir: [-4, 9, 6] }});
+  scene.fog = new THREE.FogExp2(0x93c5fd, 0.02);
+  const rig = makeLondonAftermathRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 43);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.24, exposure: 1.04, camTel, anchors,
+        physicalMotion: res.physicalMotion,
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'city_clean_air_aftermath_1956',
+          physicalAction: 'clean_air_act_recovery',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
 
     if gen.startswith("zach3d:tacoma_"):
         cfg_map = {
@@ -2696,7 +2917,11 @@ import {
 import {
   makeSkyscraperStreetHookRig, makeSkyscraperExteriorRig,
   makeSkyscraperOfficeInteriorRig, makeSkyscraperDamperCutawayRig
-} from './skyscraper_scenes.js';"""
+} from './skyscraper_scenes.js';
+import {
+  makeLondonStreetFogRig, makeCoalCombustionCutawayRig, makeLondonAtmosphericInversionRig,
+  makeLondonBusVisibilityRig, makeLondonPedestrianReactionRig, makeLondonAftermathRig
+} from './london_smog_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -2777,6 +3002,9 @@ def generate_engine_project(
     sky_p = src_dst / "skyscraper_scenes.js"
     sky_p.write_text(SKYSCRAPER_SCENES_JS, encoding="utf-8")
 
+    lon_p = src_dst / "london_smog_scenes.js"
+    lon_p.write_text(LONDON_SMOG_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
 
@@ -2851,6 +3079,8 @@ def generate_engine_project(
         str(phys_p.resolve()),
         str(char_perf_p.resolve()),
         str(tacoma_p.resolve()),
+        str(sky_p.resolve()),
+        str(lon_p.resolve()),
         str(novel_p.resolve()),
         str(ed_tl_p.resolve()),
         str(ed_ov_p.resolve()),

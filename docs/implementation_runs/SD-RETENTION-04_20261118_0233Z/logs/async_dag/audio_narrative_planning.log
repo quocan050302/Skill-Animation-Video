@@ -1,0 +1,19 @@
+TASK: audio_narrative_planning
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_audio_narrative_planning -v
+STATUS: PASS (exit=0, elapsed=3.25s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_a15_audio_integration_preserves_provenance_guard_visual_lock (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_a15_audio_integration_preserves_provenance_guard_visual_lock) ... ok
+test_a5_manual_cues_survive_rerun_and_win_collisions_without_duplication (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_a5_manual_cues_survive_rerun_and_win_collisions_without_duplication) ... ok
+test_a6_a18_timestamps_shot_relative_and_fps_alignment (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_a6_a18_timestamps_shot_relative_and_fps_alignment) ... ok
+test_a7_no_hallucinated_sfx_for_ungrounded_words (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_a7_no_hallucinated_sfx_for_ungrounded_words) ... ok
+test_a8_a9_intentional_silence_and_missing_mandatory_voice_fail (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_a8_a9_intentional_silence_and_missing_mandatory_voice_fail) ... ok
+test_b7_script_variations_produce_distinct_arcs (tests.test_audio_narrative_planning.TestAudioNarrativePlanning.test_b7_script_variations_produce_distinct_arcs) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.774s
+
+OK
+

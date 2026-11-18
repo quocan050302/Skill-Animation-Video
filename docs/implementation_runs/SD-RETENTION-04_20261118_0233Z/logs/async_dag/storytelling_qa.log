@@ -1,0 +1,16 @@
+TASK: storytelling_qa
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_storytelling_qa -v
+STATUS: PASS (exit=0, elapsed=3.27s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n11_n12_n20_overlay_render_false_pass_proofs (tests.test_storytelling_qa.TestStorytellingQA.test_n11_n12_n20_overlay_render_false_pass_proofs) ... ok
+test_n13_n22_ab_alignment_and_script_mismatch (tests.test_storytelling_qa.TestStorytellingQA.test_n13_n22_ab_alignment_and_script_mismatch) ... ok
+test_n14_n17_n18_n19_n21_n23_n24_qa_traps (tests.test_storytelling_qa.TestStorytellingQA.test_n14_n17_n18_n19_n21_n23_n24_qa_traps) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.208s
+
+OK
+

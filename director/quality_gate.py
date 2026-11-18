@@ -668,6 +668,40 @@ def run_final_quality_gate(
             decoded_qa_report=decoded_qa_doc,
         )
 
+    # 6f. SD-RETENTION-04.R1 Decoded Semantic Visual Evidence & Causal Proof QA
+    ceg_p = run_dir / "causal_event_graph.json"
+    cec_p = run_dir / "causal_evidence_contracts.json"
+    if ceg_p.exists() and cec_p.exists() and target_dec_vid.exists():
+        from .semantic_visual_evidence_qa import run_semantic_visual_evidence_qa
+        ceg_doc = json.loads(ceg_p.read_text(encoding="utf-8"))
+        cec_doc = json.loads(cec_p.read_text(encoding="utf-8"))
+        ed_tl_sem = json.loads((run_dir / "editorial_timeline.json").read_text(encoding="utf-8")) if (run_dir / "editorial_timeline.json").exists() else {}
+        tr_edl_sem = json.loads((run_dir / "transition_edl.json").read_text(encoding="utf-8")) if (run_dir / "transition_edl.json").exists() else None
+        ci_rep_sem = json.loads((run_dir / "camera_intent_report.json").read_text(encoding="utf-8")) if (run_dir / "camera_intent_report.json").exists() else None
+        raw_tel_p6 = run_dir / "logs" / "raw_render_telemetry.json"
+        raw_traces6 = list((json.loads(raw_tel_p6.read_text(encoding="utf-8")) or {}).get("traces") or []) if raw_tel_p6.exists() else None
+        sem_qa = run_semantic_visual_evidence_qa(
+            run_dir=run_dir,
+            storyboard=storyboard,
+            causal_graph=ceg_doc,
+            evidence_contracts=cec_doc,
+            editorial_timeline=ed_tl_sem,
+            transition_edl=tr_edl_sem,
+            camera_intent_report=ci_rep_sem,
+            video_mp4=target_dec_vid,
+            raw_traces=raw_traces6,
+            require_decoded_frames=True,
+        )
+        checks["semantic_causal_visual_evidence"] = {
+            "status": sem_qa["overall_status"],
+            "subjective_visual_review": sem_qa.get("subjective_visual_review", "NOT_VERIFIED"),
+            "blocking_issues": sem_qa.get("blocking_issues", []),
+            "blocking_warnings": sem_qa.get("blocking_warnings", []),
+            "advisory_warnings": sem_qa.get("advisory_warnings", []),
+            "checks_summary": sem_qa.get("checks_summary", {}),
+            "causal_gates_status_json": str((run_dir / "causal_gates_status.json").resolve()),
+        }
+
     # 7. Factual & Licensing check summary
     fact_checks = storyboard.get("entities_and_facts", {}).get("fact_checks", [])
     has_warn = any("WARN" in str(fc.get("status", "")) for fc in fact_checks)

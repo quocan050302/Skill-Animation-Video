@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .action_camera_director import plan_action_driven_camera
 from .assets.style_params import build_style_params
 from .camera_choreographer import build_camera_plan
 from .character_performance import plan_character_action
@@ -33,6 +34,7 @@ from .scene_asset_factory import (
 )
 from .shot_director import plan_editorial_coverage
 from .transition_director import emit_transition_edl
+from .visual_causality_director import build_causal_event_graph
 from .visual_event_graph import extract_semantic_visual_events, write_visual_events_artifact
 from .visual_storytelling_director import (
     NarrativeCausalityError,
@@ -343,6 +345,50 @@ def build_storyboard_and_bible(
     )
     if causality_check["status"] == "FAIL":
         raise NarrativeCausalityError("; ".join(causality_check["violations"]))
+
+    # Build aligned CausalEvent graph + VisualEvidenceContracts synced 1:1 to final shots & voices
+    shot_aligned_visual_events = {
+        **visual_events,
+        "events": [
+            {
+                "event_id": (sh.get("event_ids") or [f"ev_{si:02d}"])[0],
+                "narrative_event_id": sh.get("narrative_event_id"),
+                "clause_index": si,
+                "start_sec": sh.get("start"),
+                "end_sec": sh.get("end"),
+                "clause_text": sh.get("narration_text", ""),
+                "beat_role": sh.get("beat_role", "escalation"),
+                "scene_family": sh.get("scene_family"),
+                "relevant_prop": (sh.get("staging") or {}).get("visual_metaphor"),
+                "character_id": (sh.get("staging") or {}).get("character_id"),
+                "unsupported_exact_domain": (sh.get("staging") or {}).get("unsupported_exact_domain"),
+            }
+            for si, sh in enumerate(shots)
+        ],
+    }
+    causal_bundle = build_causal_event_graph(
+        visual_events=shot_aligned_visual_events,
+        story_action_graph=story_action_graph,
+        selected_skill=selected_skill,
+        words=(parsed_script.get("voice") or {}).get("words"),
+        run_dir=run_dir,
+        require_supported=False,
+    )
+    causal_graph_doc = causal_bundle["causal_graph"]
+    evidence_contracts_doc = causal_bundle["evidence_contracts"]
+    for sh, cev in zip(shots, causal_graph_doc.get("causal_events", [])):
+        sh["causal_event_id"] = cev.get("causal_event_id")
+        sh["proof_type"] = cev.get("proof_type")
+        sh["semantic_region_of_change"] = cev.get("semantic_region_of_change")
+        sh["cause_entity_id"] = cev.get("cause_entity_id")
+        sh["effect_entity_id"] = cev.get("effect_entity_id")
+        sh["reference_entity_id"] = cev.get("reference_entity_id")
+        sh["causal_feature_id"] = cev.get("feature_id")
+        vec = (evidence_contracts_doc.get("by_event_id") or {}).get(cev.get("causal_event_id"), {})
+        if vec:
+            sh["evidence_contract_id"] = vec.get("contract_id")
+            sh["expected_visible_consequence"] = vec.get("expected_visible_consequence")
+            sh["counterfactual_failure"] = vec.get("counterfactual_failure")
     total_duration = float(visual_events["total_duration_sec"])
 
     effective_callout_mode = callout_mode if selected_skill == "zach-d-films" else "off"
@@ -382,6 +428,14 @@ def build_storyboard_and_bible(
         "story_diversity_summary": story_diversity,
         "causality_check": causality_check,
         "story_action_graph": story_action_graph,
+        "causal_summary": {
+            "schema_version": causal_graph_doc.get("schema_version"),
+            "total_events": causal_graph_doc.get("total_events"),
+            "supported_events_count": causal_graph_doc.get("supported_events_count"),
+            "unsupported_events": causal_graph_doc.get("unsupported_events"),
+            "world_state_conservation_status": (causal_graph_doc.get("world_state_conservation") or {}).get("status"),
+            "physics_disclosure": causal_graph_doc.get("physics_disclosure"),
+        },
         "entity_continuity": entity_check,
         "transition_edl_summary": {
             "transitions_count": transition_edl["transitions_count"],
@@ -389,6 +443,20 @@ def build_storyboard_and_bible(
         },
         "visual_assets": visual_assets,
         "shots": shots,
+    }
+
+    camera_intent_report = plan_action_driven_camera(
+        storyboard=storyboard,
+        causal_graph=causal_graph_doc,
+        evidence_contracts=evidence_contracts_doc,
+        camera_plan=camera_plan,
+        run_dir=run_dir,
+    )
+    storyboard["camera_intent_summary"] = {
+        "schema_version": camera_intent_report.get("schema_version"),
+        "status": camera_intent_report.get("status"),
+        "shots_count": camera_intent_report.get("shots_count"),
+        "mean_info_gain_score": camera_intent_report.get("mean_info_gain_score"),
     }
 
     ed_timeline = build_editorial_timeline(

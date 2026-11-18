@@ -1,0 +1,16 @@
+TASK: retention03_integration
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_retention03_integration -v
+STATUS: PASS (exit=0, elapsed=3.77s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_negative_traps_n29_misaligned_pointer_fails (tests.test_retention03_integration.TestRetention03Integration.test_negative_traps_n29_misaligned_pointer_fails) ... ok
+test_single_skill_isolation_stick_figure_and_third_topic_generalization (tests.test_retention03_integration.TestRetention03Integration.test_single_skill_isolation_stick_figure_and_third_topic_generalization) ... ok
+test_tacoma_role_aware_pipeline_audio_sync_and_webgl_trace_mobile (tests.test_retention03_integration.TestRetention03Integration.test_tacoma_role_aware_pipeline_audio_sync_and_webgl_trace_mobile) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.402s
+
+OK
+

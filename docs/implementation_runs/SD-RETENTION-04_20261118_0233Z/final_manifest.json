@@ -1,0 +1,37 @@
+{
+  "schema_version": "sd-retention04-final-manifest-1",
+  "run_id": "SD-RETENTION-04_20261118_0233Z",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "rendered_mp4_artifacts": {
+    "enhanced_B_final_4k": {
+      "path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_london_smog_20261118_0233Z\\enhanced_B\\final_4k.mp4",
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "size_bytes": 52190384,
+      "sha256": "666eb7962a71357b8c119fa4ebf774f18b3d2d2c369cd89aad23e21627813ed8"
+    },
+    "enhanced_B_preview_1080": {
+      "path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_london_smog_20261118_0233Z\\enhanced_B\\preview_1080.mp4",
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "size_bytes": 15852724,
+      "sha256": "f2382f0a5dbee0c6cb9481cde7051d606e7138800eac5debada260c95602c749"
+    },
+    "baseline_A_preview_1080": {
+      "path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_london_smog_20261118_0233Z\\baseline_A\\preview_1080.mp4",
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "size_bytes": 18111800,
+      "sha256": "323278142f3a7e759de8218170aa2d0e5e38740e61ab6d254204c0b29a38de0b"
+    },
+    "baseline_A_final_4k": {
+      "path": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_london_smog_20261118_0233Z\\baseline_A\\final_4k.mp4",
+      "storage_status": "LOCAL_ONLY_GITIGNORED",
+      "size_bytes": 49159187,
+      "sha256": "0a54e54f924e4e9e793558850d39d468173507ed13e0f163659cff5ef2a7ff73"
+    }
+  },
+  "curated_qa_sheets": [
+    "docs/implementation_runs/SD-RETENTION-04_20261118_0233Z/qa/london_ab_frame_diff_grid.jpg",
+    "docs/implementation_runs/SD-RETENTION-04_20261118_0233Z/qa/london_decoded_visual_proof_sheet.jpg",
+    "docs/implementation_runs/SD-RETENTION-04_20261118_0233Z/qa/london_event_aligned_before_action_after.jpg",
+    "docs/implementation_runs/SD-RETENTION-04_20261118_0233Z/qa/london_hook_0_3s_strip.jpg"
+  ]
+}

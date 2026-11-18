@@ -1,0 +1,14 @@
+TASK: boston_molasses_scenes
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_boston_molasses_scenes -v
+STATUS: PASS (exit=0, elapsed=25.02s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_modular_scenes_render_actions_and_cutaway_in_webgl (tests.test_boston_molasses_scenes.TestBostonMolassesScenes.test_modular_scenes_render_actions_and_cutaway_in_webgl) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 21.275s
+
+OK
+

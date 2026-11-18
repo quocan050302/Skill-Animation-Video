@@ -701,6 +701,143 @@ def _classify_narrative_action_unit(
             "reconstruction_disclosure": disclosure,
         }
 
+    # 1c. Atmospheric Temperature Inversion & Urban Smog Archetypes (general physical model)
+    is_smog_story = (
+        fam in (
+            "fog_street_hook",
+            "coal_combustion_cutaway",
+            "atmospheric_inversion_cap",
+            "vehicle_visibility_dropoff",
+            "pedestrian_smog_reaction",
+            "air_quality_aftermath",
+        )
+        or "temperature inversion" in full_script_low
+        or "great smog" in full_script_low
+        or "clean air act" in full_script_low
+    )
+    if is_smog_story:
+        smog_period = 1952 if ("1952" in full_script_low or "december 1952" in full_script_low) else None
+        disclosure = "visualized_physical_approximation"
+        if fam == "air_quality_aftermath":
+            return {
+                "location_id": "city_clean_air_aftermath_1956",
+                "entity_ids": ["smokeless_hearth_upgrade", "st_pauls_skyline_clear"],
+                "physical_action": "clean_air_act_recovery",
+                "world_state_before": ["heavy_yellow_black_smog_bank"],
+                "world_state_after": ["smokeless_fuels_restore_skyline_visibility"],
+                "new_visual_evidence": ["reduced_chimney_soot", "reappearing_city_dome"],
+                "required_anchors": ["smokeless_hearth_transition"],
+                "required_stage_family": "air_quality_aftermath",
+                "primary_asset": "clean_air_aftermath_rig",
+                "factual_claim_id": "claim_clean_air_act_1956",
+                "editorial_intent": "aftermath_takeaway",
+                "curiosity_gap": False,
+                "tone": "sober_analytical",
+                "reveal_after_token": "1956" if "1956" in low else ("clean" if "clean air" in low else None),
+                "spoiler_tokens": [] if ("1956" in low or "clean" in low) else ["1956", "clean air"],
+                "period_year": 1956 if "1956" in low else smog_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "coal_combustion_cutaway":
+            return {
+                "location_id": "coal_hearth_and_chimney_cutaway",
+                "entity_ids": ["domestic_coal_hearth", "industrial_smokestack", "sulfur_soot_plume"],
+                "physical_action": "coal_smoke_and_sulfur_emission",
+                "world_state_before": ["cold_december_city_street"],
+                "world_state_after": ["dense_soot_and_sulfur_plumes_rise_from_stacks"],
+                "new_visual_evidence": ["glowing_coal_firebox_cutaway", "sulfur_soot_plume_columns"],
+                "required_anchors": ["chimney_flue_combustion"],
+                "required_stage_family": "coal_combustion_cutaway",
+                "primary_asset": "coal_combustion_cutaway_rig",
+                "factual_claim_id": "claim_coal_sulfur_smoke",
+                "editorial_intent": "mechanism_explanation",
+                "curiosity_gap": False,
+                "tone": "analytical",
+                "reveal_after_token": "sulfur" if "sulfur" in low else ("coal" if "coal" in low else None),
+                "spoiler_tokens": ["inversion", "4,000", "1956"],
+                "period_year": smog_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "atmospheric_inversion_cap":
+            return {
+                "location_id": "city_skyline_inversion_cross_section",
+                "entity_ids": ["warm_inversion_air_layer", "cold_ground_air", "trapped_smog_plume"],
+                "physical_action": "thermal_inversion_lid_trapping",
+                "world_state_before": ["smoke_plumes_rising_skyward"],
+                "world_state_after": ["warm_air_lid_traps_smoke_against_cold_ground"],
+                "new_visual_evidence": ["deflected_airflow_streamlines", "thickening_yellow_brown_smog_layer"],
+                "required_anchors": ["inversion_thermal_boundary"],
+                "required_stage_family": "atmospheric_inversion_cap",
+                "primary_asset": "atmospheric_inversion_rig",
+                "factual_claim_id": "claim_temperature_inversion_1952",
+                "editorial_intent": "twist_escalation",
+                "curiosity_gap": True,
+                "tone": "high_tension",
+                "reveal_after_token": "inversion" if "inversion" in low else ("trapped" if "trapped" in low else None),
+                "spoiler_tokens": ["4,000", "1956"],
+                "period_year": smog_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "vehicle_visibility_dropoff":
+            return {
+                "location_id": "london_intersection_zero_visibility",
+                "entity_ids": ["red_double_decker_bus_1952", "char_london_pedestrian_01", "streetlamp_column_ref"],
+                "physical_action": "vehicle_crawls_behind_lantern_guide",
+                "world_state_before": ["trapped_ground_smog_thickening"],
+                "world_state_after": ["headlights_scatter_in_dense_smog_visibility_collapses"],
+                "new_visual_evidence": ["halogen_headlight_scatter_cone", "pedestrian_guide_lantern", "disappearing_bus_rear"],
+                "required_anchors": ["bus_headlight_cone"],
+                "required_stage_family": "vehicle_visibility_dropoff",
+                "primary_asset": "bus_visibility_dropoff_rig",
+                "factual_claim_id": "claim_zero_visibility_Dec1952",
+                "editorial_intent": "mechanism_explanation",
+                "curiosity_gap": False,
+                "tone": "tense_factual",
+                "reveal_after_token": "visibility" if "visibility" in low else None,
+                "spoiler_tokens": ["4,000", "1956"],
+                "period_year": smog_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "pedestrian_smog_reaction":
+            return {
+                "location_id": "city_curbside_respiratory_impact",
+                "entity_ids": ["char_london_pedestrian_01", "acidic_smog_aerosol"],
+                "physical_action": "pedestrian_cough_and_airway_strain",
+                "world_state_before": ["zero_visibility_smog_streets"],
+                "world_state_after": ["pedestrian_shields_face_acidic_fog_overwhelms_city"],
+                "new_visual_evidence": ["hand_to_collar_cough_reaction", "aerosol_density_meters"],
+                "required_anchors": ["pedestrian_respiratory_stance_zone"],
+                "required_stage_family": "pedestrian_smog_reaction",
+                "primary_asset": "pedestrian_smog_reaction_rig",
+                "factual_claim_id": "claim_excess_deaths_est_4000" if ("4,000" in low or "deaths" in low) else "claim_respiratory_impact",
+                "editorial_intent": "human_reaction" if ("cough" in low or "lungs" in low) else "warning_danger",
+                "curiosity_gap": False,
+                "tone": "tense_factual",
+                "reveal_after_token": "4,000" if "4,000" in low else None,
+                "spoiler_tokens": ["4,000"] if "4,000" not in low else [],
+                "period_year": smog_period,
+                "reconstruction_disclosure": disclosure,
+            }
+        return {
+            "location_id": "trafalgar_midday_blackout_1952",
+            "entity_ids": ["london_street_block_1952", "red_double_decker_bus_1952", "streetlamp_column_ref"],
+            "physical_action": "midday_street_visibility_blackout",
+            "world_state_before": ["clear_noon_london_street_1952"],
+            "world_state_after": ["noon_streetlights_on_and_landmarks_vanish_in_smog"],
+            "new_visual_evidence": ["glowing_noon_streetlamps", "disappearing_distant_facade"],
+            "required_anchors": ["streetlamp_halo_visibility"],
+            "required_stage_family": "fog_street_hook",
+            "primary_asset": "fog_street_hook_rig",
+            "factual_claim_id": "claim_dates_dec5_9_1952",
+            "editorial_intent": "curiosity_hook" if idx == 0 else "context_establish",
+            "curiosity_gap": idx == 0,
+            "tone": "intrigue" if idx == 0 else "informative",
+            "reveal_after_token": None,
+            "spoiler_tokens": ["inversion", "4,000", "1956"],
+            "period_year": smog_period,
+            "reconstruction_disclosure": disclosure,
+        }
+
     # 2. Generalized Domain Mapping (Mechanisms / Science / Roman / Biology / Generic)
     action_map = {
         "tap_activate": "human_physical_contact",
@@ -849,6 +986,12 @@ CONTINUATION_SUBPHASES: Dict[str, Tuple[str, str, List[str]]] = {
     "boston_street_hook": ("mystery_suspense_crowd_freeze", "north_end_street_suspense", ["street_crowd_freezes_expecting_ordinary_water"]),
     "boston_tank_rupture": ("tank_wall_blowout_surge", "rivet_rupture_surge_rig", ["sheared_tank_wall_releases_initial_surge"]),
     "boston_elevated_rail_impact": ("trestle_girder_deflection_follow", "elevated_rail_bent_girder_rig", ["buckled_steel_girders_twist_under_molasses_load"]),
+    "fog_street_hook": ("midday_blackout_street_pan", "fog_street_follow_rig", ["distant_streetlamps_swallowed_by_yellow_smog"]),
+    "coal_combustion_cutaway": ("sulfur_soot_plume_rise", "coal_plume_exhaust_rig", ["acidic_soot_droplets_join_cold_air"]),
+    "atmospheric_inversion_cap": ("inversion_cap_lateral_buildup", "inversion_buildup_rig", ["smoke_spreads_horizontally_under_warm_cap"]),
+    "vehicle_visibility_dropoff": ("bus_headlight_scatter_dropoff", "bus_scatter_follow_rig", ["conductor_lantern_barely_pierces_smog"]),
+    "pedestrian_smog_reaction": ("smog_hospital_surge_impact", "pedestrian_respiratory_impact_rig", ["respiratory_distress_mounts_over_five_days"]),
+    "air_quality_aftermath": ("clean_air_smokeless_resolution", "clean_air_skyline_rig", ["smokeless_hearth_legislation_clears_horizon"]),
 }
 
 
@@ -1049,9 +1192,14 @@ def validate_narrative_causality(
     if "bridge_collapse_aftermath" in acts and "bridge_span_collapse" in acts:
         if acts.index("bridge_collapse_aftermath") < acts.index("bridge_span_collapse"):
             violations.append("Causal inversion: bridge_collapse_aftermath precedes bridge_span_collapse")
+    if "clean_air_act_recovery" in acts and "thermal_inversion_lid_trapping" in acts:
+        if acts.index("clean_air_act_recovery") < acts.index("thermal_inversion_lid_trapping"):
+            violations.append("Causal inversion: clean_air_act_recovery precedes thermal_inversion_lid_trapping")
 
-    # T17: World-state continuity — once bridge collapses, subsequent shots cannot reset to intact roadway
+    # T17: World-state continuity — once bridge collapses, subsequent shots cannot reset to intact roadway;
+    # similarly once clean_air_act_recovery occurs in aftermath, do not reset back to blackout peak.
     collapsed_seen = False
+    clean_air_seen = False
     intact_tacoma_fams = {
         "tacoma_hook_telephoto", "tacoma_wide_establish", "tacoma_roadway_wave",
         "tacoma_under_deck_girder", "tacoma_torsion_twist", "tacoma_shore_onlooker",
@@ -1060,6 +1208,12 @@ def validate_narrative_causality(
         gen = str(sh.get("procedural_generator") or "")
         fam = str(sh.get("scene_family") or "")
         act_s = str(sh.get("physical_action") or "").lower()
+        if fam == "air_quality_aftermath" or "clean_air" in act_s:
+            clean_air_seen = True
+        elif clean_air_seen and fam in ("coal_combustion_cutaway", "atmospheric_inversion_cap", "vehicle_visibility_dropoff"):
+            violations.append(
+                f"World-state reset violation — pre-recovery dense smog shot '{sh.get('shot_id')}' ({fam}) follows clean_air_aftermath"
+            )
         if fam == "tacoma_collapse_plunge" or "collapse" in gen or "collapse" in act_s:
             collapsed_seen = True
             continue
@@ -1068,8 +1222,8 @@ def validate_narrative_causality(
                 f"T17: World-state reset violation — intact Tacoma shot '{sh.get('shot_id')}' ({fam}/{gen}) follows collapse"
             )
 
-    # Period appropriateness check (no modern smartphone/Roman armor/SUV in historical 1919 scenes)
-    if period_year is not None and int(period_year) <= 1940:
+    # Period appropriateness check (no modern smartphone/Roman armor/SUV in pre-1960 historical scenes)
+    if period_year is not None and int(period_year) <= 1960:
         for sh in shots:
             gen = str(sh.get("procedural_generator") or "")
             props = [str(p).lower() for p in (sh.get("staging") or {}).get("grounded_props", [])]

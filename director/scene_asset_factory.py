@@ -68,6 +68,12 @@ ENTITY_BOUNDS_M: Dict[str, Tuple[float, float, float]] = {
     "skyscraper_counterphase_rig": (2.8, 2.9, 2.4),
     "skyscraper_before_after_rig": (4.2, 6.8, 2.4),
     "skyscraper_dusk_resolution_rig": (4.5, 9.2, 4.5),
+    "fog_street_hook_rig": (9.0, 5.2, 12.0),
+    "coal_combustion_cutaway_rig": (2.8, 3.6, 2.4),
+    "atmospheric_inversion_rig": (10.5, 6.8, 7.5),
+    "bus_visibility_dropoff_rig": (4.6, 3.2, 8.2),
+    "pedestrian_smog_reaction_rig": (2.8, 2.4, 4.0),
+    "clean_air_aftermath_rig": (10.5, 6.8, 8.5),
 }
 
 
@@ -379,6 +385,48 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "bounds": {"x_min": -10.5, "x_max": 10.5, "y_min": 0.12, "y_max": 12.5, "z_min": -8.0, "z_max": 13.5},
         "collider_boxes": [],
     },
+    "zach3d:london_fog_street_hook_stage": {
+        "capabilities": ["london_1952_street", "streetlamp_halo_visibility", "volumetric_smog_front"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "streetlamp_halo_visibility", "world_pos": [0.25, 2.35, -1.2], "radius_m": 0.55},
+        "bounds": {"x_min": -7.5, "x_max": 7.5, "y_min": 0.12, "y_max": 8.0, "z_min": -8.0, "z_max": 10.0},
+        "collider_boxes": [],
+    },
+    "zach3d:london_coal_combustion_cutaway_stage": {
+        "capabilities": ["layered_cutaway", "coal_firebox_cutaway", "sulfur_soot_plume"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "chimney_flue_combustion", "world_pos": [0.0, 1.55, 0.0], "radius_m": 0.45},
+        "bounds": {"x_min": -4.5, "x_max": 4.5, "y_min": 0.12, "y_max": 6.2, "z_min": -4.5, "z_max": 6.5},
+        "collider_boxes": [],
+    },
+    "zach3d:london_atmospheric_inversion_stage": {
+        "capabilities": ["warm_inversion_air_layer", "cold_ground_air", "deflected_smoke_streamlines", "illustrative_airflow_label"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "inversion_thermal_boundary", "world_pos": [0.0, 3.15, -0.6], "radius_m": 0.85},
+        "bounds": {"x_min": -9.5, "x_max": 9.5, "y_min": 0.12, "y_max": 8.5, "z_min": -7.5, "z_max": 10.5},
+        "collider_boxes": [],
+    },
+    "zach3d:london_bus_visibility_stage": {
+        "capabilities": ["double_decker_bus_1952", "headlight_scatter_cone", "pedestrian_guide_lantern", "visibility_obscuration"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "bus_headlight_cone", "world_pos": [0.35, 1.15, 1.4], "radius_m": 0.65},
+        "bounds": {"x_min": -7.5, "x_max": 7.5, "y_min": 0.12, "y_max": 6.5, "z_min": -8.0, "z_max": 10.0},
+        "collider_boxes": [],
+    },
+    "zach3d:london_pedestrian_reaction_stage": {
+        "capabilities": ["human_character", "foot_grounded_cough_brace", "streetlamp_halo_visibility", "smog_aerosol_density"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "pedestrian_respiratory_stance_zone", "world_pos": [0.0, 1.42, 0.25], "radius_m": 0.40},
+        "bounds": {"x_min": -5.5, "x_max": 5.5, "y_min": 0.12, "y_max": 5.8, "z_min": -5.5, "z_max": 7.5},
+        "collider_boxes": [],
+    },
+    "zach3d:london_clean_air_aftermath_stage": {
+        "capabilities": ["smokeless_hearth_transition", "reappearing_st_pauls_dome", "before_after_skyline"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "smokeless_hearth_transition", "world_pos": [0.0, 2.45, -1.6], "radius_m": 0.85},
+        "bounds": {"x_min": -9.5, "x_max": 9.5, "y_min": 0.12, "y_max": 8.8, "z_min": -9.0, "z_max": 11.0},
+        "collider_boxes": [],
+    },
     "zach3d:studio_demonstrator_stage": {
         "capabilities": ["human_character", "studio_gear_pedestal"],
         "fidelity_mode": "stylized_schematic",
@@ -400,14 +448,36 @@ def build_character_and_prop_registry(
     has_boston = any(str(ev.get("scene_family") or "").startswith("boston_") for ev in events)
     has_tacoma = any(str(ev.get("scene_family") or "").startswith("tacoma_") for ev in events)
     has_skyscraper = any(str(ev.get("scene_family") or "").startswith("skyscraper_") for ev in events)
-    has_modern_human = (not has_boston and not has_tacoma and not has_skyscraper) and any(
+    has_smog_london = any(
+        str(ev.get("scene_family") or "") in (
+            "fog_street_hook", "coal_combustion_cutaway", "atmospheric_inversion_cap",
+            "vehicle_visibility_dropoff", "pedestrian_smog_reaction", "air_quality_aftermath",
+        )
+        for ev in events
+    )
+    has_modern_human = (not has_boston and not has_tacoma and not has_skyscraper and not has_smog_london) and any(
         "human" in str(ev.get("subject", ""))
         or ev.get("scene_family") in ("human_device", "elevator_lobby_button", "elevator_landing_doors", "human_studio")
         for ev in events
     )
 
     characters: Dict[str, Dict[str, Any]] = {}
-    if has_skyscraper:
+    if has_smog_london:
+        characters["char_london_pedestrian_01"] = {
+            "character_id": "char_london_pedestrian_01",
+            "role": "london_pedestrian_1952",
+            "outfit_style": "trenchcoat_scarf_1952",
+            "height_m": 1.74,
+            "scale": 1.0,
+            "handedness": "right",
+            "shirt_hex": 0x475569,
+            "shirt_material_id": "mat_1952_trenchcoat_475569",
+            "pants_hex": 0x1E293B,
+            "collar_hex": 0x9F1239,
+            "skin_hex": 0xD9A484,
+            "allowed_states": ["walk_lantern_guide", "shield_airway_cough", "step_back_brace"],
+        }
+    elif has_skyscraper:
         characters["char_street_observer_01"] = {
             "character_id": "char_street_observer_01",
             "role": "street_observer",
@@ -673,6 +743,18 @@ def _map_family_to_generator(
             return "zach3d:skyscraper_before_after_stage"
         if fam == "skyscraper_dusk_resolution" or prop == "skyscraper_dusk_resolution_rig":
             return "zach3d:skyscraper_dusk_resolution_stage"
+        if fam == "fog_street_hook" or prop == "fog_street_hook_rig":
+            return "zach3d:london_fog_street_hook_stage"
+        if fam == "coal_combustion_cutaway" or prop == "coal_combustion_cutaway_rig":
+            return "zach3d:london_coal_combustion_cutaway_stage"
+        if fam == "atmospheric_inversion_cap" or prop == "atmospheric_inversion_rig":
+            return "zach3d:london_atmospheric_inversion_stage"
+        if fam == "vehicle_visibility_dropoff" or prop == "bus_visibility_dropoff_rig":
+            return "zach3d:london_bus_visibility_stage"
+        if fam == "pedestrian_smog_reaction" or prop == "pedestrian_smog_reaction_rig":
+            return "zach3d:london_pedestrian_reaction_stage"
+        if fam == "air_quality_aftermath" or prop == "clean_air_aftermath_rig":
+            return "zach3d:london_clean_air_aftermath_stage"
         if fam == "airplane_window" or prop == "airplane_window_bleed":
             return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":

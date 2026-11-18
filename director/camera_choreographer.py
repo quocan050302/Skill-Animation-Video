@@ -220,6 +220,60 @@ def _zdf_keyframes_for_generator(
             {"t_norm": 1.0, "pos": [2.60, 6.40, 10.80], "look": [0.0, 4.60, -1.0], "fov": 46, "roll": 0.0, "ease": "quintic"},
         ]
 
+    if gen == "zach3d:london_fog_street_hook_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.35, 2.15, 5.65], "look": [0.15, 1.85, -1.2], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [-0.55, 2.00, 4.65], "look": [0.22, 1.90, -1.2], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.40, 1.92, 3.85], "look": [0.25, 1.95, -1.2], "fov": 40, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:london_coal_combustion_cutaway_stage":
+        if "chimneys" in low or "chilly winter air" in low or idx >= 2:
+            return [
+                {"t_norm": 0.0, "pos": [1.75, 2.35, 5.10], "look": [0.0, 2.25, -0.55], "fov": 44, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.50, "pos": [0.65, 2.75, 4.95], "look": [0.0, 2.55, -0.75], "fov": 43, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-0.85, 3.15, 5.20], "look": [0.0, 2.75, -0.95], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            ]
+        return [
+            {"t_norm": 0.0, "pos": [-1.85, 1.55, 4.75], "look": [0.0, 1.65, -0.35], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [-0.75, 1.85, 4.35], "look": [0.0, 1.78, -0.35], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.75, 2.30, 4.55], "look": [0.0, 2.00, -0.45], "fov": 41, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:london_atmospheric_inversion_stage":
+        if "sideways" in low or "vertical mixing" in low:
+            return [
+                {"t_norm": 0.0, "pos": [2.25, 2.65, 7.20], "look": [0.0, 2.40, -0.3], "fov": 44, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 0.52, "pos": [0.85, 2.35, 6.45], "look": [-0.2, 2.25, -0.2], "fov": 43, "roll": 0.0, "ease": "quintic"},
+                {"t_norm": 1.0, "pos": [-1.45, 2.20, 6.10], "look": [-0.3, 2.15, -0.2], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            ]
+        return [
+            {"t_norm": 0.0, "pos": [-2.35, 3.15, 8.20], "look": [0.0, 2.85, -0.5], "fov": 47, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.0, 3.28, 7.95], "look": [0.0, 2.95, -0.5], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [2.25, 3.40, 8.15], "look": [0.0, 2.95, -0.5], "fov": 46, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:london_bus_visibility_stage":
+        return [
+            {"t_norm": 0.0, "pos": [2.25, 1.55, 5.20], "look": [0.25, 1.25, 1.15], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [1.85, 1.48, 4.45], "look": [0.28, 1.25, 1.35], "fov": 40, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.45, 1.42, 3.75], "look": [0.35, 1.25, 1.50], "fov": 39, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:london_pedestrian_reaction_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.25, 1.52, 3.35], "look": [0.0, 1.36, 0.22], "fov": 38, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [-0.65, 1.48, 2.95], "look": [0.0, 1.38, 0.24], "fov": 37, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [0.22, 1.46, 2.75], "look": [0.0, 1.38, 0.24], "fov": 36, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:london_clean_air_aftermath_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.25, 2.35, 5.10], "look": [0.0, 1.90, -0.6], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.55, "pos": [0.0, 2.75, 5.85], "look": [0.0, 2.05, -0.8], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.35, 3.15, 6.60], "look": [0.0, 2.15, -1.0], "fov": 46, "roll": 0.0, "ease": "quintic"},
+        ]
+
     if gen == "zach3d:boston_street_hook_stage":
         if setup == "boston_street_hook_alley_pan":
             return [

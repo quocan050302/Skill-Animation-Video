@@ -1,0 +1,28 @@
+scope,gate_name,status,detail
+validation,async_dag_full,PASS,27/27 modules in 600.27s
+validation,canonical_unittest_discover,PASS,Ran 92 tests in 720.378s | OK
+enhanced_B,style_lock_provenance,PASS,
+enhanced_B,preview_1080p_stream,PASS,
+enhanced_B,final_4k_stream,PASS,
+enhanced_B,truthful_4k_declaration,PASS,native_4k
+enhanced_B,decoded_frames_and_cuts,PASS,
+enhanced_B,audio_levels_and_ducking,PASS,
+enhanced_B,scene_diversity_and_retention,WARN,
+enhanced_B,camera_execution,PASS,
+enhanced_B,editorial_retention_finish,PASS,
+enhanced_B,visual_storytelling,PASS,
+enhanced_B,pointer_tracking,PASS,
+enhanced_B,physical_and_character_telemetry,PASS,
+enhanced_B,decoded_visual_quality,PASS,
+enhanced_B,cinematic_composition,PASS,
+enhanced_B,semantic_causal_visual_evidence,PASS,
+enhanced_B,factual_and_licensing_integrity,PASS,
+enhanced_B_causal,visual_claim_coverage,PASS,
+enhanced_B_causal,relative_motion_evidence,PASS,
+enhanced_B_causal,claim_pointer_semantics,PASS,
+enhanced_B_causal,causal_transition_visibility,PASS,
+enhanced_B_causal,silent_comprehension_proxy,PASS,
+ab_parity,vo_pcm_sha256_parity,PASS,pcm_identical=True
+ab_parity,ab_alignment,PASS,pairs=8
+backtest,tacoma_1940_r2_proof,WARN,['Advisory: Shot shot_00 claims relative displacement without prominent `reference_fixed` pixels in matte']
+backtest,boston_1919_r2_proof,FAIL,"[""N02: Claim cev_001 requires matte role 'causal_feature' >= 0.004, got 0.0000 at t=5.79s"", ""N02: Claim cev_004 requires matte role 'causal_feature' >= 0.004, got 0.0000 at t=15.21s"", ""N04/N06: Shot shot_01 claims 'particle_path_propagation' yet physical telemetry reported negligible state change (vdisp=0.0000m)"", ""N04/N06: Shot shot_04 claims 'material_deformation' yet physical telemetry reported negligible state change (vdisp=0.0000m)"", 'Supported causal visual claim coverage 0.80 < 0.85']"

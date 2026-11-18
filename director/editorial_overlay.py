@@ -418,6 +418,106 @@ def extract_editorial_focus_events(
                     prior_styled.append(cand)
             continue
 
+        if use_role_aware and gen.startswith("zach3d:london_"):
+            hb_l = curiosity_by_nev.get(str(shot.get("narrative_event_id") or ""))
+            if hb_l and gen in ("zach3d:london_fog_street_hook_stage", "zach3d:london_atmospheric_inversion_stage"):
+                t_on = round(max(st + 0.16, rev_floor), 3)
+                t_off = round(min(en - 0.14, t_on + 2.25), 3)
+                if t_off - t_on >= 0.75:
+                    spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
+                    ptr = plan_attention_pointer({
+                        "beat_index": si,
+                        "role": spec.role,
+                        "target_anchor_id": hb_l["target_anchor_id"],
+                        "secondary_anchor_id": hb_l.get("secondary_anchor_id"),
+                        "pointer_shape": hb_l.get("pointer_shape"),
+                        "narrative_event_id": nev.get("narrative_event_id"),
+                    })
+                    l1, l2 = split_curiosity_lines(hb_l["label"])
+                    lay = measure_text_layout(hb_l["label"], spec, viewport=1080)
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": hb_l.get("why_selected", "Atmospheric smog curiosity hook"),
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr["pointer_shape"],
+                        "label": hb_l["label"], "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": 1, "verified": True, "source_fact_ids": [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+                    continue
+
+            lon_item: Optional[Tuple[EditorialRole, str, Optional[str], str, str, str, Optional[str], Optional[str]]] = None
+            if gen == "zach3d:london_fog_street_hook_stage" and "lon_1952" not in seen_location_contexts:
+                seen_location_contexts.add("lon_1952")
+                lon_item = (EditorialRole.LOCATION_TIME, "streetlamp_halo_visibility", "lamppost_column_ref", "DEC 5-9, 1952", "Five-day London smog event", "none", "UK Met Office Great Smog 1952 archive", "claim_dates_dec5_9_1952")
+            elif gen == "zach3d:london_coal_combustion_cutaway_stage":
+                lon_item = (EditorialRole.EXPLANATION, "chimney_flue_combustion", None, "COAL & SULFUR SMOKE", "Domestic hearths + coal power stacks", "curved_leader", "London Museum 1952 coal smoke overview", "claim_coal_sulfur_smoke")
+            elif gen == "zach3d:london_atmospheric_inversion_stage":
+                lon_item = (EditorialRole.WARNING_DANGER, "inversion_thermal_boundary", "st_pauls_dome_and_horizon_ref", "WARM AIR LID", "ILLUSTRATIVE AIRFLOW — trapped cold air", "impact_arrow", "UK Met Office temperature inversion explanation", "claim_temperature_inversion_1952")
+            elif gen == "zach3d:london_bus_visibility_stage":
+                lon_item = (EditorialRole.EXPLANATION, "bus_headlight_cone", "lamppost_column_ref", "NEAR-ZERO VISIBILITY", "Walkers led buses with handheld lanterns", "curved_leader", "London Transport Dec 1952 fog reports", "claim_zero_visibility_Dec1952")
+            elif gen == "zach3d:london_pedestrian_reaction_stage":
+                if "4,000" in low or "deaths" in low or "four thousand" in low:
+                    lon_item = (EditorialRole.VERIFIED_FACT, "pedestrian_respiratory_stance_zone", None, "~4,000 DEATHS EST.", "Estimated monthly excess deaths (City Hall)", "mini_fact_tag", "London City Hall Great Smog 1952 archive", "claim_excess_deaths_est_4000")
+                else:
+                    lon_item = (EditorialRole.WARNING_DANGER, "pedestrian_respiratory_stance_zone", None, "ACIDIC FOG DROPLETS", "Soot & sulfuric droplets strained airways", "impact_arrow", "UK Met Office health impact note", "claim_respiratory_impact")
+            elif gen == "zach3d:london_clean_air_aftermath_stage":
+                lon_item = (EditorialRole.AFTERMATH_SOBER, "smokeless_hearth_transition", None, "CLEAN AIR ACT 1956", "Transition toward smokeless coal & clean air", "none", "UK Clean Air Act 1956 record", "claim_clean_air_act_1956")
+
+            if lon_item is not None:
+                erole, anc_k, sec_k, lbl_k, sub_k, ptr_k, f_src, f_cid = lon_item
+                spec = select_overlay_variant(erole, prior_roles=prior_styled, seed=seed + si)
+                ptr = plan_attention_pointer({
+                    "beat_index": si, "role": erole.value, "target_anchor_id": anc_k,
+                    "secondary_anchor_id": sec_k, "pointer_shape": ptr_k,
+                    "narrative_event_id": nev.get("narrative_event_id"),
+                })
+                lay = measure_text_layout(lbl_k, spec, viewport=1080)
+                t_on = round(max(st + 0.18, rev_floor, st + 0.24), 3)
+                t_off = round(min(en - 0.14, t_on + spec.max_duration), 3)
+                if t_off - t_on >= 0.80:
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow", "torsion_bracket", "sway_bracket") else "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": f"Semantic role {spec.role} matched to atmospheric stage {gen}",
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr_k,
+                        "label": lbl_k, "sublabel": sub_k,
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": spec.semantic_priority, "verified": True,
+                        "fact_source": f_src, "source_fact_ids": [f_cid] if f_cid else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+            continue
+
         if gen.startswith("zach3d:boston_"):
             hb_b = curiosity_by_nev.get(str(shot.get("narrative_event_id") or "")) if use_role_aware else None
             if hb_b and gen == "zach3d:boston_street_hook_stage" and si == 0:
@@ -816,6 +916,13 @@ def plan_3d_callouts(
             "overlay_id": f"ov_{len(accepted):02d}",
             "shot_index": cand.get("shot_index"),
             "shot_id": cand.get("shot_id"),
+            "causal_event_id": cand.get("causal_event_id"),
+            "narrative_claim_id": cand.get("narrative_claim_id") or cand.get("factual_claim_id") or f"claim_{cand.get('shot_id') or len(accepted)}",
+            "target_entity_id": cand.get("target_entity_id") or str(cand.get("anchor_id") or "stage_center"),
+            "target_feature_id": cand.get("target_feature_id") or str(cand.get("target_semantic_id") or cand.get("anchor_id") or "stage_center"),
+            "proof_target_id": cand.get("proof_target_id") or str(cand.get("target_semantic_id") or cand.get("anchor_id") or "stage_center"),
+            "semantic_region_of_change": cand.get("semantic_region_of_change") or "primary_causal_zone",
+            "why_this_overlay": cand.get("why_this_overlay") or cand.get("pointer_reason") or cand.get("why_role") or "Binds caption claim to visible causal region of change",
             "type": ctype,
             "anchor_id": str(cand.get("anchor_id") or "stage_center"),
             "secondary_anchor_id": cand.get("secondary_anchor_id"),
@@ -1032,7 +1139,28 @@ def build_editorial_timeline(
             }
             upgraded.append(c_up)
             prior_r.append(c_up)
-        cands = upgraded
+        # Ensure every candidate carries unified SD-RETENTION-04 causal/semantic region fields
+        enriched_cands: List[Dict[str, Any]] = []
+        for c in upgraded:
+            sh_ref = shots_by_id.get(c.get("shot_id"), {})
+            target_feat = str(
+                c.get("target_feature_id")
+                or c.get("target_semantic_id")
+                or sh_ref.get("causal_feature_id")
+                or c.get("anchor_id")
+                or "primary_feature"
+            )
+            enriched_cands.append({
+                **c,
+                "causal_event_id": c.get("causal_event_id") or sh_ref.get("causal_event_id"),
+                "narrative_claim_id": c.get("narrative_claim_id") or sh_ref.get("factual_claim_id") or f"claim_{c.get('shot_id') or 'overlay'}",
+                "target_entity_id": c.get("target_entity_id") or sh_ref.get("effect_entity_id") or target_feat,
+                "target_feature_id": target_feat,
+                "proof_target_id": c.get("proof_target_id") or target_feat,
+                "semantic_region_of_change": c.get("semantic_region_of_change") or sh_ref.get("semantic_region_of_change") or "primary_causal_zone",
+                "why_this_overlay": c.get("why_this_overlay") or c.get("pointer_reason") or c.get("why_role") or "Binds claim directly to visible region of change",
+            })
+        cands = enriched_cands
 
     callouts_res = plan_3d_callouts(
         candidates=cands,
