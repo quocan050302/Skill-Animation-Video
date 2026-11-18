@@ -437,6 +437,71 @@ class TestR2DecodedAndTraps(unittest.TestCase):
                 mad = float(np.abs(arr_a - arr_b).mean())
                 self.assertLess(mad, 0.25, f"T27 out-of-order seek mismatch at t={ts}s (MAD={mad})")
 
+    def test_boston_split_camera_triplet_rotation_and_payoff_routing(self) -> None:
+        """Split Boston shots (street_hook / tank_rupture / elevated_rail) must never repeat camera triplets."""
+        from director.shot_director import generate_candidate_shot_set, select_sequence_with_diversity_constraints
+
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            script = (
+                "In January 1919, people in Boston's North End heard a deep rumble, but nobody expected a flood. "
+                "The wave wasn't water, it was molasses. "
+                "A massive steel tank on Commercial Street had been leaking for years before those tank walls finally gave way. "
+                "More than 2.3 million gallons poured out at roughly 35 miles per hour, striking the elevated railway. "
+                "Twenty-one people died and about 150 were injured. "
+                "Boston's strangest flood forced engineers to tighten tank rules."
+            )
+            dec, cleaned, _ = route_and_lock_style(
+                REPO_ROOT, f"/short-director --skill zach-d-films {script}", cli_skill="zach-d-films", upstream_sha="r2_test",
+            )
+            ps = parse_script_and_build_voice(cleaned, "zach-d-films", tmp / "bos", KIT_DIR, voice_mode="off")
+            sb = build_storyboard_and_bible(
+                ps, dec, tmp / "bos", fps=30, seed=42,
+                edit_energy="dynamic", scene_novelty="high",
+                editorial_theme="role-aware", callout_mode="smart",
+            )
+            shots = sb["shots"]
+            prog = score_visual_progression(shots, [design_frame_for_action(s) for s in shots])
+            self.assertEqual(prog["status"], "PASS", f"Boston progression still has issues: {prog['issues']}")
+            self.assertEqual(shots[-1]["scene_family"], "boston_harbor_payoff")
+
+            # Directly stress-test adjacent identical Boston stage units for all 3 R2 families
+            forced_units = []
+            for idx, (fam, prop, act, txt) in enumerate([
+                ("boston_street_hook", "north_end_street_1919", "street_rumble_foreshadow", "In 1919 people in Boston heard a rumble"),
+                ("boston_street_hook", "north_end_street_1919", "mystery_suspense_crowd_freeze", "but nobody expected a giant flood."),
+                ("boston_tank_rupture", "rivet_rupture_assembly", "tank_panel_rupture", "Riveted steel walls sheared open"),
+                ("boston_tank_rupture", "rivet_rupture_assembly", "tank_wall_blowout_surge", "as flood poured onto Commercial Street."),
+                ("boston_elevated_rail_impact", "elevated_rail_impact_rig", "street_structure_impact", "The wave smashed buildings and freight cars"),
+                ("boston_elevated_rail_impact", "elevated_rail_impact_rig", "trestle_girder_deflection_follow", "and buckled the elevated steel girder."),
+            ]):
+                forced_units.append({
+                    "event_id": f"ve_{idx:02d}",
+                    "beat_id": f"beat_{idx // 2:02d}",
+                    "beat_role": "mechanism",
+                    "selected_skill": "zach-d-films",
+                    "start_sec": float(idx * 2.0),
+                    "end_sec": float((idx + 1) * 2.0),
+                    "narration_text": txt,
+                    "exact_narration_phrase": txt,
+                    "narration_span_start": 0,
+                    "narration_span_end": len(txt.split()),
+                    "subject": "boston_actor",
+                    "verb_action": act,
+                    "relevant_prop": prop,
+                    "grounded_props": [prop],
+                    "scene_family": fam,
+                    "scale_level": "human_environment",
+                    "lighting_mood": "historical_overcast",
+                })
+            forced_shots, div = select_sequence_with_diversity_constraints(
+                forced_units, grammar=None, selected_skill="zach-d-films", seed=42, scene_novelty="high",
+            )
+            self.assertEqual(div["adjacent_identical_setups"], 0, f"Duplicate adjacent setups: {div}")
+            self.assertEqual(div["adjacent_identical_cam_triples"], 0, f"Duplicate adjacent triplets: {div}")
+            forced_prog = score_visual_progression(forced_shots, [design_frame_for_action(s) for s in forced_shots])
+            self.assertEqual(forced_prog["status"], "PASS", f"Forced split progression issues: {forced_prog['issues']}")
+
 
 if __name__ == "__main__":
     unittest.main()

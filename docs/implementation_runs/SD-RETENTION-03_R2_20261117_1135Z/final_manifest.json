@@ -1,0 +1,65 @@
+{
+  "schema_version": "sd-r2-final-manifest-1",
+  "run_id": "SD-RETENTION-03_R2_20261117_1135Z",
+  "execution_branch": "feat/sd-retention-03-r2-visual-quality",
+  "base_branch": "feat/sd-retention-01-expressive-editorial",
+  "base_commit_sha": "8f53a7a08a6fefebd43d69ad5974689466236f14",
+  "wip_checkpoint_sha": "b3937890970841b40fc75de4edfbc761cd77a1b7",
+  "master_sha_unchanged": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "submodule_vendor_sha_unchanged": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "media_git_policy": {
+    "large_mp4_tracked_in_git": false,
+    "runs_policy": "LOCAL_ONLY_GITIGNORED",
+    "local_proof_outputs": [
+      {
+        "run_dir": "runs/sd_retention03_r2_boston_proof_20261118",
+        "preview_1080_sha256": "1570b603c81e95920e2c1b6f38edfcec3a199261aee4b2fa2907463400dd8672",
+        "preview_1080_bytes": 15150628,
+        "final_4k_sha256": "8d08881e50ded3aa00c5c780d9baf8c5c7dabaf6b407d5377c52ff6017c170fb",
+        "final_4k_bytes": 39005392
+      },
+      {
+        "run_dir": "runs/sd_retention03_r2_tacoma_proof_20261118",
+        "preview_1080_sha256": "c8c95aade2aa030c8dd357b745204fd09b00fcb26739cde70ead554529377b11",
+        "preview_1080_bytes": 24172157,
+        "final_4k_sha256": "17350304a8fede5ec10409ab154c99c5128f053590ff6ca73cb4bf4928261476",
+        "final_4k_bytes": 65639928
+      }
+    ]
+  },
+  "closeout_code_changes": [
+    "director/shot_director.py",
+    "director/camera_choreographer.py",
+    "director/assets/zdf_tacoma_bridge_scenes.py",
+    "director/visual_event_graph.py",
+    "director/visual_storytelling_director.py",
+    "tests/test_r2_decoded_and_traps.py"
+  ],
+  "tracked_evidence_artifacts": [
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/README.md",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/plan_and_gates.md",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/baseline_manifest.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/gates_status.csv",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa_summary.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/final_manifest.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/SHA256SUMS.txt",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/qc_report.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/ab_report.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/decoded_visual_quality_report.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/mobile_qa_320_360_390_1080.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/skyscraper_enhanced_B_360_sheet.jpg",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/ab_side_by_side_360_sheet.jpg",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/tacoma_qc_report.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/tacoma_r2_360_sheet.jpg",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/tacoma_before_vs_after_360.jpg",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/boston_qc_report.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/boston_r2_360_sheet.jpg",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/async_dag/validation_summary.json",
+    "docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/canonical_unittest_discover.log"
+  ],
+  "pending_human_review_items": [
+    "View local Skyscraper native 4K master and Boston/Tacoma R2 proofs on portrait hardware for subjective visual pacing, readability, and emotional impact.",
+    "Audit offline TTS vs human/neural voiceover and pre-collapse anticipation mixing on headphones/phone speakers.",
+    "Evaluate viewer A/B retention preference between baseline_A and enhanced_B before making editorial retention claims."
+  ]
+}

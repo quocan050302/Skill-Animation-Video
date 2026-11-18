@@ -43,19 +43,22 @@ Targeted R2 correction to SD-RETENTION-03 turning technically valid procedural s
 
 ---
 
-## Việc còn lại cần làm nốt ngày mai (Remaining Work for Tomorrow)
+## Hoàn tất đợt R2 (Final Verification & Closeout — 2026-11-18, Windows)
 
-1. **Hoàn tất Boston 1919 Regression Proof (`runs/sd_retention03_r2_boston_proof_20261117/`)**:
-   - Lần chạy kiểm chứng Boston hôm nay đã PASS toàn bộ `camera_execution_audit`, `decoded_visual_quality` (`WARN`, 0 `issues` — hết lỗi `area=0.000` ở cảnh cảng) và `visual_storytelling`, chỉ còn **1 lỗi lặp góc máy liền kề** trong `cinematic_composition` / `adjacent_repetition_guard` khi tách câu:
-     - `Consecutive duplicate camera triplet ('WS_StreetHero', 'three_quarter_street_level', 'dolly_push_in') at shot index 0->1`
-     - `Consecutive duplicate camera triplet ('MCU_RivetBurst', 'three_quarter_burst_angle', 'impact_push_shake') at shot index 4->5`
-     - `Consecutive duplicate camera triplet ('MS_StructuralImpact', 'right_oblique_trestle', 'slowmo_track_impact') at shot index 8->9`
-   - **Cách xử lý**: Thêm biến thể preset góc máy thứ 2 trong `director/shot_director.py` (tương tự như đã làm cho `tacoma_torsion_twist` / `tacoma_aftermath`) cho các family `boston_street_hook`, `boston_tank_rupture`, và `boston_elevated_rail_impact` (hoặc đảm bảo `generate_candidate_shot_set` xoay vòng Framing/Angle/Move khi 2 shot liên tiếp cùng `scene_family`), rồi render lại Boston Proof để ra PASS 100% + tạo ảnh `boston_r2_360_sheet.jpg` lưu vào `qa/`.
-2. **Tinh chỉnh đối chiếu ảnh `tacoma_before_vs_after_360.jpg`**:
-   - Cập nhật mốc lấy mẫu khung R2 của Tacoma đúng pha đỉnh xoắn (`WHOLE DECK TWISTING`) và ngay khoảnh khắc sập chạm nước (`SPAN BROKE FREE` + splash) để bảng Before-vs-After khớp beat 1:1 hơn với bản gốc lưu trữ.
-3. **Chạy trọn bộ kiểm thử đầy đủ SAU lần chỉnh sửa code cuối cùng**:
-   - `python3 tools/run_validation_async.py --mode full --workers 2 --log-dir docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/async_dag` (xác nhận toàn bộ 25/25 file `tests/test_*.py` PASS qua DAG).
-   - `python3 -m unittest discover -s tests -v | tee docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/canonical_unittest_discover.log`
-4. **Đóng gói chứng từ kết thúc đợt R2 & Push bản final**:
-   - Xuất `SHA256SUMS.txt`, `gates_status.csv`, `qa_summary.json`, `final_manifest.json` trong `docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/`.
-   - Kiểm tra lại video lớn `.mp4` chỉ nằm local trong `runs/` (`LOCAL_ONLY`, không commit vào git), dọn file nháp thừa nếu cần headroom ổ cứng, rồi commit và push bản hoàn tất lên nhánh `feat/sd-retention-03-r2-visual-quality`.
+1. **Hoàn tất Boston 1919 Regression Proof (`runs/sd_retention03_r2_boston_proof_20261118/`)**:
+   - Đã thêm biến thể preset góc máy thứ 2 & đường đi camera riêng (`director/shot_director.py`, `director/camera_choreographer.py`) cho `boston_street_hook` (`boston_street_hook_alley_pan`), `boston_tank_rupture` (`boston_tank_rupture_surge`), `boston_elevated_rail_impact` (`boston_elevated_rail_truss_tilt`) cùng bộ bảo vệ xoay triplet liền kề tổng quát + `CONTINUATION_SUBPHASES` (`director/visual_storytelling_director.py`), đồng thời sửa định tuyến mệnh đề ngắn `"Boston's strangest flood"` (`director/visual_event_graph.py`).
+   - Kết quả render lại Boston R2 Proof: **PASS `TECHNICAL_ACCEPTANCE_PASS`** (`10` shots / `10` unique setups / `10` unique movements, **`0` lặp setup/triplet liền kề**, `cinematic_composition=PASS (0 issues)`, `pointer_tracking=PASS` với `9` settled tips và sai số tối đa `13.52px <= 36px`, `character_grounding=PASS` trên `24` mẫu `worst_penetration=0.0143m / slide=0.001m`, `-15.4 LUFS / -2.3 dBTP`, `decoded_visual_quality=WARN` chỉ do 2 cảnh báo tách cạnh nhẹ `0 issues`).
+   - Bằng chứng đã kiểm tra trực quan: [boston_r2_360_sheet.jpg](qa/boston_r2_360_sheet.jpg), [boston_qc_report.json](qa/boston_qc_report.json).
+
+2. **Tinh chỉnh đối chiếu ảnh `tacoma_before_vs_after_360.jpg` & sửa khung sập Tacoma (`runs/sd_retention03_r2_tacoma_proof_20261118/`)**:
+   - Đã mở rộng nhẹ góc máy `zach3d:tacoma_collapse_plunge_stage` (`fov=52`), hiệu chỉnh `breakSeamAnchor` (`director/assets/zdf_tacoma_bridge_scenes.py`) và bổ sung góc quay `tacoma_wide_strait_aerial` + đường máy đối lập cho `tacoma_torsion_twist_stage` -> **`pointer_tracking=PASS` với `13` settled tips, `0` offscreen skips**, `worst_tip_target_error_px=13.26px`, `11` unique setups / `0` lặp.
+   - Đã cập nhật [tacoma_before_vs_after_360.jpg](qa/tacoma_before_vs_after_360.jpg) khớp beat 1:1 giữa bản lưu trữ trước đó (`1.50s`, `22.00s`, `31.50s`) và khung giải mã R2 mới đúng lúc `THE ROAD / WAS MOVING!` (`1.50s`), đỉnh xoắn `WHOLE DECK TWISTING` (`29.75s`) và khoảnh khắc gãy + splash `SPAN BROKE FREE` (`34.35s`), kèm [tacoma_r2_360_sheet.jpg](qa/tacoma_r2_360_sheet.jpg) và [tacoma_qc_report.json](qa/tacoma_qc_report.json).
+
+3. **Kiểm thử tự động trọn bộ SAU lần chỉnh sửa code cuối cùng**:
+   - `python tools/run_validation_async.py --mode full --workers 2 --log-dir docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/logs/async_dag` -> **25/25 suite `[PASS   ]`** (`497.38s`, phủ 100% file `tests/test_*.py`, `missing_modules: []`, [validation_summary.json](logs/async_dag/validation_summary.json)).
+   - `python -m unittest discover -s tests -v` -> **`Ran 79 tests in 613.330s — OK`** (`0` errors, `0` failures, [canonical_unittest_discover.log](logs/canonical_unittest_discover.log)).
+
+4. **Chứng từ kết thúc đợt R2 & Chính sách Git Media**:
+   - Đã xuất [gates_status.csv](gates_status.csv), [qa_summary.json](qa_summary.json), [final_manifest.json](final_manifest.json), và [SHA256SUMS.txt](SHA256SUMS.txt).
+   - Toàn bộ `.mp4` của đợt R2 chỉ lưu cục bộ trong `runs/` (`LOCAL_ONLY`, được `.gitignore` loại trừ hoàn toàn khỏi Git).
+   - Lưu ý trung thực: Mọi đánh giá chủ quan (`subjective_visual_review`, `subjective_visual_quality`, `subjective_editorial_listening`, `subjective_voice_quality_status`, `subjective_preference_status`, `viewer_retention_status`) giữ nguyên **`NOT_VERIFIED`** chờ con người xem và nghe thực tế.

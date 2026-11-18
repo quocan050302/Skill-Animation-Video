@@ -19,7 +19,7 @@
       "width": 1080,
       "height": 1920,
       "fps": 30.0,
-      "duration_sec": 38.67,
+      "duration_sec": 43.333,
       "has_audio": true
     },
     "final_4k_stream": {
@@ -31,8 +31,8 @@
         "pix_fmt": "yuv420p",
         "r_frame_rate": "30/1",
         "fps": 30.0,
-        "duration_sec": 38.67,
-        "size_bytes": 64567061,
+        "duration_sec": 43.333,
+        "size_bytes": 65639928,
         "audio_codec": "aac",
         "audio_sample_rate": "48000",
         "audio_channels": 2
@@ -42,77 +42,77 @@
       "status": "PASS",
       "declaration": "upscaled_lanczos_from_1080x1920",
       "native_4k": false,
-      "high_freq_edge_ratio_vs_1080p_bilinear": 1.3668
+      "high_freq_edge_ratio_vs_1080p_bilinear": 1.329
     },
     "decoded_frames_and_cuts": {
       "status": "PASS",
-      "distinct_setups_verified": 10,
+      "distinct_setups_verified": 11,
       "novel_scene_count": 11,
       "motion_scores": [
         {
           "shot_id": "shot_00",
-          "frame_mad": 22.18,
-          "luma_std": 51.4
+          "frame_mad": 13.099,
+          "luma_std": 51.2
         },
         {
           "shot_id": "shot_01",
-          "frame_mad": 26.664,
-          "luma_std": 53.24
+          "frame_mad": 6.543,
+          "luma_std": 58.69
         },
         {
           "shot_id": "shot_02",
-          "frame_mad": 11.541,
-          "luma_std": 57.94
+          "frame_mad": 13.884,
+          "luma_std": 58.29
         },
         {
           "shot_id": "shot_03",
-          "frame_mad": 23.499,
-          "luma_std": 53.54
+          "frame_mad": 48.178,
+          "luma_std": 56.95
         },
         {
           "shot_id": "shot_04",
-          "frame_mad": 30.14,
-          "luma_std": 56.9
+          "frame_mad": 19.122,
+          "luma_std": 53.38
         },
         {
           "shot_id": "shot_05",
-          "frame_mad": 20.929,
-          "luma_std": 50.59
+          "frame_mad": 11.104,
+          "luma_std": 58.58
         },
         {
           "shot_id": "shot_06",
-          "frame_mad": 25.988,
-          "luma_std": 51.1
+          "frame_mad": 18.052,
+          "luma_std": 45.82
         },
         {
           "shot_id": "shot_07",
-          "frame_mad": 13.51,
-          "luma_std": 45.97
+          "frame_mad": 16.57,
+          "luma_std": 56.6
         },
         {
           "shot_id": "shot_08",
-          "frame_mad": 12.138,
-          "luma_std": 54.3
+          "frame_mad": 4.809,
+          "luma_std": 52.22
         },
         {
           "shot_id": "shot_09",
-          "frame_mad": 13.427,
-          "luma_std": 58.22
+          "frame_mad": 8.206,
+          "luma_std": 58.39
         },
         {
           "shot_id": "shot_10",
-          "frame_mad": 5.609,
-          "luma_std": 58.11
+          "frame_mad": 6.771,
+          "luma_std": 58.91
         }
       ]
     },
     "audio_levels_and_ducking": {
       "status": "PASS",
-      "rms_dbfs": -16.7,
-      "peak_dbfs": -2.36,
-      "integrated_lufs": -14.2,
-      "true_peak_dbtp": -2.4,
-      "audio_qc_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/audio/audio_qc_report.json",
+      "rms_dbfs": -18.28,
+      "peak_dbfs": -1.85,
+      "integrated_lufs": -15.3,
+      "true_peak_dbtp": -1.8,
+      "audio_qc_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\audio\\audio_qc_report.json",
       "checks_summary": {
         "playable_stream_final": "PASS",
         "playable_stream_preview": "PASS",
@@ -130,8 +130,8 @@
     "scene_diversity_and_retention": {
       "status": "PASS",
       "subjective_visual_review": "NOT_VERIFIED",
-      "scene_diversity_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/scene_diversity_report.json",
-      "visual_qc_timeline_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/visual_qc_timeline.json",
+      "scene_diversity_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\scene_diversity_report.json",
+      "visual_qc_timeline_json": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\visual_qc_timeline.json",
       "checks_summary": {
         "visual_skill_lock": "PASS",
         "adjacent_repetition_guard": "PASS",
@@ -143,17 +143,17 @@
     },
     "camera_execution": {
       "status": "PASS",
-      "camera_execution_trace_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/camera_execution_trace.json",
+      "camera_execution_trace_json": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\camera_execution_trace.json",
       "worst_pos_err_m": 0.0,
-      "worst_ori_err_deg": 0.167,
+      "worst_ori_err_deg": 0.183,
       "worst_fov_err_deg": 0.0,
       "worst_contact_err_m": null,
       "issues": []
     },
     "editorial_retention_finish": {
       "status": "PASS",
-      "editorial_qa_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/editorial_qa_report.json",
-      "editorial_attention_timeline_json": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/editorial_attention_timeline.json",
+      "editorial_qa_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\editorial_qa_report.json",
+      "editorial_attention_timeline_json": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\editorial_attention_timeline.json",
       "subjective_voice_quality_status": "NOT_VERIFIED",
       "viewer_retention_status": "NOT_VERIFIED",
       "checks_summary": {
@@ -167,7 +167,7 @@
     },
     "visual_storytelling": {
       "status": "PASS",
-      "visual_storytelling_qa_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/visual_storytelling_qa_report.json",
+      "visual_storytelling_qa_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\visual_storytelling_qa_report.json",
       "subjective_visual_review": "NOT_VERIFIED",
       "checks_summary": {
         "story_action_coverage": "PASS",
@@ -186,265 +186,217 @@
       "schema_version": "sd-pointer-tracking-2",
       "status": "PASS",
       "planned_pointer_overlays": 6,
-      "checked_settled_tips": 15,
-      "justified_skips": [
-        {
-          "time_sec": 29.15,
-          "overlay_id": "ov_06",
-          "reason": "offscreen"
-        },
-        {
-          "time_sec": 29.686,
-          "overlay_id": "ov_06",
-          "reason": "offscreen"
-        },
-        {
-          "time_sec": 30.041,
-          "overlay_id": "ov_06",
-          "reason": "offscreen"
-        }
-      ],
-      "worst_tip_target_error_px": 13.55,
+      "checked_settled_tips": 13,
+      "justified_skips": [],
+      "worst_tip_target_error_px": 13.26,
       "max_allowed_error_px": 36.0,
       "samples": [
-        {
-          "time_sec": 0.642,
-          "overlay_id": "ov_00",
-          "role": "curiosity_headline",
-          "target_semantic_id": "bridge_midspan_twist",
-          "anchor_px": [
-            679.6,
-            816.6
-          ],
-          "tip_xy": [
-            672.2,
-            816.6
-          ],
-          "tip_target_error_px": 7.36,
-          "is_feature_visible": true
-        },
         {
           "time_sec": 1.265,
           "overlay_id": "ov_00",
           "role": "curiosity_headline",
           "target_semantic_id": "bridge_midspan_twist",
           "anchor_px": [
-            680.8,
-            834.2
+            665,
+            848.8
           ],
           "tip_xy": [
-            673.5,
-            834.3
-          ],
-          "tip_target_error_px": 7.35,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 1.284,
-          "overlay_id": "ov_00",
-          "role": "curiosity_headline",
-          "target_semantic_id": "bridge_midspan_twist",
-          "anchor_px": [
-            680.6,
-            835.2
-          ],
-          "tip_xy": [
-            673.3,
-            835.2
+            657.7,
+            848.6
           ],
           "tip_target_error_px": 7.34,
           "is_feature_visible": true
         },
         {
-          "time_sec": 1.925,
+          "time_sec": 1.433,
           "overlay_id": "ov_00",
           "role": "curiosity_headline",
           "target_semantic_id": "bridge_midspan_twist",
           "anchor_px": [
-            699.8,
-            828.3
+            666.3,
+            852.5
           ],
           "tip_xy": [
-            692.5,
-            828.7
+            659,
+            852.3
           ],
-          "tip_target_error_px": 7.35,
+          "tip_target_error_px": 7.33,
           "is_feature_visible": true
         },
         {
-          "time_sec": 3.284,
-          "overlay_id": "ov_01",
-          "role": "explanation",
-          "target_semantic_id": "plate_girder_windward",
-          "anchor_px": [
-            979.7,
-            823.3
-          ],
-          "tip_xy": [
-            975.2,
-            810.5
-          ],
-          "tip_target_error_px": 13.54,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 4.0,
-          "overlay_id": "ov_01",
-          "role": "explanation",
-          "target_semantic_id": "plate_girder_windward",
-          "anchor_px": [
-            956.7,
-            806.2
-          ],
-          "tip_xy": [
-            952.9,
-            793.2
-          ],
-          "tip_target_error_px": 13.55,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 4.07,
-          "overlay_id": "ov_01",
-          "role": "explanation",
-          "target_semantic_id": "plate_girder_windward",
-          "anchor_px": [
-            957.1,
-            809.5
-          ],
-          "tip_xy": [
-            953.3,
-            796.5
-          ],
-          "tip_target_error_px": 13.55,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 4.716,
-          "overlay_id": "ov_01",
-          "role": "explanation",
-          "target_semantic_id": "plate_girder_windward",
-          "anchor_px": [
-            866.5,
-            827.7
-          ],
-          "tip_xy": [
-            865.6,
-            814.2
-          ],
-          "tip_target_error_px": 13.54,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 10.133,
+          "time_sec": 18.334,
           "overlay_id": "ov_03",
           "role": "explanation",
           "target_semantic_id": "plate_girder_windward",
           "anchor_px": [
-            981.6,
-            824.6
+            985.8,
+            829.6
           ],
           "tip_xy": [
-            977.1,
-            811.8
+            979,
+            818.4
           ],
-          "tip_target_error_px": 13.53,
+          "tip_target_error_px": 13.13,
           "is_feature_visible": true
         },
         {
-          "time_sec": 10.847,
+          "time_sec": 18.747,
           "overlay_id": "ov_03",
           "role": "explanation",
           "target_semantic_id": "plate_girder_windward",
           "anchor_px": [
-            958.9,
-            814.1
+            977,
+            827.3
           ],
           "tip_xy": [
-            955,
-            801.1
+            970.3,
+            816
           ],
-          "tip_target_error_px": 13.53,
+          "tip_target_error_px": 13.16,
           "is_feature_visible": true
         },
         {
-          "time_sec": 11.0,
+          "time_sec": 19.5,
           "overlay_id": "ov_03",
           "role": "explanation",
           "target_semantic_id": "plate_girder_windward",
           "anchor_px": [
-            957.4,
-            820.4
+            950.6,
+            814.7
           ],
           "tip_xy": [
-            953.6,
-            807.4
+            944.2,
+            803.1
           ],
-          "tip_target_error_px": 13.53,
+          "tip_target_error_px": 13.26,
           "is_feature_visible": true
         },
         {
-          "time_sec": 11.867,
-          "overlay_id": "ov_03",
-          "role": "explanation",
-          "target_semantic_id": "plate_girder_windward",
+          "time_sec": 25.258,
+          "overlay_id": "ov_04",
+          "role": "curiosity_headline",
+          "target_semantic_id": "deck_twist_edge_l",
           "anchor_px": [
-            860.4,
-            793.7
+            818.9,
+            835.4
           ],
           "tip_xy": [
-            859.5,
-            780.2
-          ],
-          "tip_target_error_px": 13.53,
-          "is_feature_visible": true
-        },
-        {
-          "time_sec": 17.992,
-          "overlay_id": "ov_05",
-          "role": "warning_danger",
-          "target_semantic_id": "bridge_midspan_twist",
-          "anchor_px": [
-            716.8,
-            826.6
-          ],
-          "tip_xy": [
-            716.8,
-            826.6
+            818.9,
+            835.4
           ],
           "tip_target_error_px": 0.0,
           "is_feature_visible": true
         },
         {
-          "time_sec": 18.547,
-          "overlay_id": "ov_05",
-          "role": "warning_danger",
-          "target_semantic_id": "bridge_midspan_twist",
+          "time_sec": 25.334,
+          "overlay_id": "ov_04",
+          "role": "curiosity_headline",
+          "target_semantic_id": "deck_twist_edge_l",
           "anchor_px": [
-            748.5,
-            833.7
+            821.8,
+            852.9
           ],
           "tip_xy": [
-            748.5,
-            833.7
+            821.8,
+            852.9
           ],
           "tip_target_error_px": 0.0,
           "is_feature_visible": true
         },
         {
-          "time_sec": 19.017,
+          "time_sec": 28.942,
           "overlay_id": "ov_05",
           "role": "warning_danger",
           "target_semantic_id": "bridge_midspan_twist",
           "anchor_px": [
-            800,
-            822.1
+            614.6,
+            913
           ],
           "tip_xy": [
-            800,
-            822.1
+            614.6,
+            913
           ],
           "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 29.517,
+          "overlay_id": "ov_05",
+          "role": "warning_danger",
+          "target_semantic_id": "bridge_midspan_twist",
+          "anchor_px": [
+            641,
+            922.2
+          ],
+          "tip_xy": [
+            641,
+            922.2
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 29.587,
+          "overlay_id": "ov_05",
+          "role": "warning_danger",
+          "target_semantic_id": "bridge_midspan_twist",
+          "anchor_px": [
+            642.1,
+            924.9
+          ],
+          "tip_xy": [
+            642.1,
+            924.9
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 30.092,
+          "overlay_id": "ov_05",
+          "role": "warning_danger",
+          "target_semantic_id": "bridge_midspan_twist",
+          "anchor_px": [
+            643.5,
+            927.9
+          ],
+          "tip_xy": [
+            643.5,
+            927.9
+          ],
+          "tip_target_error_px": 0.0,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 35.267,
+          "overlay_id": "ov_06",
+          "role": "warning_danger",
+          "target_semantic_id": "collapse_break_seam",
+          "anchor_px": [
+            72.6,
+            673
+          ],
+          "tip_xy": [
+            80.1,
+            674.2
+          ],
+          "tip_target_error_px": 7.6,
+          "is_feature_visible": true
+        },
+        {
+          "time_sec": 35.482,
+          "overlay_id": "ov_06",
+          "role": "warning_danger",
+          "target_semantic_id": "collapse_break_seam",
+          "anchor_px": [
+            68.3,
+            625.7
+          ],
+          "tip_xy": [
+            75.8,
+            627.5
+          ],
+          "tip_target_error_px": 7.75,
           "is_feature_visible": true
         }
       ],
@@ -454,17 +406,17 @@
       "status": "PASS",
       "physics_summary": {
         "max_vertex_disp_m": 2.73,
-        "max_deck_roll_span_rad": 0.3417,
-        "collapse_onset_observed_sec": 29.15,
+        "max_deck_roll_span_rad": 0.3247,
+        "collapse_onset_observed_sec": 33.7335,
         "cables_attached_all": true,
         "nan_detected": false
       },
       "character_grounding": {
         "status": "PASS",
-        "checked_samples": 10,
+        "checked_samples": 8,
         "worst_penetration_m": 0.0,
         "worst_stance_slide_m": 0.0,
-        "max_root_speed_mps": 0.157,
+        "max_root_speed_mps": 0.232,
         "issues": []
       },
       "issues": []
@@ -473,11 +425,11 @@
       "status": "WARN",
       "subjective_visual_quality": "NOT_VERIFIED",
       "HUMAN_REVIEW_REQUIRED": true,
-      "decoded_visual_quality_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/decoded_visual_quality_report.json",
+      "decoded_visual_quality_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\decoded_visual_quality_report.json",
       "reports": {
-        "subject_visibility_by_shot": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/subject_visibility_by_shot.json",
-        "camera_compensated_motion_report": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/camera_compensated_motion_report.json",
-        "mobile_qa_320_360_390_1080": "/Users/macbook/Documents/Project_Github/Skill-Animation/Skill-Animation-Video/runs/sd_retention03_r2_tacoma_proof_20261117/mobile_qa_320_360_390_1080.json"
+        "subject_visibility_by_shot": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\subject_visibility_by_shot.json",
+        "camera_compensated_motion_report": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\camera_compensated_motion_report.json",
+        "mobile_qa_320_360_390_1080": "D:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118\\mobile_qa_320_360_390_1080.json"
       },
       "issues": []
     },
@@ -486,11 +438,11 @@
       "status": "PASS",
       "subjective_visual_quality": "NOT_VERIFIED",
       "HUMAN_REVIEW_REQUIRED": true,
-      "checked_runtime_frames": 101,
+      "checked_runtime_frames": 105,
       "decoded_visual_evidence_status": "WARN",
-      "unique_framings_count": 10,
-      "unique_angles_count": 10,
-      "unique_moves_count": 10,
+      "unique_framings_count": 11,
+      "unique_angles_count": 11,
+      "unique_moves_count": 11,
       "frames": [
         {
           "shot_id": "shot_00",
@@ -555,18 +507,18 @@
         },
         {
           "shot_id": "shot_01",
-          "framing": "MCU_UnderDeckGirder",
-          "physical_action": "plate_girder_wind_loading",
-          "salient_action_anchor": "plate_girder_windward",
+          "framing": "VWS_StraitTowerSpan",
+          "physical_action": "strait_wide_establish",
+          "salient_action_anchor": "bridge_midspan_twist",
           "salient_action_world_pos": [
             0.0,
-            2.38,
-            0.6
+            2.6,
+            0.0
           ],
           "salient_action_extent_world": [
-            1.08,
-            0.9,
-            0.99
+            2.16,
+            1.8,
+            1.98
           ],
           "preferred_on_screen_rect": [
             200.0,
@@ -594,10 +546,10 @@
               1520.0
             ]
           },
-          "minimum_visible_feature_px": 40.0,
+          "minimum_visible_feature_px": 32.0,
           "camera_compensation_baseline": "world_anchor_homography_residual",
-          "subject_screen_occupancy_min": 0.16,
-          "shot_visual_purpose": "causal_mechanism_focus",
+          "subject_screen_occupancy_min": 0.12,
+          "shot_visual_purpose": "wide_scale_context",
           "subject_box_1080": [
             200.0,
             490.0,
@@ -677,18 +629,18 @@
         },
         {
           "shot_id": "shot_03",
-          "framing": "MCU_UnderDeckGirder",
-          "physical_action": "plate_girder_wind_loading",
-          "salient_action_anchor": "plate_girder_windward",
+          "framing": "MS_DeckChase",
+          "physical_action": "bridge_car_suspension_bounce",
+          "salient_action_anchor": "bridge_midspan_twist",
           "salient_action_world_pos": [
             0.0,
-            2.38,
-            0.6
+            2.55,
+            0.0
           ],
           "salient_action_extent_world": [
-            1.08,
-            0.9,
-            0.99
+            1.68,
+            1.4,
+            1.54
           ],
           "preferred_on_screen_rect": [
             200.0,
@@ -738,18 +690,18 @@
         },
         {
           "shot_id": "shot_04",
-          "framing": "MS_DeckChase",
-          "physical_action": "bridge_vertical_bounce",
-          "salient_action_anchor": "bridge_midspan_twist",
+          "framing": "MCU_UnderDeckGirder",
+          "physical_action": "plate_girder_wind_loading",
+          "salient_action_anchor": "plate_girder_windward",
           "salient_action_world_pos": [
             0.0,
-            2.55,
-            0.0
+            2.38,
+            0.6
           ],
           "salient_action_extent_world": [
-            1.68,
-            1.4,
-            1.54
+            1.08,
+            0.9,
+            0.99
           ],
           "preferred_on_screen_rect": [
             200.0,
@@ -860,67 +812,6 @@
         },
         {
           "shot_id": "shot_06",
-          "framing": "WS_TorsionLongitudinal",
-          "physical_action": "extreme_opposed_edge_roll",
-          "salient_action_anchor": "deck_twist_edge_l",
-          "salient_action_world_pos": [
-            0.0,
-            2.55,
-            0.6
-          ],
-          "salient_action_extent_world": [
-            1.32,
-            1.1,
-            1.21
-          ],
-          "preferred_on_screen_rect": [
-            200.0,
-            490.0,
-            880.0,
-            1260.0
-          ],
-          "camera_safe_rects": {
-            "hero_action_1080": [
-              200.0,
-              490.0,
-              880.0,
-              1260.0
-            ],
-            "headline_band_1080": [
-              104.0,
-              182.0,
-              976.0,
-              466.0
-            ],
-            "caption_safe_1080": [
-              88.0,
-              1280.0,
-              992.0,
-              1520.0
-            ]
-          },
-          "minimum_visible_feature_px": 48.0,
-          "camera_compensation_baseline": "world_anchor_homography_residual",
-          "subject_screen_occupancy_min": 0.2,
-          "shot_visual_purpose": "opposing_structural_motion",
-          "subject_box_1080": [
-            200.0,
-            490.0,
-            880.0,
-            1260.0
-          ],
-          "negative_space_box_1080": [
-            104.0,
-            182.0,
-            976.0,
-            466.0
-          ],
-          "face_protect_box_1080": null,
-          "collisions": [],
-          "composition_ok": true
-        },
-        {
-          "shot_id": "shot_07",
           "framing": "MS_ShoreReaction",
           "physical_action": "shore_onlooker_reaction",
           "salient_action_anchor": "shore_onlooker_head",
@@ -982,6 +873,67 @@
             780.0,
             980.0
           ],
+          "collisions": [],
+          "composition_ok": true
+        },
+        {
+          "shot_id": "shot_07",
+          "framing": "WS_TorsionLongitudinal",
+          "physical_action": "torsional_flutter_escalation",
+          "salient_action_anchor": "deck_twist_edge_l",
+          "salient_action_world_pos": [
+            0.0,
+            2.55,
+            0.6
+          ],
+          "salient_action_extent_world": [
+            1.32,
+            1.1,
+            1.21
+          ],
+          "preferred_on_screen_rect": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "camera_safe_rects": {
+            "hero_action_1080": [
+              200.0,
+              490.0,
+              880.0,
+              1260.0
+            ],
+            "headline_band_1080": [
+              104.0,
+              182.0,
+              976.0,
+              466.0
+            ],
+            "caption_safe_1080": [
+              88.0,
+              1280.0,
+              992.0,
+              1520.0
+            ]
+          },
+          "minimum_visible_feature_px": 48.0,
+          "camera_compensation_baseline": "world_anchor_homography_residual",
+          "subject_screen_occupancy_min": 0.2,
+          "shot_visual_purpose": "opposing_structural_motion",
+          "subject_box_1080": [
+            200.0,
+            490.0,
+            880.0,
+            1260.0
+          ],
+          "negative_space_box_1080": [
+            104.0,
+            182.0,
+            976.0,
+            466.0
+          ],
+          "face_protect_box_1080": null,
           "collisions": [],
           "composition_ok": true
         },
@@ -1190,8 +1142,8 @@
     "pix_fmt": "yuv420p",
     "r_frame_rate": "30/1",
     "fps": 30.0,
-    "duration_sec": 38.67,
-    "size_bytes": 64567061,
+    "duration_sec": 43.333,
+    "size_bytes": 65639928,
     "audio_codec": "aac",
     "audio_sample_rate": "48000",
     "audio_channels": 2

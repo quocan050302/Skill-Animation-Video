@@ -111,16 +111,14 @@ python -m unittest discover -s tests -v
 python tools/run_validation_async.py --mode full --workers 2
 ```
 
-## SD-RETENTION-03.R2 Status & Remaining Work (Branch `feat/sd-retention-03-r2-visual-quality`)
+## SD-RETENTION-03.R2 Status (Branch `feat/sd-retention-03-r2-visual-quality` — Completed)
 
 Chi tiết đầy đủ xem tại [docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/README.md](docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/README.md).
 
-- **Đã hoàn thành hôm nay (2026-11-17)**:
+- **Đã hoàn thành đợt 1 (2026-11-17, macOS checkpoint `b393789`)**:
   - R2.1 `director/decoded_visual_quality.py` + semantic matte pass WebGL + camera-compensated physical motion + mobile `320/360/390/1080` composition QA + fail-closed pointer zero-tip audit.
-  - Sửa hình học cầu Tacoma (`zdf_tacoma_bridge_scenes.py`), đồng bộ splash/âm thanh, bổ sung `tagSemantic` cho toàn bộ cảnh Boston (`zdf_boston_molasses_scenes.py`), chặn truyền nhầm `contact_action` (`shot_director.py`), và hoàn thiện bộ cảnh mới Skyscraper 3D + TMD cutaway (`zdf_skyscraper_scenes.py`).
-  - Hoàn thiện 32 bẫy `T01`–`T32` (`tests/test_r2_decoded_and_traps.py`) và phủ 100% file `tests/test_*.py` vào `tools/run_validation_async.py` (bao gồm 3 suite audio trước đây bị thiếu).
-  - Đã render & PASS QC đầy đủ: **Skyscraper `baseline_A` + `enhanced_B` (Native 4K `2160x3840`, A/B VO PCM parity)** và **Tacoma 1940 Repair Proof**. Checkpoint 15/15 test mục tiêu vừa chạy đạt `OK`.
-- **Việc còn lại cần làm nốt ngày mai**:
-  1. Thêm preset góc máy xen kẽ cho split shot ở `boston_street_hook`, `boston_tank_rupture`, `boston_elevated_rail_impact` trong `director/shot_director.py` để Boston Proof hết 3 lỗi lặp triplet (`0->1`, `4->5`, `8->9`) và tạo `boston_r2_360_sheet.jpg`.
-  2. Chỉnh lại mốc lấy mẫu đỉnh xoắn/sập cho ảnh đối chiếu `tacoma_before_vs_after_360.jpg`.
-  3. Chạy trọn bộ `python tools/run_validation_async.py --mode full --workers 2` và `python -m unittest discover -s tests -v` **sau lần sửa code cuối**, rồi chốt `SHA256SUMS.txt` / `gates_status.csv` / `final_manifest.json` và commit/push bản hoàn chỉnh.
+  - Hoàn thiện bộ cảnh mới Skyscraper 3D + TMD cutaway (`zdf_skyscraper_scenes.py`), render & PASS QC đầy đủ **Skyscraper `baseline_A` + `enhanced_B` (Native 4K `2160x3840`, A/B VO PCM parity)**.
+- **Đã hoàn thành nốt & đóng gói R2 (2026-11-18, Windows)**:
+  1. Thêm preset góc máy xen kẽ và camera paths riêng trong `director/shot_director.py` & `director/camera_choreographer.py` cho `boston_street_hook`, `boston_tank_rupture`, `boston_elevated_rail_impact` (+ bảo vệ xoay triplet tổng quát, `CONTINUATION_SUBPHASES` & sửa định tuyến mệnh đề cuối Boston) -> **Boston 1919 Regression Proof** PASS `cinematic_composition` (`10` shots / `10` setups / `10` moves, `0` lỗi lặp), kèm [boston_r2_360_sheet.jpg](docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/boston_r2_360_sheet.jpg) & [boston_qc_report.json](docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/boston_qc_report.json).
+  2. Hiệu chỉnh khung máy & điểm neo sập Tacoma (`pointer_tracking PASS`, `13` tips, **`0` offscreen skips**) và cập nhật đối chiếu 1:1 [tacoma_before_vs_after_360.jpg](docs/implementation_runs/SD-RETENTION-03_R2_20261117_1135Z/qa/tacoma_before_vs_after_360.jpg) đúng đỉnh xoắn + pha gãy chạm nước.
+  3. Chạy trọn bộ `python tools/run_validation_async.py --mode full --workers 2` (**25/25 suite `PASS`** trong `497.38s`) và `python -m unittest discover -s tests -v` (**`Ran 79 tests in 613.330s — OK`**) **sau lần sửa code cuối**, kèm bộ chứng từ `SHA256SUMS.txt`, `gates_status.csv`, `qa_summary.json`, `final_manifest.json` (video `.mp4` giữ `LOCAL_ONLY` trong `runs/`, không commit lên Git).

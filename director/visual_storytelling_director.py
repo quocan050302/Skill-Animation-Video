@@ -282,7 +282,7 @@ def _classify_narrative_action_unit(
                 "period_year": base_period,
                 "reconstruction_disclosure": disclosure,
             }
-        if (len(low.split()) <= 4 and "boston" in low) or (any(k in low for k in ("unlike anything", "1919", "expected", "rumble", "north end", "nobody")) and not any(m in low for m in ("milestone", "strangest", "preventable", "tighten", "rules", "great molasses flood"))):
+        if ((len(low.split()) <= 4 and "boston" in low and idx == 0) or any(k in low for k in ("unlike anything", "1919", "expected", "rumble", "north end", "nobody"))) and not any(m in low for m in ("milestone", "strangest", "preventable", "tighten", "rules", "great molasses flood")):
             is_suspense_clause = ("nobody" in low or "expected" in low or "unlike" in low) and ("1919" not in low)
             return {
                 "location_id": "boston_north_end_alley_suspense_1919" if is_suspense_clause else "boston_north_end_street_1919",
@@ -846,6 +846,9 @@ CONTINUATION_SUBPHASES: Dict[str, Tuple[str, str, List[str]]] = {
     "skyscraper_counterphase": ("hydraulic_damping_cycle", "skyscraper_counterphase_hydraulic", ["pistons_dissipate_counterphase_inertia"]),
     "skyscraper_before_after": ("damped_amplitude_contrast", "skyscraper_before_after_contrast", ["damped_tower_displacement_clearly_smaller"]),
     "skyscraper_dusk_resolution": ("skyline_safe_sway_resolve", "skyscraper_dusk_safe_rig", ["engineers_allow_controlled_flex"]),
+    "boston_street_hook": ("mystery_suspense_crowd_freeze", "north_end_street_suspense", ["street_crowd_freezes_expecting_ordinary_water"]),
+    "boston_tank_rupture": ("tank_wall_blowout_surge", "rivet_rupture_surge_rig", ["sheared_tank_wall_releases_initial_surge"]),
+    "boston_elevated_rail_impact": ("trestle_girder_deflection_follow", "elevated_rail_bent_girder_rig", ["buckled_steel_girders_twist_under_molasses_load"]),
 }
 
 

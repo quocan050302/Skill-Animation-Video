@@ -382,7 +382,7 @@ def classify_visual_clause(
             matched_props = ["tank_seam_leak_rig"]
             families = ["boston_tank_leak_seep"]
             scales = ["macro_object"]
-        elif (len(low.split()) <= 4 and "boston" in low) or (any(k in low for k in ("expected", "1919", "normal winter", "nothing like", "unlike anything", "rumble", "north end")) and not any(m in low for m in ("great molasses flood", "strangest", "preventable", "milestone"))):
+        elif ((len(low.split()) <= 4 and "boston" in low and beat_index == 0) or any(k in low for k in ("expected", "1919", "normal winter", "nothing like", "unlike anything", "rumble", "north end"))) and not any(m in low for m in ("great molasses flood", "strangest", "preventable", "milestone", "tighten", "rules")):
             matched_props = ["north_end_street_1919"]
             families = ["boston_street_hook"]
             scales = ["human_environment"]

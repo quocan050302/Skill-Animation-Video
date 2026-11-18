@@ -44,6 +44,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "tacoma_wide_strait_aerial",
+            "families": ("tacoma_wide_establish",),
+            "framing": "VWS_StraitTowerSpan",
+            "angle": "high_shore_towers_oblique",
+            "move": "tower_span_arc_sweep",
+            "focal_mm": 28,
+            "placement": "east_tower_strait_horizon",
+            "silhouette": "twin_towers_puget_narrows",
+            "pose": "strait_crosswind_buildup",
+            "novel_non_template": True,
+        },
+        {
             "setup": "tacoma_roadway_wave_car",
             "families": ("tacoma_roadway_wave",),
             "framing": "MS_DeckChase",
@@ -260,6 +272,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "boston_street_hook_alley_pan",
+            "families": ("boston_street_hook",),
+            "framing": "MS_AlleyHorizon",
+            "angle": "low_cobblestone_upward",
+            "move": "alley_track_pan",
+            "focal_mm": 34,
+            "placement": "right_storefront_curb",
+            "silhouette": "horse_cart_approaching_shadow",
+            "pose": "mystery_suspense_crowd_freeze",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_molasses_wave_reveal",
             "families": ("boston_molasses_reveal",),
             "framing": "MS_LowReveal",
@@ -308,6 +332,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "novel_non_template": True,
         },
         {
+            "setup": "boston_tank_rupture_surge",
+            "families": ("boston_tank_rupture",),
+            "framing": "WS_TankCollapse",
+            "angle": "wide_low_wharf_angle",
+            "move": "whip_tilt_rupture_follow",
+            "focal_mm": 28,
+            "placement": "lower_rivet_apron",
+            "silhouette": "gushing_molasses_flood_front",
+            "pose": "tank_wall_blowout",
+            "novel_non_template": True,
+        },
+        {
             "setup": "boston_wave_chase_street",
             "families": ("boston_wave_street_flow",),
             "framing": "MS_TrackingChase",
@@ -341,6 +377,18 @@ ENGINE_CANDIDATE_SPACES: Dict[str, List[Dict[str, Any]]] = {
             "placement": "right_trestle_pillar",
             "silhouette": "bent_trestle_delivery_wagon",
             "pose": "street_structure_impact",
+            "novel_non_template": True,
+        },
+        {
+            "setup": "boston_elevated_rail_truss_tilt",
+            "families": ("boston_elevated_rail_impact",),
+            "framing": "MCU_BentGirder",
+            "angle": "low_under_trestle_upward",
+            "move": "impact_tilt_reframe",
+            "focal_mm": 30,
+            "placement": "buckled_steel_girder",
+            "silhouette": "tilted_elevated_track_wagon",
+            "pose": "trestle_truss_deflection",
             "novel_non_template": True,
         },
         {
@@ -939,6 +987,24 @@ def generate_candidate_shot_set(
             continue
 
         c["semantic_fit"] = 1.0 if fam_match else 0.35
+        if fam == "boston_street_hook":
+            is_suspense = ("nobody" in nar_low or "expected" in nar_low or "unlike" in nar_low) and ("1919" not in nar_low)
+            if (is_suspense or unit_idx > 0) and c["setup"] == "boston_street_hook_alley_pan":
+                c["semantic_fit"] += 0.70
+            elif (not is_suspense and unit_idx == 0) and c["setup"] == "boston_street_hook_crowd":
+                c["semantic_fit"] += 0.65
+        if fam == "boston_tank_rupture":
+            is_blowout_follow = any(k in nar_low for k in ("gave way", "walls gave", "flood", "poured", "surge"))
+            if is_blowout_follow and c["setup"] == "boston_tank_rupture_surge":
+                c["semantic_fit"] += 0.45
+            elif (not is_blowout_follow) and c["setup"] == "boston_tank_rupture_blast":
+                c["semantic_fit"] += 0.55
+        if fam == "boston_elevated_rail_impact":
+            is_girder_focus = any(k in nar_low for k in ("buckled", "support", "girder", "railway", "trestle"))
+            if is_girder_focus and c["setup"] == "boston_elevated_rail_truss_tilt":
+                c["semantic_fit"] += 0.45
+            elif (not is_girder_focus) and c["setup"] == "boston_elevated_rail_crush":
+                c["semantic_fit"] += 0.55
         if fam == "boston_wave_street_flow":
             is_speed_beat = any(k in nar_low for k in ("35", "faster", "race", "speed", "horse", "per hour", "tore through", "neighborhood"))
             if is_speed_beat and c["setup"] == "boston_wave_speed_sweep":
@@ -1117,6 +1183,26 @@ def select_sequence_with_diversity_constraints(
                 if cand["setup"] != history[-1]["setup_type"]:
                     best_score, chosen, rationale = sc, cand, rsn + " (anti_clone_override)"
                     break
+
+        # Enforce strict non-adjacent camera triplet rotation so consecutive shots never clone (framing, angle, move)
+        prev_triplet = (history[-1]["framing"], history[-1]["angle"], history[-1]["movement"]) if history else None
+        cur_triplet = (chosen["framing"], chosen["angle"], chosen["move"])
+        if prev_triplet is not None and cur_triplet == prev_triplet:
+            swapped = False
+            for sc, cand, rsn in ranked[1:]:
+                if (cand["framing"], cand["angle"], cand["move"]) != prev_triplet:
+                    best_score, chosen, rationale = sc, cand, rsn + " (anti_triplet_override)"
+                    swapped = True
+                    break
+            if not swapped:
+                chosen = dict(chosen)
+                alt_moves = ("reframe_track_sweep", "arc_pull_alt", "slow_tilt_shift")
+                fr = str(chosen["framing"])
+                chosen["framing"] = ("MCU_" + fr.split("_", 1)[-1]) if not fr.startswith("MCU") else ("WS_" + fr.split("_", 1)[-1])
+                ang = str(chosen["angle"])
+                chosen["angle"] = f"{ang}_reverse" if not ang.endswith("_reverse") else f"{ang}_alt"
+                chosen["move"] = alt_moves[idx % len(alt_moves)]
+                rationale = rationale + " (synthetic_triplet_rotate)"
 
         # Honor explicit manual shot lock if provided in --visual-plan-in and validated for this skill
         manual_override = manual_shots[idx] if idx < len(manual_shots) and isinstance(manual_shots[idx], dict) and manual_shots[idx].get("manual") else None

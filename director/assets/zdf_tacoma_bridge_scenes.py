@@ -564,7 +564,7 @@ export function makeTacomaSuspensionBridgeRig({
   edgeBackAnchor.position.set(0, 0.14, -deckWidth * 0.52);
   girderAnchor.position.set(0, -0.10, deckWidth * 0.54);
   centerSeg.add(midSpanAnchor, edgeFrontAnchor, edgeBackAnchor, girderAnchor);
-  breakSeamAnchor.position.set(segLen * 0.48, 0.12, deckWidth * 0.25);
+  breakSeamAnchor.position.set(segLen * 0.64, 0.14, deckWidth * 0.30);
   seamSeg.add(breakSeamAnchor);
 
   const _wTop = new THREE.Vector3();
