@@ -466,18 +466,22 @@ def extract_editorial_focus_events(
                 seen_location_contexts.add("lon_1952")
                 lon_item = (EditorialRole.LOCATION_TIME, "streetlamp_halo_visibility", "lamppost_column_ref", "DEC 5-9, 1952", "Five-day London smog event", "none", "UK Met Office Great Smog 1952 archive", "claim_dates_dec5_9_1952")
             elif gen == "zach3d:london_coal_combustion_cutaway_stage":
-                lon_item = (EditorialRole.EXPLANATION, "chimney_flue_combustion", None, "COAL & SULFUR SMOKE", "Domestic hearths + coal power stacks", "curved_leader", "London Museum 1952 coal smoke overview", "claim_coal_sulfur_smoke")
+                lon_item = (EditorialRole.EXPLANATION, "chimney_flue_combustion", None, "COAL & SULFUR SMOKE", "Home hearths burning soft coal", "curved_leader", "London Museum 1952 coal smoke overview", "claim_coal_sulfur_smoke")
+            elif gen == "zach3d:london_rooftop_stacks_stage":
+                lon_item = (EditorialRole.EXPLANATION, "rooftop_chimney_plume", None, "CHIMNEY SOOT SURGE", "Citywide exhaust fills cool sky", "curved_leader", "London Museum 1952 coal smoke overview", "claim_coal_sulfur_smoke")
             elif gen == "zach3d:london_atmospheric_inversion_stage":
-                lon_item = (EditorialRole.WARNING_DANGER, "inversion_thermal_boundary", "st_pauls_dome_and_horizon_ref", "WARM AIR LID", "ILLUSTRATIVE AIRFLOW — trapped cold air", "impact_arrow", "UK Met Office temperature inversion explanation", "claim_temperature_inversion_1952")
+                lon_item = (EditorialRole.WARNING_DANGER, "inversion_thermal_boundary", "st_pauls_dome_and_horizon_ref", "WARM AIR LID", "Temperature cap traps rising smoke", "impact_arrow", "UK Met Office temperature inversion explanation", "claim_temperature_inversion_1952")
+            elif gen == "zach3d:london_street_canyon_stage":
+                lon_item = (EditorialRole.EXPLANATION, "street_canyon_smog_layer", None, "TRAPPED STREET SMOG", "Smoke stalls inside street canyon", "curved_leader", "UK Met Office Great Smog 1952 archive", "claim_temperature_inversion_1952")
             elif gen == "zach3d:london_bus_visibility_stage":
-                lon_item = (EditorialRole.EXPLANATION, "bus_headlight_cone", "lamppost_column_ref", "NEAR-ZERO VISIBILITY", "Walkers led buses with handheld lanterns", "curved_leader", "London Transport Dec 1952 fog reports", "claim_zero_visibility_Dec1952")
+                lon_item = (EditorialRole.EXPLANATION, "bus_headlight_cone", "lamppost_column_ref", "NEAR-ZERO VISIBILITY", "Walkers led buses with lanterns", "curved_leader", "London Transport Dec 1952 fog reports", "claim_zero_visibility_Dec1952")
             elif gen == "zach3d:london_pedestrian_reaction_stage":
                 if "4,000" in low or "deaths" in low or "four thousand" in low:
-                    lon_item = (EditorialRole.VERIFIED_FACT, "pedestrian_respiratory_stance_zone", None, "~4,000 DEATHS EST.", "Estimated monthly excess deaths (City Hall)", "mini_fact_tag", "London City Hall Great Smog 1952 archive", "claim_excess_deaths_est_4000")
+                    lon_item = (EditorialRole.VERIFIED_FACT, "pedestrian_respiratory_stance_zone", None, "~4,000 DEATHS EST.", "Estimated monthly excess deaths", "mini_fact_tag", "London City Hall Great Smog 1952 archive", "claim_excess_deaths_est_4000")
                 else:
-                    lon_item = (EditorialRole.WARNING_DANGER, "pedestrian_respiratory_stance_zone", None, "ACIDIC FOG DROPLETS", "Soot & sulfuric droplets strained airways", "impact_arrow", "UK Met Office health impact note", "claim_respiratory_impact")
+                    lon_item = (EditorialRole.WARNING_DANGER, "pedestrian_respiratory_stance_zone", None, "ACIDIC FOG DROPLETS", "Soot and acid strained airways", "impact_arrow", "UK Met Office health impact note", "claim_respiratory_impact")
             elif gen == "zach3d:london_clean_air_aftermath_stage":
-                lon_item = (EditorialRole.AFTERMATH_SOBER, "smokeless_hearth_transition", None, "CLEAN AIR ACT 1956", "Transition toward smokeless coal & clean air", "none", "UK Clean Air Act 1956 record", "claim_clean_air_act_1956")
+                lon_item = (EditorialRole.AFTERMATH_SOBER, "smokeless_hearth_transition", None, "CLEAN AIR ACT 1956", "Transition toward cleaner urban air", "none", "UK Clean Air Act 1956 record", "claim_clean_air_act_1956")
 
             if lon_item is not None:
                 erole, anc_k, sec_k, lbl_k, sub_k, ptr_k, f_src, f_cid = lon_item
@@ -496,6 +500,105 @@ def extract_editorial_focus_events(
                         "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow", "torsion_bracket", "sway_bracket") else "tracked_arrow",
                         "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
                         "why_role": f"Semantic role {spec.role} matched to atmospheric stage {gen}",
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr_k,
+                        "label": lbl_k, "sublabel": sub_k,
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": spec.semantic_priority, "verified": True,
+                        "fact_source": f_src, "source_fact_ids": [f_cid] if f_cid else [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+            continue
+
+        if use_role_aware and gen.startswith("zach3d:sthelens_"):
+            hb_v = curiosity_by_nev.get(str(shot.get("narrative_event_id") or ""))
+            if hb_v and gen in ("zach3d:sthelens_ridge_hook_stage", "zach3d:sthelens_lateral_blast_stage"):
+                t_on = round(max(st + 0.16, rev_floor), 3)
+                t_off = round(min(en - 0.14, t_on + 2.25), 3)
+                if t_off - t_on >= 0.75:
+                    spec = select_overlay_variant(EditorialRole.CURIOSITY_HEADLINE, contrast_needs="extreme", prior_roles=prior_styled, seed=seed + si)
+                    ptr = plan_attention_pointer({
+                        "beat_index": si,
+                        "role": spec.role,
+                        "target_anchor_id": hb_v["target_anchor_id"],
+                        "secondary_anchor_id": hb_v.get("secondary_anchor_id"),
+                        "pointer_shape": hb_v.get("pointer_shape"),
+                        "narrative_event_id": nev.get("narrative_event_id"),
+                    })
+                    l1, l2 = split_curiosity_lines(hb_v["label"])
+                    lay = measure_text_layout(hb_v["label"], spec, viewport=1080)
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": hb_v.get("why_selected", "Mount St. Helens volcano curiosity headline"),
+                        "anchor_id": ptr["anchor_id"],
+                        "secondary_anchor_id": ptr.get("secondary_anchor_id"),
+                        "target_semantic_id": ptr.get("target_semantic_id"),
+                        "target_mesh_ids": ptr.get("target_mesh_ids"),
+                        "target_region_world": ptr.get("target_region_world"),
+                        "pointer_reason": ptr.get("pointer_reason"),
+                        "pointer_shape": ptr["pointer_shape"],
+                        "label": hb_v["label"], "display_lines": [ln for ln in (l1, l2) if ln], "sublabel": "",
+                        "start": t_on, "end": t_off,
+                        "preferred_side": ptr["preferred_side"], "placement_box": ptr["placement_box"],
+                        "font_size_1080": lay["font_size_1080"], "stroke_width": spec.stroke_width,
+                        "bg_shape": spec.bg_shape, "primary_color": spec.primary_color,
+                        "secondary_color": spec.secondary_color, "outline_color": spec.outline_color,
+                        "accent_color": spec.secondary_color, "contrast_ratio_min": spec.contrast_ratio_min,
+                        "sfx_intent": spec.sfx_intent, "sound_intent": spec.sfx_intent,
+                        "priority": 1, "verified": True, "source_fact_ids": [],
+                    }
+                    candidates.append(cand)
+                    prior_styled.append(cand)
+                    continue
+
+            v_item: Optional[Tuple[EditorialRole, str, Optional[str], str, str, str, Optional[str], Optional[str]]] = None
+            if gen == "zach3d:sthelens_ridge_hook_stage" and "msh_1980" not in seen_location_contexts:
+                seen_location_contexts.add("msh_1980")
+                v_item = (EditorialRole.LOCATION_TIME, "msh_north_flank_bulge", "msh_south_ridge_ref", "MAY 18, 1980", "Mount St. Helens north slope", "none", "USGS FS 036-00 / GIP St. Helens overview", "claim_msh_may18_1980")
+            elif gen == "zach3d:sthelens_cryptodome_cutaway_stage":
+                v_item = (EditorialRole.EXPLANATION, "msh_cryptodome_core", "msh_south_ridge_ref", "TRAPPED CRYPTODOME", "Magma inflated the north slope", "curved_leader", "USGS cryptodome deformation logs", "claim_msh_cryptodome_bulge")
+            elif gen == "zach3d:sthelens_landslide_avalanche_stage":
+                v_item = (EditorialRole.WARNING_DANGER, "msh_landslide_scar", "msh_south_ridge_ref", "M5.1 FLANK SLIDE", "Earthquake unroofed the slope", "impact_arrow", "USGS 08:32 PDT M5.1 earthquake & debris avalanche", "claim_msh_m51_landslide")
+            elif gen == "zach3d:sthelens_lateral_blast_stage":
+                v_item = (EditorialRole.WARNING_DANGER, "msh_lateral_blast_front", "msh_crater_lip_ref", ">300 MPH BLAST", "Decompression blew out sideways", "impact_arrow", "USGS over 300 mph lateral blast estimate", "claim_msh_lateral_blast_300mph")
+            elif gen == "zach3d:sthelens_forest_sweep_stage":
+                v_item = (EditorialRole.VERIFIED_FACT, "msh_blast_timber_front", "msh_untouched_ridge_ref", "~230 SQ MI ZONE", "Timber flattened in minutes", "mini_fact_tag", "USGS ~230 square miles damaged forest area", "claim_msh_230_sq_mi")
+            elif gen == "zach3d:sthelens_plinian_column_stage":
+                v_item = (EditorialRole.VERIFIED_FACT, "msh_plinian_ash_column", "msh_valley_horizon_ref", "~15 MI ASH COLUMN", "Vertical plume burned for hours", "mini_fact_tag", "USGS ~15-mile (24 km) Plinian column", "claim_msh_15_mile_column")
+            elif gen == "zach3d:sthelens_crater_aftermath_stage":
+                v_item = (EditorialRole.AFTERMATH_SOBER, "msh_horseshoe_crater_rim", "msh_original_summit_ghost", "~1,300 FT LOST", "57 deaths recorded; open horseshoe crater", "none", "USGS crater summit drop & 57 fatalities", "claim_msh_crater_aftermath")
+
+            if v_item is not None:
+                erole, anc_k, sec_k, lbl_k, sub_k, ptr_k, f_src, f_cid = v_item
+                spec = select_overlay_variant(erole, prior_roles=prior_styled, seed=seed + si)
+                ptr = plan_attention_pointer({
+                    "beat_index": si, "role": erole.value, "target_anchor_id": anc_k,
+                    "secondary_anchor_id": sec_k, "pointer_shape": ptr_k,
+                    "narrative_event_id": nev.get("narrative_event_id"),
+                })
+                lay = measure_text_layout(lbl_k, spec, viewport=1080)
+                t_on = round(max(st + 0.18, rev_floor, st + 0.24), 3)
+                t_off = round(min(en - 0.14, t_on + spec.max_duration), 3)
+                if t_off - t_on >= 0.80:
+                    cand = {
+                        "shot_index": si, "shot_id": shot_id, "narrative_event_id": nev.get("narrative_event_id"),
+                        "type": "focus_ring" if ptr_k in ("focus_circle", "impact_arrow", "torsion_bracket", "sway_bracket") else "tracked_arrow",
+                        "role": spec.role, "variant_id": spec.variant_id, "style_id": spec.style_id,
+                        "why_role": f"Semantic role {spec.role} matched to Mount St. Helens stage {gen}",
                         "anchor_id": ptr["anchor_id"],
                         "secondary_anchor_id": ptr.get("secondary_anchor_id"),
                         "target_semantic_id": ptr.get("target_semantic_id"),

@@ -113,6 +113,7 @@ export class EditorialOverlayController {
           }
         }
         const capRect = this.capEl.getBoundingClientRect();
+        const capClipped = (capRect && capRect.width > 1) ? (capRect.left < 60 || capRect.right > 1020 || capRect.bottom > 1580) : false;
         capTel.text = activeChunk.text || '';
         capTel.active_word = activeW;
         capTel.chunk_id = activeChunk.chunk_id;
@@ -121,6 +122,8 @@ export class EditorialOverlayController {
           min_word_gap_px: minGap < 990 ? Number(minGap.toFixed(2)) : null,
           word_overlap_count: overlaps,
           row_count: rowYs.length,
+          clipped_by_viewport: capClipped,
+          cap_bbox: (capRect && capRect.width > 1) ? [Number(capRect.left.toFixed(1)), Number(capRect.top.toFixed(1)), Number(capRect.right.toFixed(1)), Number(capRect.bottom.toFixed(1))] : null,
           in_safe_area: capRect.left >= 70 && capRect.right <= 1010 && capRect.bottom <= 1560,
         };
       }
@@ -313,6 +316,8 @@ export class EditorialOverlayController {
         const bh = by1 - by0;
         let ptrRes = { tip_xy: null, tip_target_error_px: null };
         let textBBox = [bx0, by0, bx1, by1];
+        let baseFont1080 = Number(ov.font_size_1080 || 34);
+        const txtCardG = el('g', {});
 
         if (!useRoleAware) {
           // Legacy mode for controlled baseline_A comparison
@@ -325,15 +330,16 @@ export class EditorialOverlayController {
             ptrRes = drawImpactArrow(g, bx0 + bw * 0.5 < anchorPx[0] ? bx1 : bx0, by0 + bh * 0.5, anchorPx[0], anchorPx[1], accent, '#090d16', enter, false);
           }
           if (ov.label) {
-            g.appendChild(el('rect', { x: bx0, y: by0, width: bw, height: bh, rx: 16, fill: 'rgba(10, 16, 28, 0.88)', stroke: accent, 'stroke-width': '3' }));
-            g.appendChild(el('rect', { x: bx0 + 11, y: by0 + 14, width: 6.5, height: Math.max(20, bh - 28), rx: 3.5, fill: accent }));
+            baseFont1080 = 32;
+            txtCardG.appendChild(el('rect', { x: bx0, y: by0, width: bw, height: bh, rx: 16, fill: 'rgba(10, 16, 28, 0.88)', stroke: accent, 'stroke-width': '3' }));
+            txtCardG.appendChild(el('rect', { x: bx0 + 11, y: by0 + 14, width: 6.5, height: Math.max(20, bh - 28), rx: 3.5, fill: accent }));
             const tEl = el('text', { x: bx0 + 30, y: by0 + (ov.sublabel ? 45 : bh * 0.58), fill: '#f8fafc', 'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '32' });
             tEl.textContent = ov.label;
-            g.appendChild(tEl);
+            txtCardG.appendChild(tEl);
             if (ov.sublabel) {
               const sEl = el('text', { x: bx0 + 30, y: by0 + 82, fill: '#e2e8f0', 'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '22' });
               sEl.textContent = ov.sublabel;
-              g.appendChild(sEl);
+              txtCardG.appendChild(sEl);
             }
           }
         } else if (role === 'curiosity_headline') {
@@ -342,6 +348,7 @@ export class EditorialOverlayController {
           const l1 = lines[0] || String(ov.label || '');
           const l2 = lines[1] || '';
           const fontSz = clamp(Number(ov.font_size_1080 || 88), 64, 112);
+          baseFont1080 = fontSz;
           const strokeW = Number(ov.stroke_width || 11);
           const cxMid = (bx0 + bx1) * 0.5;
           const uPop = clamp((t - ov.start) / 0.19, 0, 1);
@@ -370,7 +377,7 @@ export class EditorialOverlayController {
             const u2 = clamp((t - ov.start - 0.08) / 0.16, 0, 1);
             textG.appendChild(makeOutlineText(l2, fontSz * 2.02, secCol, easeOutCubic(u2)));
           }
-          g.appendChild(textG);
+          txtCardG.appendChild(textG);
           const totalTxtH = l2 ? fontSz * 2.18 : fontSz * 1.12;
           textBBox = [bx0, by0, bx1, by0 + totalTxtH];
 
@@ -392,24 +399,26 @@ export class EditorialOverlayController {
           }
         } else if (role === 'location_time') {
           // Subtle minimal context chip (no big border/arrow) clamped cleanly inside SAFE x bounds
+          baseFont1080 = 31;
           const sub = ov.sublabel ? ` • ${ov.sublabel}` : '';
-          const rawW = String((ov.label || '') + sub).length * 18 + 44;
-          const tagW = clamp(rawW, 260, Math.min(620, SAFE.x1 - SAFE.x0 - 20));
-          const tagH = 62;
-          const chipX0 = (bx0 + tagW > SAFE.x1) ? clamp(SAFE.x1 - tagW - 8, SAFE.x0 + 8, bx0) : bx0;
-          g.appendChild(el('rect', {
+          const rawW = String((ov.label || '') + sub).length * 19.5 + 48;
+          const tagW = clamp(rawW, 270, Math.min(720, SAFE.x1 - SAFE.x0 - 20));
+          const tagH = 64;
+          const chipX0 = (bx0 + tagW > SAFE.x1 - 8) ? clamp(SAFE.x1 - tagW - 10, SAFE.x0 + 8, bx0) : bx0;
+          txtCardG.appendChild(el('rect', {
             x: chipX0, y: by0, width: tagW, height: tagH, rx: 10,
             fill: 'rgba(15, 23, 42, 0.56)', stroke: 'rgba(148, 163, 184, 0.45)', 'stroke-width': '1.5',
           }));
-          g.appendChild(el('rect', { x: chipX0 + 8, y: by0 + 13, width: 3.5, height: 36, rx: 2, fill: '#94a3b8' }));
+          txtCardG.appendChild(el('rect', { x: chipX0 + 8, y: by0 + 13, width: 3.5, height: 38, rx: 2, fill: '#94a3b8' }));
           const locTxt = el('text', {
-            x: chipX0 + 22, y: by0 + 41, fill: '#f1f5f9',
-            'font-family': 'Cap, sans-serif', 'font-weight': '700', 'font-size': '28',
+            x: chipX0 + 22, y: by0 + 42, fill: '#f1f5f9',
+            'font-family': 'Cap, sans-serif', 'font-weight': '700', 'font-size': '31',
           });
           locTxt.textContent = `${ov.label || ''}${sub}`;
-          g.appendChild(locTxt);
+          txtCardG.appendChild(locTxt);
           textBBox = [chipX0, by0, chipX0 + tagW, by0 + tagH];
         } else if (role === 'warning_danger') {
+          baseFont1080 = 34;
           const maxCharsW = Math.max(String(ov.label || '').length, String(ov.sublabel || '').length * 0.65);
           const cardW = clamp(Math.max(bw, maxCharsW * 24 + 54), 320, SAFE.x1 - SAFE.x0 - 20);
           const boxX0 = (bx0 + cardW > SAFE.x1 - 10) ? clamp(SAFE.x1 - cardW - 10, SAFE.x0 + 10, bx0) : bx0;
@@ -435,7 +444,7 @@ export class EditorialOverlayController {
               ptrRes = drawImpactArrow(g, sx, by0 + bh * 0.5, ax, ay, '#ef4444', '#060911', enter, true);
             }
           }
-          g.appendChild(el('rect', {
+          txtCardG.appendChild(el('rect', {
             x: boxX0, y: by0, width: cardW, height: bh, rx: 14,
             fill: 'rgba(69, 10, 10, 0.78)', stroke: '#f87171', 'stroke-width': '3.5',
           }));
@@ -444,17 +453,18 @@ export class EditorialOverlayController {
             'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '34',
           });
           wEl.textContent = ov.label || '';
-          g.appendChild(wEl);
+          txtCardG.appendChild(wEl);
           if (ov.sublabel) {
             const wsEl = el('text', {
               x: boxX0 + 22, y: by0 + 84, fill: '#fecaca',
               'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '21',
             });
             wsEl.textContent = ov.sublabel;
-            g.appendChild(wsEl);
+            txtCardG.appendChild(wsEl);
           }
           textBBox = [boxX0, by0, boxX0 + cardW, by0 + bh];
         } else if (role === 'verified_fact') {
+          baseFont1080 = 36;
           // High-contrast clean stat card dynamically sized to fit text cleanly with padding
           const maxCharsF = Math.max(String(ov.label || '').length, String(ov.sublabel || '').length * 0.62);
           const cardW = clamp(Math.max(bw, maxCharsF * 25 + 56), 340, SAFE.x1 - SAFE.x0 - 20);
@@ -464,49 +474,59 @@ export class EditorialOverlayController {
           const fgC = isLight ? '#0f172a' : '#f8fafc';
           const subC = isLight ? '#334155' : '#cbd5e1';
           const barC = isLight ? '#0284c7' : '#38bdf8';
-          g.appendChild(el('rect', {
+          txtCardG.appendChild(el('rect', {
             x: boxX0, y: by0, width: cardW, height: bh, rx: 12,
             fill: bgC, stroke: barC, 'stroke-width': '2.5',
             style: 'filter: drop-shadow(0 6px 14px rgba(0,0,0,0.42));',
           }));
-          g.appendChild(el('rect', { x: boxX0, y: by0, width: cardW, height: 7, rx: 4, fill: barC }));
+          txtCardG.appendChild(el('rect', { x: boxX0, y: by0, width: cardW, height: 7, rx: 4, fill: barC }));
           const fEl = el('text', {
             x: boxX0 + 22, y: by0 + 54, fill: fgC,
             'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '36',
           });
           fEl.textContent = ov.label || '';
-          g.appendChild(fEl);
+          txtCardG.appendChild(fEl);
           if (ov.sublabel) {
             const fsEl = el('text', {
               x: boxX0 + 22, y: by0 + 88, fill: subC,
               'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '21',
             });
             fsEl.textContent = ov.sublabel;
-            g.appendChild(fsEl);
+            txtCardG.appendChild(fsEl);
           }
           textBBox = [boxX0, by0, boxX0 + cardW, by0 + bh];
         } else if (role === 'aftermath_sober') {
-          // Quiet desaturated dissolve strip (no arrow/bounce/alarm border)
-          g.appendChild(el('rect', {
-            x: bx0, y: by0, width: bw, height: bh, rx: 8,
-            fill: 'rgba(15, 23, 42, 0.48)', stroke: 'rgba(203, 213, 225, 0.35)', 'stroke-width': '1.2',
+          baseFont1080 = 33;
+          // Quiet desaturated dissolve strip (no arrow/bounce/alarm border), clamped inside safe bounds
+          const maxCharsA = Math.max(String(ov.label || '').length, String(ov.sublabel || '').length * 0.65);
+          const cardW = clamp(Math.max(bw, maxCharsA * 22 + 54), 340, SAFE.x1 - SAFE.x0 - 20);
+          const boxX0 = clamp((bx0 + bx1) * 0.5 - cardW * 0.5, SAFE.x0 + 10, SAFE.x1 - cardW - 10);
+          txtCardG.appendChild(el('rect', {
+            x: boxX0, y: by0, width: cardW, height: bh, rx: 8,
+            fill: 'rgba(15, 23, 42, 0.54)', stroke: 'rgba(203, 213, 225, 0.35)', 'stroke-width': '1.2',
           }));
           const aEl = el('text', {
-            x: (bx0 + bx1) * 0.5, y: by0 + 48, 'text-anchor': 'middle',
+            x: boxX0 + cardW * 0.5, y: by0 + 48, 'text-anchor': 'middle',
             fill: '#e2e8f0', 'font-family': 'Cap, sans-serif', 'font-weight': '700', 'font-size': '33',
           });
           aEl.textContent = ov.label || '';
-          g.appendChild(aEl);
+          txtCardG.appendChild(aEl);
           if (ov.sublabel) {
             const asEl = el('text', {
-              x: (bx0 + bx1) * 0.5, y: by0 + 82, 'text-anchor': 'middle',
+              x: boxX0 + cardW * 0.5, y: by0 + 82, 'text-anchor': 'middle',
               fill: '#94a3b8', 'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '22',
             });
             asEl.textContent = ov.sublabel;
-            g.appendChild(asEl);
+            txtCardG.appendChild(asEl);
           }
+          textBBox = [boxX0, by0, boxX0 + cardW, by0 + bh];
         } else {
-          // EXPLANATION / TRANSITION_EMPHASIS: lighter tracked leader + crisp outlined label
+          baseFont1080 = 34;
+          // EXPLANATION / TRANSITION_EMPHASIS: lighter tracked leader + crisp outlined label safely clamped
+          const maxCharsE = Math.max(String(ov.label || '').length, String(ov.sublabel || '').length * 0.68);
+          const cardW = clamp(Math.max(bw, maxCharsE * 22 + 44), 300, SAFE.x1 - SAFE.x0 - 20);
+          const boxX0 = clamp((bx0 + bx1) * 0.5 - cardW * 0.5, SAFE.x0 + 10, SAFE.x1 - cardW - 10);
+          const boxX1 = boxX0 + cardW;
           if (anchorPx) {
             const [ax, ay] = anchorPx;
             const secAncE = ov.secondary_anchor_id ? anchorsMap[ov.secondary_anchor_id] : null;
@@ -522,29 +542,69 @@ export class EditorialOverlayController {
                 fill: 'none', stroke: accent, 'stroke-width': '4',
                 'stroke-dasharray': `${(2 * Math.PI * rOuter * enter).toFixed(1)} 320`,
               }));
-              ptrRes = drawImpactArrow(g, bx0 + bw * 0.5 < ax ? bx1 : bx0, by0 + bh * 0.5, ax, ay, accent, '#090d16', enter, false);
+              ptrRes = drawImpactArrow(g, boxX0 + cardW * 0.5 < ax ? boxX1 : boxX0, by0 + bh * 0.5, ax, ay, accent, '#090d16', enter, false);
             }
           }
           const eTxt = el('text', {
-            x: bx0 + bw * 0.5, y: by0 + 44, 'text-anchor': 'middle',
+            x: boxX0 + cardW * 0.5, y: by0 + 44, 'text-anchor': 'middle',
             fill: '#f8fafc', stroke: '#090d16', 'stroke-width': '6', 'stroke-linejoin': 'round', 'paint-order': 'stroke fill',
             'font-family': 'Cap, sans-serif', 'font-weight': '800', 'font-size': '34',
           });
           eTxt.textContent = ov.label || '';
-          g.appendChild(eTxt);
+          txtCardG.appendChild(eTxt);
           if (ov.sublabel) {
             const esTxt = el('text', {
-              x: bx0 + bw * 0.5, y: by0 + 78, 'text-anchor': 'middle',
+              x: boxX0 + cardW * 0.5, y: by0 + 78, 'text-anchor': 'middle',
               fill: '#cbd5e1', stroke: '#090d16', 'stroke-width': '4', 'stroke-linejoin': 'round', 'paint-order': 'stroke fill',
-              'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '23',
+              'font-family': 'Cap, sans-serif', 'font-weight': '600', 'font-size': '22',
             });
             esTxt.textContent = ov.sublabel;
-            g.appendChild(esTxt);
+            txtCardG.appendChild(esTxt);
           }
+          textBBox = [boxX0, by0, boxX1, by0 + bh];
         }
 
+        g.appendChild(txtCardG);
         this.svg.appendChild(g);
-        const inSafe = textBBox[0] >= SAFE.x0 && textBBox[2] <= SAFE.x1 && textBBox[1] >= SAFE.y0 && textBBox[3] <= SAFE.capY0;
+
+        // Live DOM glyph clamping & verification inside 9:16 mobile safe bounds
+        let domScaleFix = 1.0;
+        const preRect = txtCardG.getBoundingClientRect ? txtCardG.getBoundingClientRect() : null;
+        if (preRect && preRect.width > 1 && preRect.height > 1) {
+          const maxSafeW = (SAFE.x1 - SAFE.x0) - 16;
+          let tx = 0;
+          let ty = 0;
+          if (preRect.width > maxSafeW) {
+            domScaleFix = maxSafeW / preRect.width;
+          }
+          const adjRight = preRect.left + preRect.width * domScaleFix;
+          if (adjRight > SAFE.x1 - 8) tx = (SAFE.x1 - 8) - adjRight;
+          if (preRect.left + tx < SAFE.x0 + 8) tx = (SAFE.x0 + 8) - preRect.left;
+          const adjH = preRect.height * domScaleFix;
+          if (preRect.top + adjH > SAFE.capY0 - 10) ty = (SAFE.capY0 - 10) - (preRect.top + adjH);
+          if (preRect.top + ty < SAFE.y0) ty = SAFE.y0 - preRect.top;
+          if (domScaleFix < 0.999 || Math.abs(tx) > 0.5 || Math.abs(ty) > 0.5) {
+            const ox = preRect.left;
+            const oy = preRect.top;
+            txtCardG.setAttribute(
+              'transform',
+              `translate(${(ox + tx).toFixed(2)}, ${(oy + ty).toFixed(2)}) scale(${domScaleFix.toFixed(4)}) translate(${(-ox).toFixed(2)}, ${(-oy).toFixed(2)})`
+            );
+          }
+        }
+        const postRect = txtCardG.getBoundingClientRect ? txtCardG.getBoundingClientRect() : null;
+        const liveBox = (postRect && postRect.width > 1 && postRect.height > 1)
+          ? [postRect.left, postRect.top, postRect.right, postRect.bottom]
+          : null;
+        if (liveBox) {
+          textBBox = liveBox;
+        }
+        const inSafe = textBBox[0] >= SAFE.x0 - 4 && textBBox[2] <= SAFE.x1 + 4 && textBBox[1] >= SAFE.y0 - 4 && textBBox[3] <= SAFE.capY0;
+        const clippedByViewport = Boolean(textBBox[0] < SAFE.x0 - 8 || textBBox[2] > SAFE.x1 + 8 || textBBox[1] < SAFE.y0 - 8 || textBBox[3] > SAFE.capY0 + 8);
+        const charOverflow = Boolean((textBBox[2] - textBBox[0]) > (SAFE.x1 - SAFE.x0 + 8));
+        const effFont1080 = baseFont1080 * domScaleFix;
+        const mobile360FontPx = Number((effFont1080 * (360 / 1080)).toFixed(2));
+        const fitsMobile360 = !clippedByViewport && !charOverflow && mobile360FontPx >= (role === 'curiosity_headline' ? 21.0 : 9.0);
         const capOv = capBox ? !(textBBox[2] <= capBox[0] || textBBox[0] >= capBox[2] || textBBox[3] <= capBox[1] || textBBox[1] >= capBox[3]) : false;
         const gRect = g.getBoundingClientRect ? g.getBoundingClientRect() : null;
         const domRendered = Boolean(this.svg.contains(g) && g.childElementCount > 0 && (!gRect || (gRect.width > 1 && gRect.height > 1)));
@@ -574,9 +634,21 @@ export class EditorialOverlayController {
           tip_xy: ptrRes.tip_xy,
           tip_target_error_px: ptrRes.tip_target_error_px,
           contrast_estimate: Number(ov.contrast_ratio_min || 5.0),
-          label_bbox: [Number(bx0.toFixed(1)), Number(by0.toFixed(1)), Number(bx1.toFixed(1)), Number(by1.toFixed(1))],
+          label_bbox: [Number(textBBox[0].toFixed(1)), Number(textBBox[1].toFixed(1)), Number(textBBox[2].toFixed(1)), Number(textBBox[3].toFixed(1))],
+          rendered_glyph_bbox: textBBox.map(v => Number(v.toFixed(1))),
           text_bbox: textBBox.map(v => Number(v.toFixed(1))),
           bbox: textBBox.map(v => Number(v.toFixed(1))),
+          clipped_by_viewport: clippedByViewport,
+          char_overflow: charOverflow,
+          overlay_visibility_proof: {
+            dom_rendered: domRendered,
+            rendered_glyph_bbox: textBBox.map(v => Number(v.toFixed(1))),
+            clipped_by_viewport: clippedByViewport,
+            char_overflow: charOverflow,
+            fits_viewport_1080: !clippedByViewport && !charOverflow && !capOv,
+            fits_mobile_360: fitsMobile360,
+            mobile_360_font_px: mobile360FontPx,
+          },
           in_safe_area: inSafe,
           z_index: 14,
           caption_overlap: capOv,

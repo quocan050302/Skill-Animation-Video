@@ -1,0 +1,14 @@
+TASK: audio_only_remux
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_audio_only_remux -v
+STATUS: PASS (exit=0, elapsed=6.8s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_a16_a17_audio_only_preserves_video_packets_and_rolls_back_on_fail (tests.test_audio_only_remux.TestAudioOnlyRemux.test_a16_a17_audio_only_preserves_video_packets_and_rolls_back_on_fail) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 4.148s
+
+OK
+

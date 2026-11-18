@@ -1,0 +1,16 @@
+TASK: audio_integration_smoke
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_audio_integration_smoke -v
+STATUS: PASS (exit=0, elapsed=192.19s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_b1_stick_figure_e2e_4k_and_b5_b6_audio_only_remix (tests.test_audio_integration_smoke.TestAudioIntegrationSmoke.test_b1_stick_figure_e2e_4k_and_b5_b6_audio_only_remix) ... ok
+test_b2_minimalistic_graphics_e2e_and_analyze_audio_beats (tests.test_audio_integration_smoke.TestAudioIntegrationSmoke.test_b2_minimalistic_graphics_e2e_and_analyze_audio_beats) ... ok
+test_b4_qa_readonly_ccby_attribution_and_unlicensed_rejection (tests.test_audio_integration_smoke.TestAudioIntegrationSmoke.test_b4_qa_readonly_ccby_attribution_and_unlicensed_rejection) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 190.409s
+
+OK
+

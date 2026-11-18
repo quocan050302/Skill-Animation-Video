@@ -1,0 +1,15 @@
+{
+  "schema_version": "sd-baseline-git-1",
+  "run_id": "SD-RETENTION-04_R2_20261118_0458Z",
+  "recorded_at_utc": "2026-11-18T04:58:00Z",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "local_head_sha": "742da8f4a53231d5cdd1c0c80d5733a28d6d6f45",
+  "remote_branch_sha": "742da8f4a53231d5cdd1c0c80d5733a28d6d6f45",
+  "master_head_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "merge_base_with_master": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "submodule_vendor_claude_animation_skills": {
+    "sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+    "status": "clean"
+  },
+  "working_tree_clean_before_edits": true
+}

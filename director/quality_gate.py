@@ -700,6 +700,8 @@ def run_final_quality_gate(
             "advisory_warnings": sem_qa.get("advisory_warnings", []),
             "checks_summary": sem_qa.get("checks_summary", {}),
             "causal_gates_status_json": str((run_dir / "causal_gates_status.json").resolve()),
+            "observed_evidence_report_json": sem_qa.get("observed_evidence_report_json"),
+            "pacing_report_json": sem_qa.get("pacing_report_json"),
         }
 
     # 7. Factual & Licensing check summary
@@ -714,11 +716,20 @@ def run_final_quality_gate(
     statuses = [c["status"] for c in checks.values()]
     overall = "FAIL" if ("FAIL" in statuses or "NOT_VERIFIED" in statuses) else ("WARN" if "WARN" in statuses else "PASS")
     release_status = "TECHNICAL_ACCEPTANCE_PASS" if overall in ("PASS", "WARN") else "FAIL"
+    engine_pass = overall in ("PASS", "WARN")
+    acc_cls = "ENGINE_TECHNICAL_PASS_DEMO_EDITORIAL_REVIEW_REQUIRED" if engine_pass else "ENGINE_TECHNICAL_FAIL"
 
     qc_report = {
         "schema_version": "0.5.0",
         "overall_status": overall,
         "release_status": release_status,
+        "acceptance_classification": acc_cls,
+        "ENGINE_TECHNICAL_PASS": engine_pass,
+        "DEMO_EDITORIAL_REVIEW_REQUIRED": True,
+        "HUMAN_VISUAL_REVIEW_REQUIRED": True,
+        "HUMAN_VISUAL_REVIEW_STATUS": "NOT_VERIFIED",
+        "HUMAN_AUDIO_REVIEW_STATUS": "NOT_VERIFIED",
+        "PRODUCTION_RELEASE_READY": False,
         "subjective_visual_review": "NOT_VERIFIED",
         "subjective_editorial_listening": subj_audio,
         "subjective_voice_quality_status": (editorial_qa_doc or {}).get("subjective_voice_quality_status", "NOT_VERIFIED"),

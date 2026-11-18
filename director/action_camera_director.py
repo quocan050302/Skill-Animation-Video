@@ -194,6 +194,7 @@ def score_camera_information_gain(
         + 0.10 * impact_und
         - center_penalty
     )
+    planned_score = round(max(0.0, min(1.0, composite)), 3)
     return {
         "causal_visibility_gain": round(causal_vis, 3),
         "action_anchoring": round(action_anchor_score, 3),
@@ -202,7 +203,10 @@ def score_camera_information_gain(
         "context_preservation": round(ctx_pres, 3),
         "impact_understanding": round(impact_und, 3),
         "subject_centering_penalty": round(center_penalty, 3),
-        "total_info_gain_score": round(max(0.0, min(1.0, composite)), 3),
+        "planned_camera_info_gain": planned_score,
+        "total_info_gain_score": planned_score,
+        "is_planning_heuristic": True,
+        "metric_authority": "PLANNING_HEURISTIC_NOT_DECODED_PROOF",
     }
 
 
@@ -428,6 +432,9 @@ def plan_action_driven_camera(
         "schema_version": SCHEMA_VERSION,
         "status": val["status"],
         "shots_count": len(contracts_out),
+        "planned_camera_info_gain": mean_gain,
+        "is_planning_heuristic": True,
+        "metric_authority": "PLANNING_HEURISTIC_NOT_DECODED_PROOF",
         "mean_info_gain_score": mean_gain,
         "validation": val,
         "contracts": contracts_out,

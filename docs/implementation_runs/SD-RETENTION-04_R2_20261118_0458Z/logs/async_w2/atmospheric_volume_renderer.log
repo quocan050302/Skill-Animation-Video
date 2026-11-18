@@ -1,0 +1,15 @@
+TASK: atmospheric_volume_renderer
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_atmospheric_volume_renderer -v
+STATUS: PASS (exit=0, elapsed=4.59s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n41_n42_n43_n45_smoke_geometry_continuity_matte_and_honesty_traps (tests.test_atmospheric_volume_renderer.TestAtmosphericVolumeRenderer.test_n41_n42_n43_n45_smoke_geometry_continuity_matte_and_honesty_traps) ... ok
+test_n44_volumetric_ash_webgl_seek_determinism_and_continuity (tests.test_atmospheric_volume_renderer.TestAtmosphericVolumeRenderer.test_n44_volumetric_ash_webgl_seek_determinism_and_continuity) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 3.307s
+
+OK
+

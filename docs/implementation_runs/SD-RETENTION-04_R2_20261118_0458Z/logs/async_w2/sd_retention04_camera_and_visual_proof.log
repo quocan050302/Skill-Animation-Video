@@ -1,0 +1,17 @@
+TASK: sd_retention04_camera_and_visual_proof
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_sd_retention04_camera_and_visual_proof -v
+STATUS: PASS (exit=0, elapsed=12.72s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n21_n22_n23_n24_camera_q1_q5_and_info_gain (tests.test_sd_retention04_camera_and_visual_proof.TestSdRetention04CameraAndVisualProof.test_n21_n22_n23_n24_camera_q1_q5_and_info_gain) ... ok
+test_n25_n26_ab_vo_parity_and_metric_inconsistency (tests.test_sd_retention04_camera_and_visual_proof.TestSdRetention04CameraAndVisualProof.test_n25_n26_ab_vo_parity_and_metric_inconsistency) ... ok
+test_n27_n29_n30_n35_n36_n37_mattes_warnings_and_examples (tests.test_sd_retention04_camera_and_visual_proof.TestSdRetention04CameraAndVisualProof.test_n27_n29_n30_n35_n36_n37_mattes_warnings_and_examples) ... ok
+test_n31_to_n40_london_1952_e2e_plan_webgl_seek_mattes_and_sfx (tests.test_sd_retention04_camera_and_visual_proof.TestSdRetention04CameraAndVisualProof.test_n31_to_n40_london_1952_e2e_plan_webgl_seek_mattes_and_sfx) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 11.368s
+
+OK
+

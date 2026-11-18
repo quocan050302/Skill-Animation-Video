@@ -1,0 +1,19 @@
+TASK: r2_decoded_and_traps
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_r2_decoded_and_traps -v
+STATUS: PASS (exit=0, elapsed=11.39s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_boston_split_camera_triplet_rotation_and_payoff_routing (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_boston_split_camera_triplet_rotation_and_payoff_routing)
+Split Boston shots (street_hook / tank_rupture / elevated_rail) must never repeat camera triplets. ... ok
+test_negative_traps_t01_to_t16 (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_negative_traps_t01_to_t16) ... ok
+test_negative_traps_t17_to_t32 (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_negative_traps_t17_to_t32) ... ok
+test_t27_t29_generalization_and_skyscraper_seek_invariance (tests.test_r2_decoded_and_traps.TestR2DecodedAndTraps.test_t27_t29_generalization_and_skyscraper_seek_invariance)
+Positive Matrix + T27 out-of-order WebGL seek invariance + T29 packet parity + neutral third-domain check. ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 10.097s
+
+OK
+

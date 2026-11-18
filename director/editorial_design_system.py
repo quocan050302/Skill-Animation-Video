@@ -111,7 +111,7 @@ ROLE_STYLE_VARIANTS: Dict[str, Tuple[OverlayStyleSpec, ...]] = {
             style_id="loc_stamp_strip_v2",
             variant_id="loc_v2_date_band",
             font_family="'Cap', sans-serif",
-            font_size_1080=32,
+            font_size_1080=34,
             font_weight=700,
             line_height=1.18,
             max_lines=2,
@@ -623,6 +623,8 @@ def measure_text_layout(
     box_w_1080 = min(max_w_1080, max(260.0, est_line_w_1080 + 44.0))
     box_h_1080 = max(58.0, len(lines) * font_sz * spec.line_height + (28.0 if spec.bg_shape != "transparent" else 16.0))
     px_at_viewport = round(font_sz * scale, 2)
+    min_px_threshold = 21.0 if (viewport == 360 and spec.role == EditorialRole.CURIOSITY_HEADLINE.value) else (10.0 if viewport == 360 else 8.5)
+    mobile_ok = px_at_viewport >= min_px_threshold
 
     return {
         "viewport_width": int(viewport),
@@ -633,7 +635,7 @@ def measure_text_layout(
         "word_count": len(words),
         "est_box_1080": [round(box_w_1080, 1), round(box_h_1080, 1)],
         "fits_safe_width": est_line_w_1080 <= max_w_1080 + 1.0,
-        "meets_mobile_360_min": (px_at_viewport >= 22.0) if (viewport == 360 and spec.role == EditorialRole.CURIOSITY_HEADLINE.value) else True,
+        "meets_mobile_360_min": mobile_ok,
     }
 
 

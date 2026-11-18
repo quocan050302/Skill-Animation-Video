@@ -371,18 +371,18 @@ export function makeTacomaSuspensionBridgeRig({
   for (const tx of towerXs) {
     const pier = new THREE.Mesh(new THREE.BoxGeometry(1.20, 0.74, 2.05), concreteMat);
     pier.position.set(tx, 0.18, 0);
-    tagSemantic(pier, 'subject');
+    tagSemantic(pier, 'reference_fixed');
     root.add(pier);
     for (const sz of [-deckWidth * 0.54, deckWidth * 0.54]) {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, towerTopY, 0.25), steelTower);
       leg.position.set(tx, towerTopY * 0.5 + 0.15, sz);
-      tagSemantic(leg, 'subject');
+      tagSemantic(leg, 'reference_fixed');
       root.add(leg);
     }
     for (const cy of [deckBaseY + 0.68, deckBaseY + 1.54, towerTopY - 0.10]) {
       const strut = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.22, deckWidth * 1.26), steelTower);
       strut.position.set(tx, cy, 0);
-      tagSemantic(strut, 'subject');
+      tagSemantic(strut, 'reference_fixed');
       root.add(strut);
     }
   }

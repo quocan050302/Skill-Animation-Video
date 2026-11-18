@@ -227,30 +227,81 @@ def _zdf_keyframes_for_generator(
             {"t_norm": 1.0, "pos": [0.40, 1.92, 3.85], "look": [0.25, 1.95, -1.2], "fov": 40, "roll": 0.0, "ease": "quintic"},
         ]
 
+    if gen == "zach3d:london_rooftop_stacks_stage" or setup == "london_rooftop_stacks":
+        return [
+            {"t_norm": 0.0, "pos": [2.25, 2.75, 5.45], "look": [0.10, 3.15, -1.85], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.75, 3.35, 5.15], "look": [0.25, 3.45, -2.10], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-1.15, 3.85, 5.45], "look": [0.35, 3.75, -2.25], "fov": 44, "roll": 0.0, "ease": "quintic"},
+        ]
+
     if gen == "zach3d:london_coal_combustion_cutaway_stage":
-        if "chimneys" in low or "chilly winter air" in low or idx >= 2:
-            return [
-                {"t_norm": 0.0, "pos": [1.75, 2.35, 5.10], "look": [0.0, 2.25, -0.55], "fov": 44, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 0.50, "pos": [0.65, 2.75, 4.95], "look": [0.0, 2.55, -0.75], "fov": 43, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 1.0, "pos": [-0.85, 3.15, 5.20], "look": [0.0, 2.75, -0.95], "fov": 44, "roll": 0.0, "ease": "quintic"},
-            ]
         return [
             {"t_norm": 0.0, "pos": [-1.85, 1.55, 4.75], "look": [0.0, 1.65, -0.35], "fov": 42, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 0.50, "pos": [-0.75, 1.85, 4.35], "look": [0.0, 1.78, -0.35], "fov": 40, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 1.0, "pos": [0.75, 2.30, 4.55], "look": [0.0, 2.00, -0.45], "fov": 41, "roll": 0.0, "ease": "quintic"},
         ]
 
+    if gen == "zach3d:london_street_canyon_stage" or setup == "london_street_canyon_buildup":
+        return [
+            {"t_norm": 0.0, "pos": [1.85, 1.85, 4.95], "look": [-0.25, 2.15, -1.65], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.45, 1.65, 4.35], "look": [-0.25, 2.05, -1.65], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-1.25, 1.55, 3.95], "look": [-0.30, 1.95, -1.65], "fov": 43, "roll": 0.0, "ease": "quintic"},
+        ]
+
     if gen == "zach3d:london_atmospheric_inversion_stage":
-        if "sideways" in low or "vertical mixing" in low:
-            return [
-                {"t_norm": 0.0, "pos": [2.25, 2.65, 7.20], "look": [0.0, 2.40, -0.3], "fov": 44, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 0.52, "pos": [0.85, 2.35, 6.45], "look": [-0.2, 2.25, -0.2], "fov": 43, "roll": 0.0, "ease": "quintic"},
-                {"t_norm": 1.0, "pos": [-1.45, 2.20, 6.10], "look": [-0.3, 2.15, -0.2], "fov": 42, "roll": 0.0, "ease": "quintic"},
-            ]
         return [
             {"t_norm": 0.0, "pos": [-2.35, 3.15, 8.20], "look": [0.0, 2.85, -0.5], "fov": 47, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 0.52, "pos": [0.0, 3.28, 7.95], "look": [0.0, 2.95, -0.5], "fov": 46, "roll": 0.0, "ease": "quintic"},
             {"t_norm": 1.0, "pos": [2.25, 3.40, 8.15], "look": [0.0, 2.95, -0.5], "fov": 46, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_ridge_hook_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-1.20, 2.35, 9.60], "look": [0.45, 1.65, -0.45], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.25, 2.25, 8.85], "look": [0.65, 1.68, -0.45], "fov": 42, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [1.55, 2.20, 8.25], "look": [0.85, 1.70, -0.45], "fov": 41, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_cryptodome_cutaway_stage":
+        return [
+            {"t_norm": 0.0, "pos": [2.20, 2.35, 7.60], "look": [0.25, 1.38, 0.05], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.95, 2.15, 7.05], "look": [0.35, 1.42, 0.05], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-0.35, 2.05, 6.75], "look": [0.45, 1.45, 0.05], "fov": 43, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_landslide_avalanche_stage":
+        return [
+            {"t_norm": 0.0, "pos": [0.85, 3.05, 8.90], "look": [0.80, 1.55, -0.30], "fov": 44, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [2.25, 2.85, 8.55], "look": [1.65, 1.30, -0.30], "fov": 43, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [3.55, 2.65, 8.75], "look": [2.45, 1.05, -0.30], "fov": 44, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_lateral_blast_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-0.60, 2.65, 9.60], "look": [0.55, 1.50, -0.30], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.50, "pos": [1.80, 2.55, 9.85], "look": [1.85, 1.38, -0.25], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [4.10, 2.45, 10.25], "look": [3.05, 1.25, -0.25], "fov": 47, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_forest_sweep_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.85, 2.35, 7.65], "look": [-0.65, 0.95, -0.60], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.15, 2.45, 7.85], "look": [0.55, 1.00, -0.60], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [3.15, 2.55, 8.15], "look": [1.75, 1.05, -0.60], "fov": 45, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_plinian_column_stage":
+        return [
+            {"t_norm": 0.0, "pos": [-2.25, 2.35, 10.80], "look": [0.0, 2.65, -0.60], "fov": 48, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [0.0, 3.15, 11.40], "look": [0.0, 3.55, -0.60], "fov": 49, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [2.15, 4.15, 12.10], "look": [0.0, 4.35, -0.60], "fov": 50, "roll": 0.0, "ease": "quintic"},
+        ]
+
+    if gen == "zach3d:sthelens_crater_aftermath_stage":
+        return [
+            {"t_norm": 0.0, "pos": [3.20, 3.85, 8.85], "look": [0.0, 1.95, -0.40], "fov": 45, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 0.52, "pos": [1.05, 4.05, 9.25], "look": [0.0, 2.05, -0.40], "fov": 46, "roll": 0.0, "ease": "quintic"},
+            {"t_norm": 1.0, "pos": [-1.85, 4.25, 9.65], "look": [0.0, 2.10, -0.40], "fov": 46, "roll": 0.0, "ease": "quintic"},
         ]
 
     if gen == "zach3d:london_bus_visibility_stage":

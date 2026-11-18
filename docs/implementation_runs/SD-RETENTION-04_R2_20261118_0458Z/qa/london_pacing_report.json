@@ -1,0 +1,11 @@
+{
+  "schema_version": "sd-pacing-report-1",
+  "status": "PASS",
+  "max_idle_run_sec": 0.0,
+  "review_threshold_sec": 4.0,
+  "blocking_threshold_sec": 5.0,
+  "hook_window_0_3s_mad": 29.872,
+  "stagnant_segments": [],
+  "issues": [],
+  "warnings": []
+}

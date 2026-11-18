@@ -60,6 +60,13 @@ DOMAIN_PROP_RULES: List[Tuple[str, str, str, Tuple[str, ...]]] = [
     ("bus_visibility_dropoff_rig", "vehicle_visibility_dropoff", "human_environment", ("double-decker", "headlights", "conductors", "walked ahead", "blinded traffic", "visibility zero")),
     ("pedestrian_smog_reaction_rig", "pedestrian_smog_reaction", "human_environment", ("coughing", "choking", "excess deaths", "respiratory", "lungs", "hospitals", "smog")),
     ("clean_air_aftermath_rig", "air_quality_aftermath", "street_aerial", ("clean air act", "smokeless fuels", "1956", "reformed heating", "skies cleared")),
+    ("msh_ridge_hook_rig", "volcano_ridge_hook", "street_aerial", ("mount st. helens", "st. helens", "north flank", "bulged", "bulge")),
+    ("msh_cryptodome_cutaway_rig", "volcano_cryptodome_cutaway", "macro_object", ("cryptodome", "intruding magma", "magma", "beneath a fragile")),
+    ("msh_landslide_avalanche_rig", "volcano_landslide_avalanche", "industrial_scale", ("earthquake", "5.1", "landslide", "collapsed", "tore away", "shook")),
+    ("msh_lateral_blast_rig", "volcano_lateral_blast", "industrial_scale", ("lateral blast", "uncorked", "superheated", "300 miles", "sideways")),
+    ("msh_forest_sweep_rig", "volcano_forest_sweep", "street_aerial", ("flattened", "square miles", "ridge forests", "timber")),
+    ("msh_plinian_column_rig", "volcano_plinian_column", "street_aerial", ("ash column", "plinian", "towering", "skyward")),
+    ("msh_crater_aftermath_rig", "volcano_crater_aftermath", "street_aerial", ("horseshoe crater", "today", "reshaped", "warning about")),
 ]
 
 # Mechanisms that lack a dedicated exact 3D archetype in ZDF and must fail closed or disclose stylized schematic
@@ -262,7 +269,17 @@ def classify_visual_clause(
         )
     )
 
-    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story and not is_skyscraper_story and not is_atmospheric_smog_story:
+    is_volcano_eruption_story = (
+        selected_skill == "zach-d-films"
+        and (
+            "st. helens" in full_script_low
+            or "st helens" in full_script_low
+            or "cryptodome" in full_script_low
+            or ("lateral blast" in full_script_low and any(k in full_script_low for k in ("volcan", "magma", "eruption", "ash")))
+        )
+    )
+
+    if unsupported_domain and not is_boston_molasses_story and not is_tacoma_bridge_story and not is_skyscraper_story and not is_atmospheric_smog_story and not is_volcano_eruption_story:
         matched_props = ["schematic_mechanism"]
         families = ["schematic_mechanism"]
         scales = ["macro_object"]
@@ -411,6 +428,44 @@ def classify_visual_clause(
         else:
             matched_props = ["boston_overview_stage"]
             families = ["boston_harbor_payoff"]
+            scales = ["street_aerial"]
+        unsupported_domain = None
+    elif is_volcano_eruption_story:
+        if any(k in low for k in ("crater", "horseshoe", "warning about", "still stands", "reshaped", "today the")):
+            matched_props = ["msh_crater_aftermath_rig"]
+            families = ["volcano_crater_aftermath"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("ash column", "plinian", "towering ash", "skyward", "exploded skyward")):
+            matched_props = ["msh_plinian_column_rig"]
+            families = ["volcano_plinian_column"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("flattened", "square miles", "230", "250", "forests", "forest", "ridge", "sweeping sideways")) and "300 miles" not in low:
+            matched_props = ["msh_forest_sweep_rig"]
+            families = ["volcano_forest_sweep"]
+            scales = ["street_aerial"]
+        elif any(k in low for k in ("lateral blast", "uncorked", "unroof", "heavy hillside", "hillside", "superheated", "steam", "300 miles", "300 mph", "catastrophic blast")) or ("sideways" in low and "flattened" not in low):
+            matched_props = ["msh_lateral_blast_rig"]
+            families = ["volcano_lateral_blast"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("earthquake", "5.1", "landslide", "tore away", "shook", "avalanche", "collapsed")):
+            matched_props = ["msh_landslide_avalanche_rig"]
+            families = ["volcano_landslide_avalanche"]
+            scales = ["industrial_scale"]
+        elif any(k in low for k in ("cryptodome", "intruding", "magma", "deep inside", "fragile slope", "pressure")) and "uncorked" not in low:
+            matched_props = ["msh_cryptodome_cutaway_rig"]
+            families = ["volcano_cryptodome_cutaway"]
+            scales = ["macro_object"]
+        elif (beat_index == 0 and clause_index == 0) or any(k in low for k in ("8:32", "may 18", "1980", "bulge", "bulged", "hundreds of feet")):
+            matched_props = ["msh_ridge_hook_rig"]
+            families = ["volcano_ridge_hook"]
+            scales = ["street_aerial"]
+        elif prev_family and prev_family.startswith("volcano_"):
+            matched_props = [f"msh_{prev_family.replace('volcano_', '')}_rig"]
+            families = [prev_family]
+            scales = ["street_aerial"]
+        else:
+            matched_props = ["msh_ridge_hook_rig"]
+            families = ["volcano_ridge_hook"]
             scales = ["street_aerial"]
         unsupported_domain = None
     elif is_atmospheric_smog_story:

@@ -189,21 +189,26 @@ class VisualEvidenceContract:
 
 
 def _infer_proof_type(text_low: str, phys_action: str, beat_role: str, scene_fam: str) -> str:
+    tlow = (text_low or "").lower()
     act = (phys_action or "").lower()
     fam = (scene_fam or "").lower()
-    combined = f"{text_low} {act} {fam}"
+    combined = f"{tlow} {act} {fam}"
 
     if any(k in combined for k in ("split", "compare", "side-by-side", "without damper", "versus", "before_after")):
         return "comparative_split_reference"
-    if any(k in combined for k in ("cutaway", "inside", "pcb", "rivet", "chamber", "sulfur", "chemical", "combustion", "firebox")):
+    if "nobody" in tlow or "didn't expect" in tlow or "unlikely" in tlow:
+        if any(k in combined for k in ("crowd", "street", "pedestrian", "onlooker", "hook")):
+            return "human_reaction_consequence"
+        return "context_establish"
+    if any(k in combined for k in ("cutaway", "inside", "pcb", "rivet", "chamber", "sulfur", "chemical", "combustion", "firebox", "cryptodome")):
         return "internal_mechanism_cutaway"
     if any(k in combined for k in ("disappear", "visibility", "obscure", "blind", "vanish", "headlight", "bus_visibility", "swallow", "fog_street_hook")):
         return "occlusion_visibility_change"
-    if any(k in combined for k in ("inversion", "warm air", "lid", "trap", "pressure", "airflow", "vortex", "wind_loading", "bleed")):
+    if any(k in combined for k in ("inversion", "warm air", "lid", "trap", "pressure", "airflow", "vortex", "wind_loading", "bleed", "uncorked", "lateral blast", "lateral_blast")):
         return "pressure_flow_difference"
-    if any(k in combined for k in ("smoke", "soot", "particle", "chimney", "plume", "spill", "surge", "flood", "spread", "settle")):
+    if any(k in combined for k in ("smoke", "soot", "particle", "chimney", "plume", "spill", "surge", "flood", "spread", "settle", "ash column", "plinian")):
         return "particle_path_propagation"
-    if any(k in combined for k in ("twist", "torsion", "crack", "bend", "flex", "buckle", "rupture", "collapse", "plunge")):
+    if any(k in combined for k in ("twist", "torsion", "crack", "bend", "flex", "buckle", "rupture", "collapse", "plunge", "bulge", "bulged", "landslide", "flattened", "snapping")):
         return "material_deformation"
     if any(k in combined for k in ("cough", "shield", "brace", "retreat", "crowd", "pedestrian", "onlooker", "worker", "passenger", "excess deaths", "injured")):
         return "human_reaction_consequence"
@@ -262,13 +267,69 @@ def _infer_world_entities_and_region(
             anchor or "pedestrian_respiratory_brace",
             "character_respiratory_stance_zone",
         )
-    if "aftermath" in fam or "clean air" in text_low or "1956" in text_low or "cleared" in text_low:
+    if "aftermath" in fam and not fam.startswith("volcano_") or "clean air" in text_low or "1956" in text_low or "cleared" in text_low:
         return (
             "clean_air_act_1956_smokeless_fuel",
             "clearing_london_skyline",
             "st_pauls_silhouette_ref",
             anchor or "smokeless_hearth_transition",
             "skyline_visibility_recovery_zone",
+        )
+    if fam == "volcano_ridge_hook" or ("bulge" in text_low and "st. helens" in text_low):
+        return (
+            "intruding_subsurface_pressure",
+            "north_flank_bulge_slope",
+            "msh_south_ridge_ref",
+            anchor or "msh_north_flank_bulge",
+            "north_flank_bulge_zone",
+        )
+    if fam == "volcano_cryptodome_cutaway" or "cryptodome" in text_low:
+        return (
+            "magma_feeder_conduit",
+            "pressurized_cryptodome",
+            "msh_south_ridge_ref",
+            anchor or "msh_cryptodome_core",
+            "cryptodome_cutaway_zone",
+        )
+    if fam == "volcano_landslide_avalanche" or "landslide" in text_low:
+        return (
+            "magnitude_5_1_earthquake",
+            "collapsing_north_flank_blocks",
+            "msh_south_ridge_ref",
+            anchor or "msh_landslide_scar",
+            "debris_avalanche_zone",
+        )
+    if fam == "volcano_lateral_blast" or "lateral blast" in text_low:
+        return (
+            "uncorked_cryptodome_steam",
+            "sideways_pyroclastic_blast_front",
+            "msh_crater_lip_ref",
+            anchor or "msh_lateral_blast_front",
+            "lateral_blast_corridor",
+        )
+    if fam == "volcano_forest_sweep" or ("flattened" in text_low and "miles" in text_low):
+        return (
+            "lateral_blast_shockwave",
+            "flattened_ridge_timber",
+            "msh_untouched_ridge_ref",
+            anchor or "msh_blast_timber_front",
+            "blast_forest_blowdown_zone",
+        )
+    if fam == "volcano_plinian_column" or "ash column" in text_low:
+        return (
+            "deep_conduit_depressurization",
+            "towering_plinian_ash_column",
+            "msh_valley_horizon_ref",
+            anchor or "msh_plinian_ash_column",
+            "vertical_plinian_column_zone",
+        )
+    if fam == "volcano_crater_aftermath" or "horseshoe crater" in text_low:
+        return (
+            "catastrophic_flank_collapse",
+            "carved_horseshoe_crater",
+            "msh_original_summit_ghost",
+            anchor or "msh_horseshoe_crater_rim",
+            "crater_topography_comparison_zone",
         )
 
     cause_ent = str(ev.get("cause_entity_id") or ("wind_or_driving_force" if proof_type in ("pressure_flow_difference", "material_deformation") else prop))

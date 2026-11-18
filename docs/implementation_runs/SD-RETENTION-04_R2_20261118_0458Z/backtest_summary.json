@@ -1,0 +1,28 @@
+{
+  "boston": {
+    "name": "boston_molasses_1919",
+    "legacy_dir": "d:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_boston_proof_20261118",
+    "backtest_dir": "d:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_r2_boston_backtest_20261118",
+    "pre_R4_status": "WARN",
+    "new_R4_R2_qc_status": "WARN",
+    "new_R4_R2_causal_status": "PASS",
+    "acceptance_classification": "ENGINE_TECHNICAL_PASS_DEMO_EDITORIAL_REVIEW_REQUIRED",
+    "exit_code": 0
+  },
+  "tacoma": {
+    "name": "tacoma_narrows_1940",
+    "legacy_dir": "d:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention03_r2_tacoma_proof_20261118",
+    "backtest_dir": "d:\\Project_github\\Skill-animations\\short-director\\Skill-Animation-Video\\runs\\sd_retention04_r2_tacoma_backtest_20261118",
+    "pre_R4_status": "WARN",
+    "new_R4_R2_qc_status": "WARN",
+    "new_R4_R2_causal_status": "WARN",
+    "acceptance_classification": "ENGINE_TECHNICAL_PASS_DEMO_EDITORIAL_REVIEW_REQUIRED",
+    "exit_code": 0
+  },
+  "skyscraper": {
+    "name": "skyscraper_tmd",
+    "pre_R4_status": "UNAVAILABLE_LOCAL_MP4",
+    "new_R4_R2_status": "UNAVAILABLE_LOCAL_MP4",
+    "note": "No pre-existing local Skyscraper MP4 in workspace; untouched per non-destructive baseline rule."
+  }
+}

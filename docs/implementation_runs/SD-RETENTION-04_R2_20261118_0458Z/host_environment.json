@@ -1,0 +1,51 @@
+{
+  "schema_version": "sd-host-env-r2-1",
+  "recorded_at_utc": "2026-11-18T04:58:00Z",
+  "os": "Windows 11 AMD64",
+  "cpu_cores": 12,
+  "ram_total_bytes": 34088599552,
+  "ram_total_gib": 31.75,
+  "gpu": {
+    "name": "Intel(R) UHD Graphics 730",
+    "adapter_ram_bytes": 2147479552,
+    "driver_version": "32.0.101.7088",
+    "webgl_backend": "d3d11"
+  },
+  "disk": {
+    "total_gib": 144.02,
+    "free_gib": 48.77,
+    "free_pct": 33.86,
+    "reserve_policy": "preserve >= 20% total OR >= 12 GiB free after planned renders",
+    "single_gpu_render_lock": true
+  },
+  "toolchain": {
+    "ffmpeg": "9.0.2-full_build-www.gyan.dev",
+    "node": "v26.13.1",
+    "chrome_headless_d3d11": true
+  },
+  "voice_capabilities": {
+    "selected_backend": "windows_sapi",
+    "available_voices": ["Microsoft David Desktop", "Microsoft Zira Desktop"],
+    "neural_voice_available": false,
+    "neural_voice": "NOT_AVAILABLE",
+    "installed_neural_packages": {
+      "edge_tts": false,
+      "piper": false,
+      "kokoro": false,
+      "torch": false,
+      "onnxruntime": false
+    },
+    "word_anchor_confidence": "ESTIMATED"
+  },
+  "baseline_demo_hashes": {
+    "london_r1_enhanced_B_final_4k": {
+      "path": "runs/sd_retention04_london_smog_20261118_0233Z/enhanced_B/final_4k.mp4",
+      "bytes": 52190384,
+      "sha256_prefix": "666eb7962a71357b"
+    },
+    "london_r1_vo_wav": {
+      "path": "runs/sd_retention04_london_smog_20261118_0233Z/enhanced_B/audio/vo.wav",
+      "pcm_sha256_prefix": "fcaed921c9077f99"
+    }
+  }
+}

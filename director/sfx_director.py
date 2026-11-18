@@ -59,9 +59,13 @@ from .audio_dsp import (
     _thud,
     _tick,
     _ui_pop_soft,
+    _volcano_sub_rumble,
     _warning_tension_pulse,
     _whoosh,
     _wind_bridge_gust,
+    _lateral_blast_shockwave,
+    _plinian_ash_roar,
+    _rock_landslide_roar,
 )
 
 
@@ -181,6 +185,14 @@ def select_procedural_sfx(
         return _reveal_soft(rng, 0.28)
     if gen == "transition_whoosh_soft":
         return _whoosh(rng, dur=0.22, up=True) * 0.72
+    if gen == "volcano_sub_rumble":
+        return _volcano_sub_rumble(rng, 0.85)
+    if gen == "rock_landslide_roar":
+        return _rock_landslide_roar(rng, 0.92)
+    if gen == "lateral_blast_shockwave":
+        return _lateral_blast_shockwave(rng, 0.95)
+    if gen == "plinian_ash_roar":
+        return _plinian_ash_roar(rng, 0.90)
     return _pop(520.0) * 0.6
 
 

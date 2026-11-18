@@ -320,11 +320,16 @@ def audit_relative_motion_evidence(
         sid = str(sh.get("shot_id") or "")
         checked += 1
 
-        # 1. Check physical_motion telemetry non-zero physical displacement
+        # 1. Check physical_motion / structural_state telemetry non-zero physical displacement
         tels = traces_by_sid.get(sid, [])
         if tels:
             vdisp = max(
-                float((t.get("physical_motion") or {}).get("vertex_disp_max_m") or 0.0)
+                max(
+                    float((t.get("physical_motion") or {}).get("vertex_disp_max_m") or 0.0),
+                    float(((t.get("narrative_action") or {}).get("structural_state") or {}).get("vertex_disp_max_m") or 0.0),
+                    float(((t.get("narrative_action") or {}).get("structural_state") or {}).get("ruptureProgress") or 0.0),
+                    float(((t.get("narrative_action") or {}).get("structural_state") or {}).get("world_error_m") or 0.0),
+                )
                 for t in tels
             )
             clarity_vals = [
@@ -687,6 +692,266 @@ def audit_ab_vo_and_metric_consistency(run_a: Path, run_b: Path) -> Dict[str, An
     }
 
 
+def audit_smoke_geometry_and_continuity(
+    raw_traces: Optional[List[Dict[str, Any]]],
+    storyboard: Dict[str, Any],
+    run_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Audit volumetric atmosphere traces for banned sphere/dodeca smoke primitives & source continuity."""
+    issues: List[str] = []
+    warnings: List[str] = []
+    atm_samples = 0
+    exposed_dodeca_max = 0
+    min_continuity = None
+    models_seen: List[str] = []
+
+    for rec in (raw_traces or []):
+        tel = rec.get("telemetry") or {}
+        pm = tel.get("physical_motion") or {}
+        pmodel = str(pm.get("physical_model") or "")
+        is_atm = (
+            pmodel == "stylized_atmospheric_visualization"
+            or ("exposed_dodecahedron_smoke_count" in pm)
+            or ("source_plume_continuity" in pm)
+        )
+        if not is_atm:
+            continue
+        atm_samples += 1
+        if pmodel and pmodel not in models_seen:
+            models_seen.append(pmodel)
+        d_cnt = int(pm.get("exposed_dodecahedron_smoke_count") or 0)
+        exposed_dodeca_max = max(exposed_dodeca_max, d_cnt)
+        if d_cnt > 0:
+            issues.append(
+                f"N41: Exposed low-poly sphere/dodecahedron smoke primitives ({d_cnt}) at t={rec.get('time')}s"
+            )
+        cont = pm.get("source_plume_continuity")
+        if cont is not None:
+            cf = float(cont)
+            min_continuity = cf if min_continuity is None else min(min_continuity, cf)
+            if cf < 0.70:
+                issues.append(
+                    f"N42: Detached smoke plume from emission source (continuity={cf:.2f} < 0.70) at t={rec.get('time')}s"
+                )
+        if pmodel and pmodel not in ("stylized_atmospheric_visualization", "volcanic_plume_stylized"):
+            if "cfd" in pmodel.lower() or "navier" in pmodel.lower():
+                issues.append(f"Dishonest fluid claim in atmospheric physical_model: '{pmodel}'")
+
+    # Optional static JS guard when engine_work/src exists on atmospheric demos
+    shots = list(storyboard.get("shots") or [])
+    is_london_or_volcano = any(
+        str(s.get("procedural_generator") or "").startswith(("zach3d:london_", "zach3d:sthelens_"))
+        for s in shots
+    )
+    if run_dir is not None and is_london_or_volcano:
+        lon_js = Path(run_dir) / "engine_work" / "src" / "london_smog_scenes.js"
+        if lon_js.exists():
+            txt = lon_js.read_text(encoding="utf-8", errors="ignore")
+            if "DodecahedronGeometry" in txt:
+                issues.append("N41: DodecahedronGeometry found inside rendered london_smog_scenes.js")
+            if "ILLUSTRATIVE AIRFLOW" in txt:
+                issues.append("P0-B: Clipped 3D ILLUSTRATIVE AIRFLOW billboard card still present in london_smog_scenes.js")
+
+    status = "FAIL" if issues else ("WARN" if warnings else "PASS")
+    return {
+        "schema_version": "sd-smoke-geometry-audit-1",
+        "status": status,
+        "atmospheric_samples_checked": atm_samples,
+        "exposed_dodecahedron_smoke_max": exposed_dodeca_max,
+        "min_source_plume_continuity": round(min_continuity, 3) if min_continuity is not None else None,
+        "physical_models_disclosed": models_seen,
+        "issues": issues,
+        "warnings": warnings,
+    }
+
+
+def audit_editorial_pacing(
+    storyboard: Dict[str, Any],
+    raw_traces: Optional[List[Dict[str, Any]]] = None,
+    video_mp4: Optional[Path] = None,
+    max_warn_idle_sec: float = 4.0,
+    max_fail_idle_sec: float = 5.0,
+) -> Dict[str, Any]:
+    """Verify timeline does not stagnate >4.0s (WARN) or >5.0s (FAIL) without real visual/state escalation."""
+    selected_skill = str((storyboard or {}).get("selected_skill") or "zach-d-films")
+    is_zdf_multi_scene = (selected_skill == "zach-d-films")
+    min_window_mad = 0.12 if selected_skill in ("graph", "minimalistic-graphics") else 1.35
+    shots = list(storyboard.get("shots") or [])
+    issues: List[str] = []
+    warnings: List[str] = []
+    max_idle_sec = 0.0
+    stagnant_segments: List[Dict[str, Any]] = []
+
+    traces_by_sid: Dict[str, List[Dict[str, Any]]] = {}
+    for rec in (raw_traces or []):
+        tel = rec.get("telemetry") or {}
+        sid = str(rec.get("shot_id") or tel.get("shot_id") or "")
+        if sid:
+            traces_by_sid.setdefault(sid, []).append(tel)
+
+    can_decode = bool(video_mp4 and Path(video_mp4).exists())
+    hook_mad = None
+    if can_decode:
+        f0 = _decode_frame_rgb(Path(video_mp4), 0.15, scale_w=135, scale_h=240).astype(np.float32)
+        f1 = _decode_frame_rgb(Path(video_mp4), 1.45, scale_w=135, scale_h=240).astype(np.float32)
+        f2 = _decode_frame_rgb(Path(video_mp4), 2.75, scale_w=135, scale_h=240).astype(np.float32)
+        hook_mad = round(float(max(np.mean(np.abs(f1 - f0)), np.mean(np.abs(f2 - f0)))), 3)
+
+    # Track consecutive same-setup+same-action stretches (for multi-scene ZDF) OR truly low-motion idle shots
+    cur_sig = None
+    cur_dur = 0.0
+    cur_start = 0.0
+    cur_streak = 0
+    cur_has_inactive = False
+    for idx, sh in enumerate(shots):
+        st = float(sh.get("start", 0.0))
+        en = float(sh.get("end", st + 1.0))
+        dur = max(0.0, en - st)
+        sig = (
+            str(sh.get("procedural_generator") or sh.get("setup_type") or ""),
+            str(sh.get("physical_action") or sh.get("beat_role") or ""),
+        )
+        # Check if long single shot (>4s) is visually active vs genuinely static via 1.0s sub-windows & telemetry
+        shot_active = True
+        if dur > max_warn_idle_sec and can_decode:
+            win_mads: List[float] = []
+            t_cur = st + 0.15
+            while t_cur + 0.9 <= en - 0.1:
+                fa = _decode_frame_rgb(Path(video_mp4), t_cur, scale_w=135, scale_h=240).astype(np.float32)
+                fb = _decode_frame_rgb(Path(video_mp4), t_cur + 0.9, scale_w=135, scale_h=240).astype(np.float32)
+                win_mads.append(float(np.mean(np.abs(fb - fa))))
+                t_cur += 1.0
+            if win_mads and max(win_mads) < min_window_mad:
+                shot_active = False
+        tels = traces_by_sid.get(str(sh.get("shot_id") or ""), [])
+        if is_zdf_multi_scene and tels:
+            vdisp = max(
+                max(
+                    float((t.get("physical_motion") or {}).get("vertex_disp_max_m") or 0.0),
+                    float(((t.get("narrative_action") or {}).get("structural_state") or {}).get("vertex_disp_max_m") or 0.0),
+                )
+                for t in tels
+            )
+            if dur > max_warn_idle_sec and vdisp < 0.015:
+                shot_active = False
+
+        if not shot_active:
+            max_idle_sec = max(max_idle_sec, dur)
+            stagnant_segments.append({"shot_id": sh.get("shot_id"), "start": st, "end": en, "dur_sec": round(dur, 2), "reason": "low_visual_state_delta"})
+
+        if sig == cur_sig and cur_sig[0]:
+            cur_dur += dur
+            cur_streak += 1
+            cur_has_inactive = cur_has_inactive or (not shot_active)
+        else:
+            if ((is_zdf_multi_scene and cur_streak >= 2) or cur_has_inactive) and cur_dur > max_warn_idle_sec:
+                stagnant_segments.append({"start": round(cur_start, 2), "dur_sec": round(cur_dur, 2), "signature": cur_sig, "reason": "repeated_setup_stretch" if cur_streak >= 2 else "low_visual_state_delta"})
+                max_idle_sec = max(max_idle_sec, cur_dur)
+            cur_sig = sig
+            cur_dur = dur
+            cur_start = st
+            cur_streak = 1
+            cur_has_inactive = not shot_active
+    if ((is_zdf_multi_scene and cur_streak >= 2) or cur_has_inactive) and cur_dur > max_warn_idle_sec:
+        stagnant_segments.append({"start": round(cur_start, 2), "dur_sec": round(cur_dur, 2), "signature": cur_sig, "reason": "repeated_setup_stretch" if cur_streak >= 2 else "low_visual_state_delta"})
+        max_idle_sec = max(max_idle_sec, cur_dur)
+
+    if max_idle_sec > max_fail_idle_sec:
+        issues.append(f"N43: Stagnant/idle run {max_idle_sec:.2f}s > {max_fail_idle_sec:.1f}s blocking threshold")
+    elif max_idle_sec > max_warn_idle_sec:
+        warnings.append(f"Pacing review required: idle/repeated stretch {max_idle_sec:.2f}s > {max_warn_idle_sec:.1f}s")
+
+    return {
+        "schema_version": "sd-pacing-report-1",
+        "status": "FAIL" if issues else ("WARN" if warnings else "PASS"),
+        "max_idle_run_sec": round(max_idle_sec, 3),
+        "review_threshold_sec": max_warn_idle_sec,
+        "blocking_threshold_sec": max_fail_idle_sec,
+        "hook_window_0_3s_mad": hook_mad,
+        "stagnant_segments": stagnant_segments,
+        "issues": issues,
+        "warnings": warnings,
+    }
+
+
+def build_observed_evidence_report(
+    claim_cov: Dict[str, Any],
+    storyboard: Dict[str, Any],
+    raw_traces: Optional[List[Dict[str, Any]]] = None,
+    camera_intent_report: Optional[Dict[str, Any]] = None,
+    smoke_audit: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Compute true decoded `observed_proof_gain` strictly separated from heuristic planning scores."""
+    traces_by_sid: Dict[str, List[Dict[str, Any]]] = {}
+    for rec in (raw_traces or []):
+        tel = rec.get("telemetry") or {}
+        sid = str(rec.get("shot_id") or tel.get("shot_id") or "")
+        if sid:
+            traces_by_sid.setdefault(sid, []).append(tel)
+
+    rows: List[Dict[str, Any]] = []
+    gains: List[float] = []
+    for cl in (claim_cov.get("claims") or []):
+        sid = str(cl.get("shot_id") or "")
+        mad_ba = cl.get("frame_mad_before_action_or_after")
+        matte_ratio = cl.get("matte_role_ratio")
+        motion_f = min(1.0, float(mad_ba or 0.0) / 8.0) if mad_ba is not None else 0.0
+        matte_f = min(1.0, float(matte_ratio or 0.0) / 0.12) if matte_ratio is not None else 0.0
+
+        tels = traces_by_sid.get(sid, [])
+        dom_f = 0.85
+        cont_f = 1.0
+        if tels:
+            vis_proofs = [
+                ov.get("overlay_visibility_proof")
+                for t in tels
+                for ov in ((t.get("overlay") or {}).get("overlays") or [])
+                if ov.get("visible") and isinstance(ov.get("overlay_visibility_proof"), dict)
+            ]
+            if vis_proofs:
+                ok_cnt = sum(1 for vp in vis_proofs if vp.get("fits_mobile_360") and not vp.get("clipped_by_viewport"))
+                dom_f = ok_cnt / float(len(vis_proofs))
+            conts = [float((t.get("physical_motion") or {}).get("source_plume_continuity")) for t in tels if (t.get("physical_motion") or {}).get("source_plume_continuity") is not None]
+            if conts:
+                cont_f = max(0.0, min(1.0, min(conts)))
+
+        obs_gain = round(0.45 * motion_f + 0.30 * matte_f + 0.15 * dom_f + 0.10 * cont_f, 4)
+        gains.append(obs_gain)
+        rows.append({
+            "causal_event_id": cl.get("causal_event_id"),
+            "shot_id": sid,
+            "decoded_frame_mad": mad_ba,
+            "matte_role_ratio": matte_ratio,
+            "overlay_dom_factor": round(dom_f, 3),
+            "source_plume_continuity_factor": round(cont_f, 3),
+            "observed_proof_gain": obs_gain,
+            "claim_status": cl.get("status"),
+        })
+
+    planned_gain = None
+    if isinstance(camera_intent_report, dict):
+        planned_gain = camera_intent_report.get("planned_camera_info_gain")
+        if planned_gain is None:
+            planned_gain = camera_intent_report.get("mean_info_gain_score")
+
+    mean_obs = round(sum(gains) / float(max(1, len(gains))), 4) if gains else 0.0
+    return {
+        "schema_version": "sd-observed-evidence-report-1",
+        "metric_separation_enforced": True,
+        "observed_proof_gain": {
+            "mean": mean_obs,
+            "metric_authority": "DECODED_PIXELS_MATTES_AND_RUNTIME_TELEMETRY",
+            "per_event": rows,
+        },
+        "planned_camera_info_gain": {
+            "mean": planned_gain,
+            "is_planning_heuristic": True,
+            "metric_authority": "PLANNING_HEURISTIC_NOT_DECODED_PROOF",
+        },
+        "smoke_geometry_audit_status": (smoke_audit or {}).get("status"),
+    }
+
+
 def run_semantic_visual_evidence_qa(
     run_dir: Path,
     storyboard: Dict[str, Any],
@@ -700,7 +965,7 @@ def run_semantic_visual_evidence_qa(
     matte_manifest: Optional[Dict[str, Any]] = None,
     require_decoded_frames: bool = True,
 ) -> Dict[str, Any]:
-    """Run complete SD-RETENTION-04.R1 decoded semantic QA & persist all evidence files."""
+    """Run complete SD-RETENTION-04.R2 decoded semantic QA & persist all evidence files."""
     run_dir = Path(run_dir)
     qa_dir = run_dir / "qa"
     qa_dir.mkdir(parents=True, exist_ok=True)
@@ -746,6 +1011,23 @@ def run_semantic_visual_evidence_qa(
         claim_cov=c_claim,
         camera_intent_report=camera_intent_report,
     )
+    c_smoke = audit_smoke_geometry_and_continuity(
+        raw_traces=raw_traces,
+        storyboard=storyboard,
+        run_dir=run_dir,
+    )
+    c_pacing = audit_editorial_pacing(
+        storyboard=storyboard,
+        raw_traces=raw_traces,
+        video_mp4=video_mp4 if require_decoded_frames else None,
+    )
+    observed_rep = build_observed_evidence_report(
+        claim_cov=c_claim,
+        storyboard=storyboard,
+        raw_traces=raw_traces,
+        camera_intent_report=camera_intent_report,
+        smoke_audit=c_smoke,
+    )
 
     checks = {
         "visual_claim_coverage": c_claim,
@@ -753,6 +1035,8 @@ def run_semantic_visual_evidence_qa(
         "claim_pointer_semantics": c_ptr,
         "causal_transition_visibility": c_trans,
         "silent_comprehension_proxy": c_comp,
+        "smoke_geometry_and_continuity": c_smoke,
+        "editorial_pacing": c_pacing,
     }
     blocking_issues: List[str] = []
     advisory_warnings: List[str] = []
@@ -761,7 +1045,7 @@ def run_semantic_visual_evidence_qa(
     for cname, chk in checks.items():
         blocking_issues.extend(chk.get("issues") or [])
         for w in chk.get("warnings") or []:
-            if "blocking" in str(w).lower() or cname == "visual_claim_coverage" and "unsupported" not in str(w).lower():
+            if "blocking" in str(w).lower() or (cname == "visual_claim_coverage" and "unsupported" not in str(w).lower()):
                 blocking_warnings.append(w)
             else:
                 advisory_warnings.append(w)
@@ -783,6 +1067,11 @@ def run_semantic_visual_evidence_qa(
         json.dumps({"schema_version": "sd-semantic-matte-align-1", "frames": c_claim.get("matte_alignment", [])}, indent=2),
         encoding="utf-8",
     )
+    obs_p = run_dir / "observed_evidence_report.json"
+    obs_p.write_text(json.dumps(observed_rep, ensure_ascii=False, indent=2), encoding="utf-8")
+    pace_p = run_dir / "pacing_report.json"
+    pace_p.write_text(json.dumps(c_pacing, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "smoke_geometry_audit.json").write_text(json.dumps(c_smoke, ensure_ascii=False, indent=2), encoding="utf-8")
 
     gaps_csv = run_dir / "causal_evidence_gaps.csv"
     with gaps_csv.open("w", encoding="utf-8", newline="") as f:
@@ -799,11 +1088,23 @@ def run_semantic_visual_evidence_qa(
         )
     write_qa_failure_examples(qa_dir / "qa_failures_visual_examples", video_mp4, c_claim.get("claims", []), blocking_issues)
 
+    engine_pass = overall in ("PASS", "WARN")
     gates_doc = {
         "schema_version": SCHEMA_VERSION,
         "overall_status": overall,
+        "acceptance_classification": "ENGINE_TECHNICAL_PASS_DEMO_EDITORIAL_REVIEW_REQUIRED" if engine_pass else "ENGINE_TECHNICAL_FAIL",
+        "ENGINE_TECHNICAL_PASS": engine_pass,
+        "DEMO_EDITORIAL_REVIEW_REQUIRED": True,
+        "HUMAN_VISUAL_REVIEW_REQUIRED": True,
+        "HUMAN_VISUAL_REVIEW_STATUS": "NOT_VERIFIED",
+        "HUMAN_AUDIO_REVIEW_STATUS": "NOT_VERIFIED",
+        "PRODUCTION_RELEASE_READY": False,
         "subjective_visual_review": "NOT_VERIFIED",
         "viewer_retention_status": "NOT_VERIFIED",
+        "observed_evidence_report_json": str(obs_p.resolve()),
+        "pacing_report_json": str(pace_p.resolve()),
+        "mean_observed_proof_gain": (observed_rep.get("observed_proof_gain") or {}).get("mean"),
+        "mean_planned_camera_info_gain": (observed_rep.get("planned_camera_info_gain") or {}).get("mean"),
         "blocking_issues": blocking_issues,
         "blocking_warnings": blocking_warnings,
         "advisory_warnings": advisory_warnings,

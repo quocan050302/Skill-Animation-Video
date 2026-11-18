@@ -1,0 +1,20 @@
+TASK: unit_and_negative
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_unit_and_negative -v
+STATUS: PASS (exit=0, elapsed=1.41s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_audit_rejects_foreign_shot_asset_import_and_fallback (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_audit_rejects_foreign_shot_asset_import_and_fallback) ... ok
+test_auto_mode_blocks_engine_files_during_capability_scan_and_locks_one (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_auto_mode_blocks_engine_files_during_capability_scan_and_locks_one) ... ok
+test_auto_mode_capability_routing_across_genres (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_auto_mode_capability_routing_across_genres) ... ok
+test_explicit_mode_blocks_reading_other_five_skill_mds_and_adapters (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_explicit_mode_blocks_reading_other_five_skill_mds_and_adapters) ... ok
+test_explicit_parsing_variants (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_explicit_parsing_variants) ... ok
+test_graph_rejects_invented_numbers_and_kokoro_rejects_vietnamese_claim (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_graph_rejects_invented_numbers_and_kokoro_rejects_vietnamese_claim) ... ok
+test_unknown_explicit_skill_fails_closed (tests.test_unit_and_negative.TestStyleLockAndNegativeRegressions.test_unknown_explicit_skill_fails_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.041s
+
+OK
+

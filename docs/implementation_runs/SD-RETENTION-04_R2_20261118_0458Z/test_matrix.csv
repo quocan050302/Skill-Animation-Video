@@ -1,0 +1,32 @@
+task_id,description,status_w1,elapsed_w1_sec,status_w2,elapsed_w2_sec,exit_code_w1,exit_code_w2,deps
+unit_and_negative,Style-lock negative & routing contracts,PASS,1.42,PASS,1.41,0,0,
+visual_event_coverage,"VisualEventGraph, coverage, bounds & fault-injection unit contracts",PASS,0.3,PASS,0.34,0,0,
+visual_storytelling_dir,"R2.1 story action graph, world-state causality, reveal order & period integrity",PASS,2.06,PASS,3.0,0,0,visual_event_coverage
+storytelling_qa,"R2.6 false-pass-proof overlay diff, A/B event alignment & N11-N24 QA traps",PASS,2.36,PASS,1.33,0,0,visual_storytelling_dir
+audio_determinism,Audio DSP determinism & mastering LUFS/TP checks,PASS,5.25,PASS,6.31,0,0,
+zdf_motion01_matrix,"T01-T20 ZDF-MOTION-01 contracts, IK, cutaway, transition & QA tamper traps",PASS,13.92,PASS,18.34,0,0,unit_and_negative;visual_event_coverage
+audio_catalog_licenses,"Audio catalog, license policy & Windows portable traversal guard",PASS,0.41,PASS,0.42,0,0,
+voice_prosody,"R1/R2.3 semantic voice prosody, candidate eval & traps N1-N3/N15",PASS,9.51,PASS,10.19,0,0,
+editorial_overlays,"R2.4 kinetic captions across mobile widths, 3D tracking, occlusion & N4-N9/N16",PASS,10.89,PASS,31.27,0,0,voice_prosody
+boston_molasses_scenes,"R2.2 modular 1919 Boston WebGL scenes, rupture/wave dynamics & determinism",PASS,10.62,PASS,17.11,0,0,visual_storytelling_dir
+retention_audio_sync,"R2.5 bespoke SFX sync, isolation & traps N10-N12/N14",PASS,8.92,PASS,9.38,0,0,audio_determinism;editorial_overlays
+editorial_design_system,"SD-RETENTION-03 semantic roles, mobile widths, design tokens & N01-N04/N31",PASS,0.12,PASS,0.11,0,0,
+curiosity_director,"SD-RETENTION-03 <=2 curiosity headlines, pointer planning & N09-N10",PASS,0.11,PASS,0.11,0,0,editorial_design_system
+cinematic_composition,"SD-RETENTION-03 9:16 negative-space framing, progression & collision QA",PASS,0.11,PASS,0.16,0,0,
+physical_motion,"SD-RETENTION-03 deterministic torsion/collapse/viscous waves, seek determinism & N13-N15/N20-N22",PASS,4.44,PASS,7.05,0,0,visual_storytelling_dir
+character_performance,"SD-RETENTION-03 human.js foot-lock grounding, non-slide retreat & N17-N19",PASS,4.28,PASS,9.75,0,0,visual_storytelling_dir
+sd_retention04_causality,"SD-RETENTION-04.R1 CausalEvent graph, world-state conservation, semantic QA & N01-N20 traps",PASS,18.39,PASS,16.75,0,0,visual_storytelling_dir
+visual_scene_factory_e2e,"ZDF non-Roman cutaway stills, determinism hashes & E2E pipeline",PASS,121.19,PASS,112.23,0,0,zdf_motion01_matrix
+retention_e2e,"3-pane WebGL cutaway, determinism & trap N13",PASS,11.2,PASS,10.31,0,0,editorial_overlays;retention_audio_sync;storytelling_qa;boston_molasses_scenes
+retention03_integration,"SD-RETENTION-03 Tacoma Narrows WebGL integration, role SFX sync, isolation & N25/N29",PASS,3.94,PASS,3.81,0,0,editorial_design_system;curiosity_director;cinematic_composition;physical_motion;character_performance;storytelling_qa
+r2_decoded_and_traps,"SD-RETENTION-03.R2 decoded visual QA, Skyscraper E2E, third-domain generalization & T01-T32 traps",PASS,11.84,PASS,11.39,0,0,editorial_design_system;curiosity_director;cinematic_composition;physical_motion;character_performance;storytelling_qa
+sd_retention04_camera_and_visual_proof,"SD-RETENTION-04.R1 Q1-Q5 ActionCamera, N21-N40 traps & London 1952 live WebGL seek/matte proof",PASS,13.67,PASS,12.72,0,0,sd_retention04_causality;r2_decoded_and_traps
+atmospheric_volume_renderer,"SD-RETENTION-04.R2 N41-N45 FBM soft-alpha plumes, ash seek determinism & matteAlphaClip",PASS,5.23,PASS,4.59,0,0,sd_retention04_causality
+scene_text_safe_zones,"SD-RETENTION-04.R2 N46-N50 3D label removal, live DOM glyph clamping & mobile safe zones",PASS,5.16,PASS,5.47,0,0,editorial_design_system
+sd_retention04_r2_visual_quality,"SD-RETENTION-04.R2 N51-N55 setup diversity, >4s/>5s pacing checks, proof separation & acceptance honesty",PASS,6.56,PASS,3.42,0,0,sd_retention04_causality
+sd_retention04_r2_regression_backtests,"SD-RETENTION-04.R2 N56-N60 Boston/Tacoma backtests, St. Helens reveal/SFX & full DAG coverage",PASS,3.16,PASS,3.28,0,0,visual_storytelling_dir;sd_retention04_r2_visual_quality
+determinism_and_resources,Seeded TTS/storyboard/resource budget determinism,PASS,51.09,PASS,69.77,0,0,unit_and_negative
+audio_narrative_planning,Narrative beat/music/SFX alignment planning suite,PASS,2.94,PASS,2.88,0,0,audio_catalog_licenses
+audio_integration_smoke,Audio pipeline integration smoke test,PASS,224.42,PASS,192.19,0,0,audio_narrative_planning;audio_determinism
+audio_only_remux,--audio-only lossless video-packet preservation remix suite,PASS,8.09,PASS,6.8,0,0,audio_integration_smoke
+smoke_all_engines,All remaining 5 visual engines smoke + upstream isolation check,PASS,466.95,PASS,408.06,0,0,zdf_motion01_matrix

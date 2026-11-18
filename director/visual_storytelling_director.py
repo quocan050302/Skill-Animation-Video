@@ -838,6 +838,154 @@ def _classify_narrative_action_unit(
             "reconstruction_disclosure": disclosure,
         }
 
+    # 1d. Mount St. Helens 1980 Volcanic Eruption Archetypes (USGS grounded chronology)
+    is_volcano_story = (
+        fam.startswith("volcano_")
+        or "st. helens" in full_script_low
+        or "cryptodome" in full_script_low
+    )
+    if is_volcano_story:
+        disclosure = "visualized_physical_approximation"
+        if fam == "volcano_crater_aftermath":
+            return {
+                "location_id": "msh_horseshoe_crater_aftermath",
+                "entity_ids": ["mount_st_helens_crater", "original_summit_contour_ref", "fixed_granite_ridges"],
+                "physical_action": "horseshoe_crater_before_after",
+                "world_state_before": ["towering_plinian_ash_column"],
+                "world_state_after": ["horseshoe_crater_carved_summit_1300ft_lower"],
+                "new_visual_evidence": ["carved_horseshoe_crater", "wireframe_pre_1980_summit_contour"],
+                "required_anchors": ["msh_horseshoe_crater_rim"],
+                "required_stage_family": "volcano_crater_aftermath",
+                "primary_asset": "msh_crater_aftermath_rig",
+                "factual_claim_id": "claim_msh_horseshoe_crater_legacy",
+                "editorial_intent": "aftermath_takeaway",
+                "curiosity_gap": False,
+                "tone": "sober_analytical",
+                "reveal_after_token": "crater" if "crater" in low else None,
+                "spoiler_tokens": [],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "volcano_plinian_column":
+            return {
+                "location_id": "msh_plinian_column_view",
+                "entity_ids": ["mount_st_helens_crater", "plinian_ash_column", "fixed_granite_ridges"],
+                "physical_action": "vertical_plinian_ash_rise",
+                "world_state_before": ["lateral_blast_swept_forest_ridge"],
+                "world_state_after": ["vertical_ash_column_rising_skyward"],
+                "new_visual_evidence": ["vertical_plinian_ash_column", "anvil_cloud_tephra"],
+                "required_anchors": ["msh_plinian_ash_column"],
+                "required_stage_family": "volcano_plinian_column",
+                "primary_asset": "msh_plinian_column_rig",
+                "factual_claim_id": "claim_msh_plinian_column",
+                "editorial_intent": "escalation",
+                "curiosity_gap": False,
+                "tone": "dramatic_factual",
+                "reveal_after_token": "ash" if "ash" in low else None,
+                "spoiler_tokens": ["crater"],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "volcano_forest_sweep":
+            return {
+                "location_id": "msh_timber_ridge_zone",
+                "entity_ids": ["lateral_blast_front", "cascade_ridge_pines", "untouched_ridge_ref"],
+                "physical_action": "lateral_blast_tree_blowdown",
+                "world_state_before": ["uncorked_lateral_blast_racing_sideways"],
+                "world_state_after": ["trees_flattened_across_blast_sector"],
+                "new_visual_evidence": ["progressively_snapping_trees", "untouched_far_ridge"],
+                "required_anchors": ["msh_blast_timber_front"],
+                "required_stage_family": "volcano_forest_sweep",
+                "primary_asset": "msh_forest_sweep_rig",
+                "factual_claim_id": "claim_msh_blast_zone_area",
+                "editorial_intent": "mechanism_consequence",
+                "curiosity_gap": False,
+                "tone": "tense_factual",
+                "reveal_after_token": "flattened" if "flattened" in low else None,
+                "spoiler_tokens": ["plinian"],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "volcano_lateral_blast":
+            return {
+                "location_id": "msh_north_scarp_blast_vent",
+                "entity_ids": ["uncorked_cryptodome_vent", "lateral_blast_surge", "west_crater_lip_ref"],
+                "physical_action": "horizontal_decompression_blast",
+                "world_state_before": ["north_flank_sliding_away"],
+                "world_state_after": ["supersonic_steam_ash_blast_erupting_sideways"],
+                "new_visual_evidence": ["horizontal_shockwave_cone", "sideways_pyroclastic_surge"],
+                "required_anchors": ["msh_lateral_blast_front"],
+                "required_stage_family": "volcano_lateral_blast",
+                "primary_asset": "msh_lateral_blast_rig",
+                "factual_claim_id": "claim_msh_lateral_blast_300mph",
+                "editorial_intent": "twist_escalation",
+                "curiosity_gap": True,
+                "tone": "high_tension",
+                "reveal_after_token": "lateral" if "lateral" in low else ("sideways" if "sideways" in low else None),
+                "spoiler_tokens": ["250", "crater"],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "volcano_landslide_avalanche":
+            return {
+                "location_id": "msh_north_flank_avalanche",
+                "entity_ids": ["detached_landslide_blocks", "south_summit_lip_ref"],
+                "physical_action": "earthquake_triggered_flank_landslide",
+                "world_state_before": ["cryptodome_bulging_under_north_slope"],
+                "world_state_after": ["north_flank_sliding_away"],
+                "new_visual_evidence": ["collapsing_slope_blocks", "tumbling_talus_dust"],
+                "required_anchors": ["msh_landslide_scar"],
+                "required_stage_family": "volcano_landslide_avalanche",
+                "primary_asset": "msh_landslide_avalanche_rig",
+                "factual_claim_id": "claim_msh_quake_5_1_landslide",
+                "editorial_intent": "mechanism_escalation",
+                "curiosity_gap": False,
+                "tone": "high_tension",
+                "reveal_after_token": "landslide" if "landslide" in low else None,
+                "spoiler_tokens": ["300", "250"],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        if fam == "volcano_cryptodome_cutaway":
+            return {
+                "location_id": "msh_cryptodome_subsurface",
+                "entity_ids": ["magma_feeder_conduit", "pressurized_cryptodome", "granite_bedrock_ref"],
+                "physical_action": "internal_cryptodome_bulge_cutaway",
+                "world_state_before": ["swelling_north_slope_visible"],
+                "world_state_after": ["cryptodome_bulging_under_north_slope"],
+                "new_visual_evidence": ["cutaway_magma_intrusion", "bulging_cryptodome_dome"],
+                "required_anchors": ["msh_cryptodome_core"],
+                "required_stage_family": "volcano_cryptodome_cutaway",
+                "primary_asset": "msh_cryptodome_cutaway_rig",
+                "factual_claim_id": "claim_msh_date_bulge_1980",
+                "editorial_intent": "mechanism_explanation",
+                "curiosity_gap": False,
+                "tone": "analytical",
+                "reveal_after_token": "cryptodome" if "cryptodome" in low else ("magma" if "magma" in low else None),
+                "spoiler_tokens": ["lateral", "300", "250"],
+                "period_year": 1980,
+                "reconstruction_disclosure": disclosure,
+            }
+        return {
+            "location_id": "msh_spirit_lake_ridge_outlook",
+            "entity_ids": ["mount_st_helens_cone", "north_flank_bulge", "spirit_lake_ridge_ref"],
+            "physical_action": "north_flank_bulge_distortion",
+            "world_state_before": ["pre_eruption_symmetrical_volcano"],
+            "world_state_after": ["swelling_north_slope_visible"],
+            "new_visual_evidence": ["protruding_north_flank", "fixed_foreground_pines_and_lake"],
+            "required_anchors": ["msh_north_flank_bulge"],
+            "required_stage_family": "volcano_ridge_hook",
+            "primary_asset": "msh_ridge_hook_rig",
+            "factual_claim_id": "claim_msh_date_bulge_1980",
+            "editorial_intent": "curiosity_hook" if idx == 0 else "context_establish",
+            "curiosity_gap": idx == 0,
+            "tone": "intrigue" if idx == 0 else "informative",
+            "reveal_after_token": None,
+            "spoiler_tokens": ["300", "250", "lateral"],
+            "period_year": 1980,
+            "reconstruction_disclosure": disclosure,
+        }
+
     # 2. Generalized Domain Mapping (Mechanisms / Science / Roman / Biology / Generic)
     action_map = {
         "tap_activate": "human_physical_contact",
@@ -992,6 +1140,13 @@ CONTINUATION_SUBPHASES: Dict[str, Tuple[str, str, List[str]]] = {
     "vehicle_visibility_dropoff": ("bus_headlight_scatter_dropoff", "bus_scatter_follow_rig", ["conductor_lantern_barely_pierces_smog"]),
     "pedestrian_smog_reaction": ("smog_hospital_surge_impact", "pedestrian_respiratory_impact_rig", ["respiratory_distress_mounts_over_five_days"]),
     "air_quality_aftermath": ("clean_air_smokeless_resolution", "clean_air_skyline_rig", ["smokeless_hearth_legislation_clears_horizon"]),
+    "volcano_ridge_hook": ("north_flank_fracture_dust", "msh_ridge_fracture_rig", ["warning_steam_and_fractures_open_along_bulge"]),
+    "volcano_cryptodome_cutaway": ("cryptodome_pressure_escalation", "msh_cryptodome_pressure_rig", ["shallow_magma_stretches_overlying_basalt_thin"]),
+    "volcano_landslide_avalanche": ("debris_avalanche_downslope_surge", "msh_avalanche_runout_rig", ["millions_of_tons_plunge_into_valley"]),
+    "volcano_lateral_blast": ("supersonic_blast_shockwave_sweep", "msh_lateral_shockwave_rig", ["sideways_pyroclastic_wave_tears_outward"]),
+    "volcano_forest_sweep": ("timber_ridge_blowdown_wake", "msh_timber_wake_rig", ["blast_front_flattens_distant_pine_ridges"]),
+    "volcano_plinian_column": ("stratospheric_ash_umbrella_spread", "msh_plinian_anvil_rig", ["dark_tephra_cloud_expands_across_skyline"]),
+    "volcano_crater_aftermath": ("volcanic_hazard_monitoring_legacy", "msh_crater_legacy_rig", ["horseshoe_scar_remains_landmark_of_lateral_blast"]),
 }
 
 

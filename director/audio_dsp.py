@@ -577,3 +577,51 @@ def _warning_tension_pulse(rng: np.random.Generator, dur: float = 0.34) -> np.nd
     air = _bp(rng.standard_normal(n), 160.0, 620.0) * np.exp(-t * 9.0) * 0.26
     return (pulse + air) * atk * rel
 
+
+def _volcano_sub_rumble(rng: np.random.Generator, dur: float = 0.85) -> np.ndarray:
+    """Deep volcanic cryptodome swarm / seismic sub-rumble."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    u = np.minimum(1.0, t / dur)
+    env = np.sin(np.pi * u) ** 0.85
+    sub = (
+        0.55 * np.sin(2.0 * np.pi * (42.0 + 9.0 * np.sin(2.0 * np.pi * 1.4 * t)) * t)
+        + 0.28 * np.sin(2.0 * np.pi * 63.0 * t)
+    )
+    gravel = _bp(rng.standard_normal(n), 60.0, 320.0) * 0.42
+    return _lp((sub + gravel) * env, 480.0) * 0.88
+
+
+def _rock_landslide_roar(rng: np.random.Generator, dur: float = 0.92) -> np.ndarray:
+    """Flank shear fracture + massive debris avalanche cascade."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.012)
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.14)
+    crack = _bp(rng.standard_normal(n), 380.0, 1800.0) * np.exp(-t * 14.0) * 0.55
+    slide = _bp(rng.standard_normal(n), 120.0, 1150.0) * (0.45 + 0.35 * np.sin(np.pi * np.minimum(1.0, t / dur)))
+    rumble = np.sin(2.0 * np.pi * (58.0 - 16.0 * t) * t) * 0.42
+    return _lp((crack + slide + rumble) * atk * rel, 1850.0) * 0.90
+
+
+def _lateral_blast_shockwave(rng: np.random.Generator, dur: float = 0.95) -> np.ndarray:
+    """Unroofed supersonic decompression blast shockwave + hot pyroclastic roar."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    atk = np.minimum(1.0, t / 0.0025)
+    shock = np.sin(2.0 * np.pi * (74.0 * np.exp(-t * 5.2) + 28.0) * t) * np.exp(-t * 3.8) * 0.72
+    crack = _bp(rng.standard_normal(n), 650.0, 3200.0) * np.exp(-t * 9.5) * 0.62
+    roar = _lp(rng.standard_normal(n), 1400.0) * np.exp(-np.maximum(0.0, t - 0.04) * 2.4) * 0.54
+    rel = np.minimum(1.0, np.maximum(0.0, dur - t) / 0.12)
+    return (shock + crack + roar) * atk * rel * 0.92
+
+
+def _plinian_ash_roar(rng: np.random.Generator, dur: float = 0.90) -> np.ndarray:
+    """Stratospheric vertical ash column roar & airborne tephra hiss."""
+    n = max(64, int(dur * SR))
+    t = _t(n)
+    env = np.minimum(1.0, t / 0.08) * np.minimum(1.0, np.maximum(0.0, dur - t) / 0.16)
+    jet = _bp(rng.standard_normal(n), 220.0, 2400.0) * 0.48
+    core = np.sin(2.0 * np.pi * 48.0 * t) * 0.32 + _bp(rng.standard_normal(n), 75.0, 260.0) * 0.46
+    return _lp((jet + core) * env, 2600.0) * 0.85
+

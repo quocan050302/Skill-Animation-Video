@@ -1,0 +1,18 @@
+TASK: sd_retention04_r2_regression_backtests
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_sd_retention04_r2_regression_backtests -v
+STATUS: PASS (exit=0, elapsed=3.28s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n56_boston_scene_fix_and_legacy_immutability (tests.test_sd_retention04_r2_regression_backtests.TestSdRetention04R2RegressionBacktests.test_n56_boston_scene_fix_and_legacy_immutability) ... ok
+test_n57_tacoma_reference_fixed_towers_tagged (tests.test_sd_retention04_r2_regression_backtests.TestSdRetention04R2RegressionBacktests.test_n57_tacoma_reference_fixed_towers_tagged) ... ok
+test_n58_st_helens_reveal_gate_blocks_premature_blast_spoiler (tests.test_sd_retention04_r2_regression_backtests.TestSdRetention04R2RegressionBacktests.test_n58_st_helens_reveal_gate_blocks_premature_blast_spoiler) ... ok
+test_n59_st_helens_subphases_and_volcanic_sfx_dsp (tests.test_sd_retention04_r2_regression_backtests.TestSdRetention04R2RegressionBacktests.test_n59_st_helens_subphases_and_volcanic_sfx_dsp) ... ok
+test_n60_validation_async_full_dag_covers_all_test_modules (tests.test_sd_retention04_r2_regression_backtests.TestSdRetention04R2RegressionBacktests.test_n60_validation_async_full_dag_covers_all_test_modules) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.048s
+
+OK
+

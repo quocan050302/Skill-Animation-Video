@@ -74,6 +74,13 @@ ENTITY_BOUNDS_M: Dict[str, Tuple[float, float, float]] = {
     "bus_visibility_dropoff_rig": (4.6, 3.2, 8.2),
     "pedestrian_smog_reaction_rig": (2.8, 2.4, 4.0),
     "clean_air_aftermath_rig": (10.5, 6.8, 8.5),
+    "msh_ridge_hook_rig": (14.0, 6.5, 12.0),
+    "msh_cryptodome_cutaway_rig": (7.5, 4.2, 6.5),
+    "msh_landslide_avalanche_rig": (14.0, 6.5, 10.0),
+    "msh_lateral_blast_rig": (16.0, 6.5, 12.0),
+    "msh_forest_sweep_rig": (14.0, 5.5, 10.0),
+    "msh_plinian_column_rig": (14.0, 9.5, 12.0),
+    "msh_crater_aftermath_rig": (14.0, 6.0, 12.0),
 }
 
 
@@ -399,11 +406,25 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "bounds": {"x_min": -4.5, "x_max": 4.5, "y_min": 0.12, "y_max": 6.2, "z_min": -4.5, "z_max": 6.5},
         "collider_boxes": [],
     },
+    "zach3d:london_rooftop_stacks_stage": {
+        "capabilities": ["rooftop_chimney_pots", "power_plant_smokestacks", "volumetric_sulfur_plumes"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "chimney_flue_combustion", "world_pos": [0.85, 4.15, -2.2], "radius_m": 0.75},
+        "bounds": {"x_min": -8.5, "x_max": 8.5, "y_min": 0.12, "y_max": 8.8, "z_min": -7.5, "z_max": 9.5},
+        "collider_boxes": [],
+    },
     "zach3d:london_atmospheric_inversion_stage": {
-        "capabilities": ["warm_inversion_air_layer", "cold_ground_air", "deflected_smoke_streamlines", "illustrative_airflow_label"],
+        "capabilities": ["warm_inversion_air_layer", "cold_ground_air", "deflected_smoke_streamlines"],
         "fidelity_mode": "stylized_illustrative",
         "focal_anchor": {"anchor_id": "inversion_thermal_boundary", "world_pos": [0.0, 3.15, -0.6], "radius_m": 0.85},
         "bounds": {"x_min": -9.5, "x_max": 9.5, "y_min": 0.12, "y_max": 8.5, "z_min": -7.5, "z_max": 10.5},
+        "collider_boxes": [],
+    },
+    "zach3d:london_street_canyon_stage": {
+        "capabilities": ["street_canyon_facades", "trapped_under_lid_smog", "victorian_lamp_ref"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "inversion_thermal_boundary", "world_pos": [0.0, 2.45, -1.6], "radius_m": 0.75},
+        "bounds": {"x_min": -7.5, "x_max": 7.5, "y_min": 0.12, "y_max": 7.5, "z_min": -7.5, "z_max": 9.5},
         "collider_boxes": [],
     },
     "zach3d:london_bus_visibility_stage": {
@@ -425,6 +446,55 @@ ZDF_ARCHETYPE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "fidelity_mode": "stylized_historical",
         "focal_anchor": {"anchor_id": "smokeless_hearth_transition", "world_pos": [0.0, 2.45, -1.6], "radius_m": 0.85},
         "bounds": {"x_min": -9.5, "x_max": 9.5, "y_min": 0.12, "y_max": 8.8, "z_min": -9.0, "z_max": 11.0},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_ridge_hook_stage": {
+        "capabilities": ["volcano_morph_bulge", "spirit_lake_ridge_ref", "warning_fracture_dust"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_north_flank_bulge", "world_pos": [1.35, 1.65, -0.5], "radius_m": 0.90},
+        "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 10.5, "z_min": -10.0, "z_max": 15.0},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_cryptodome_cutaway_stage": {
+        "capabilities": ["layered_cutaway", "magma_conduit", "pressurized_cryptodome"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_cryptodome_core", "world_pos": [0.75, 1.55, 0.10], "radius_m": 0.70},
+        "bounds": {"x_min": -8.0, "x_max": 8.0, "y_min": 0.12, "y_max": 7.5, "z_min": -7.5, "z_max": 11.0},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_landslide_avalanche_stage": {
+        "capabilities": ["landslide_blocks", "talus_avalanche", "north_scarp_dust"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_landslide_scar", "world_pos": [1.85, 1.25, -0.3], "radius_m": 0.95},
+        "bounds": {"x_min": -12.0, "x_max": 12.0, "y_min": 0.12, "y_max": 10.0, "z_min": -10.0, "z_max": 14.5},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_lateral_blast_stage": {
+        "capabilities": ["uncorked_lateral_blast", "shockwave_cone", "sideways_pyroclastic_surge"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_lateral_blast_front", "world_pos": [2.25, 1.35, -0.25], "radius_m": 1.05},
+        "bounds": {"x_min": -14.0, "x_max": 14.0, "y_min": 0.12, "y_max": 10.5, "z_min": -11.0, "z_max": 15.5},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_forest_sweep_stage": {
+        "capabilities": ["pine_forest_blowdown", "lateral_blast_sweep", "untouched_ridge_ref"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_blast_timber_front", "world_pos": [0.25, 0.95, -0.4], "radius_m": 0.95},
+        "bounds": {"x_min": -12.5, "x_max": 12.5, "y_min": 0.12, "y_max": 9.5, "z_min": -10.5, "z_max": 14.0},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_plinian_column_stage": {
+        "capabilities": ["vertical_plinian_ash_column", "tephra_anvil", "volcanic_ash_sky"],
+        "fidelity_mode": "stylized_illustrative",
+        "focal_anchor": {"anchor_id": "msh_plinian_ash_column", "world_pos": [0.0, 3.85, -0.6], "radius_m": 1.25},
+        "bounds": {"x_min": -14.0, "x_max": 14.0, "y_min": 0.12, "y_max": 13.5, "z_min": -12.0, "z_max": 17.0},
+        "collider_boxes": [],
+    },
+    "zach3d:sthelens_crater_aftermath_stage": {
+        "capabilities": ["horseshoe_crater_topography", "pre_1980_summit_ghost_ref", "residual_steam"],
+        "fidelity_mode": "stylized_historical",
+        "focal_anchor": {"anchor_id": "msh_horseshoe_crater_rim", "world_pos": [0.25, 2.05, -0.4], "radius_m": 1.05},
+        "bounds": {"x_min": -12.5, "x_max": 12.5, "y_min": 0.12, "y_max": 10.5, "z_min": -11.0, "z_max": 15.0},
         "collider_boxes": [],
     },
     "zach3d:studio_demonstrator_stage": {
@@ -755,6 +825,20 @@ def _map_family_to_generator(
             return "zach3d:london_pedestrian_reaction_stage"
         if fam == "air_quality_aftermath" or prop == "clean_air_aftermath_rig":
             return "zach3d:london_clean_air_aftermath_stage"
+        if fam == "volcano_ridge_hook" or prop == "msh_ridge_hook_rig":
+            return "zach3d:sthelens_ridge_hook_stage"
+        if fam == "volcano_cryptodome_cutaway" or prop == "msh_cryptodome_cutaway_rig":
+            return "zach3d:sthelens_cryptodome_cutaway_stage"
+        if fam == "volcano_landslide_avalanche" or prop == "msh_landslide_avalanche_rig":
+            return "zach3d:sthelens_landslide_avalanche_stage"
+        if fam == "volcano_lateral_blast" or prop == "msh_lateral_blast_rig":
+            return "zach3d:sthelens_lateral_blast_stage"
+        if fam == "volcano_forest_sweep" or prop == "msh_forest_sweep_rig":
+            return "zach3d:sthelens_forest_sweep_stage"
+        if fam == "volcano_plinian_column" or prop == "msh_plinian_column_rig":
+            return "zach3d:sthelens_plinian_column_stage"
+        if fam == "volcano_crater_aftermath" or prop == "msh_crater_aftermath_rig":
+            return "zach3d:sthelens_crater_aftermath_stage"
         if fam == "airplane_window" or prop == "airplane_window_bleed":
             return "zach3d:airplane_window_hole_stage"
         if fam == "elevator_lobby_button" or prop == "elevator_button":
@@ -959,6 +1043,24 @@ def materialize_engine_scene(
                 "focal_anchor": dict(reg_info.get("focal_anchor") or {"anchor_id": "stage_center", "world_pos": [0.0, 1.18, 0.0], "radius_m": 0.25}),
                 "scene_bounds": dict(reg_info.get("bounds") or {"x_min": -3.5, "x_max": 3.5, "y_min": 0.12, "y_max": 4.2, "z_min": -4.0, "z_max": 5.2}),
                 "collider_boxes": list(reg_info.get("collider_boxes") or []),
+            },
+        }
+
+    setup_override = str(shot_spec.get("setup_type") or "")
+    setup_gen_map = {
+        "london_rooftop_stacks": "zach3d:london_rooftop_stacks_stage",
+        "london_street_canyon_buildup": "zach3d:london_street_canyon_stage",
+    }
+    if selected_skill == "zach-d-films" and setup_override in setup_gen_map:
+        gen_ov = setup_gen_map[setup_override]
+        reg_ov = ZDF_ARCHETYPE_REGISTRY.get(gen_ov, {})
+        ent = {
+            **ent,
+            "asset": {
+                **(ent.get("asset") or {}),
+                "procedural_generator": gen_ov,
+                "focal_anchor": dict(reg_ov.get("focal_anchor") or ent.get("asset", {}).get("focal_anchor") or {}),
+                "scene_bounds": dict(reg_ov.get("bounds") or ent.get("asset", {}).get("scene_bounds") or {}),
             },
         }
 

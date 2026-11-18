@@ -215,6 +215,38 @@ def build_task_graph(mode: str) -> List[ValidationTask]:
                 description="SD-RETENTION-04.R1 Q1-Q5 ActionCamera, N21-N40 traps & London 1952 live WebGL seek/matte proof",
                 resource_class="gpu",
             ),
+            ValidationTask(
+                task_id="atmospheric_volume_renderer",
+                cmd=[py, "-m", "unittest", "tests.test_atmospheric_volume_renderer", "-v"],
+                deps=["sd_retention04_causality"],
+                timeout_sec=240.0,
+                description="SD-RETENTION-04.R2 N41-N45 FBM soft-alpha plumes, ash seek determinism & matteAlphaClip",
+                resource_class="gpu",
+            ),
+            ValidationTask(
+                task_id="scene_text_safe_zones",
+                cmd=[py, "-m", "unittest", "tests.test_scene_text_safe_zones", "-v"],
+                deps=["editorial_design_system"],
+                timeout_sec=240.0,
+                description="SD-RETENTION-04.R2 N46-N50 3D label removal, live DOM glyph clamping & mobile safe zones",
+                resource_class="gpu",
+            ),
+            ValidationTask(
+                task_id="sd_retention04_r2_visual_quality",
+                cmd=[py, "-m", "unittest", "tests.test_sd_retention04_r2_visual_quality", "-v"],
+                deps=["sd_retention04_causality"],
+                timeout_sec=180.0,
+                description="SD-RETENTION-04.R2 N51-N55 setup diversity, >4s/>5s pacing checks, proof separation & acceptance honesty",
+                resource_class="cpu",
+            ),
+            ValidationTask(
+                task_id="sd_retention04_r2_regression_backtests",
+                cmd=[py, "-m", "unittest", "tests.test_sd_retention04_r2_regression_backtests", "-v"],
+                deps=["visual_storytelling_dir", "sd_retention04_r2_visual_quality"],
+                timeout_sec=180.0,
+                description="SD-RETENTION-04.R2 N56-N60 Boston/Tacoma backtests, St. Helens reveal/SFX & full DAG coverage",
+                resource_class="cpu",
+            ),
         ])
     if mode == "full":
         tasks.extend([

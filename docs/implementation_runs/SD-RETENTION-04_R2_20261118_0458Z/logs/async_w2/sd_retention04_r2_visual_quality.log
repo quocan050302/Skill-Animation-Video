@@ -1,0 +1,17 @@
+TASK: sd_retention04_r2_visual_quality
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_sd_retention04_r2_visual_quality -v
+STATUS: PASS (exit=0, elapsed=3.42s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n51_london_r2_has_zero_repeated_setups_or_generators (tests.test_sd_retention04_r2_visual_quality.TestSdRetention04R2VisualQuality.test_n51_london_r2_has_zero_repeated_setups_or_generators) ... ok
+test_n52_pacing_warns_above_4s_and_fails_above_5s_idle (tests.test_sd_retention04_r2_visual_quality.TestSdRetention04R2VisualQuality.test_n52_pacing_warns_above_4s_and_fails_above_5s_idle) ... ok
+test_n53_separates_planning_heuristic_from_observed_proof_gain (tests.test_sd_retention04_r2_visual_quality.TestSdRetention04R2VisualQuality.test_n53_separates_planning_heuristic_from_observed_proof_gain) ... ok
+test_n54_n55_ab_reuse_transparency_and_acceptance_classification (tests.test_sd_retention04_r2_visual_quality.TestSdRetention04R2VisualQuality.test_n54_n55_ab_reuse_transparency_and_acceptance_classification) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.624s
+
+OK
+

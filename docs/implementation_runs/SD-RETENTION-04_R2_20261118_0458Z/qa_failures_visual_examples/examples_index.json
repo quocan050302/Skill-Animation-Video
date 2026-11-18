@@ -1,0 +1,42 @@
+{
+  "schema_version": "sd-qa-visual-examples-1",
+  "generated_utc": "2026-11-18T06:22:00Z",
+  "examples": [
+    {
+      "file": "r1_clipped_3d_card_and_dodeca_smoke.jpg",
+      "source_path": "runs/sd_retention04_london_smog_20261118_0233Z/enhanced_B/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 216865,
+      "finding": "London R1 pre-fix proof sheet showing clipped 3D PlaneGeometry ILLUSTRATIVE AIRFLOW card and low-poly Dodecahedron/Sphere smoke clumps (fixed in R2)."
+    },
+    {
+      "file": "r2_london_resolved_volumetric_proof_sheet.jpg",
+      "source_path": "runs/sd_retention04_r2_london_fix_20261118_0458Z/enhanced_B/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 188306,
+      "finding": "London R2 fixed proof sheet with volumetric-like FBM sprites and DOM-clamped overlays; decoded_visual_quality logs advisory WARN on shot_04 figure-ground edge separation (10.6 < 12.0)."
+    },
+    {
+      "file": "r2_sthelens_baselineA_fail_idle_and_duplicate.jpg",
+      "source_path": "runs/sd_retention04_r2_sthelens_20261118_0458Z/baseline_A/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 215247,
+      "finding": "St. Helens baseline_A (callout_mode=off, legacy theme) honest FAIL on N43 stagnant/idle run (6.97s) and scene_diversity."
+    },
+    {
+      "file": "r2_sthelens_enhancedB_proof_sheet.jpg",
+      "source_path": "runs/sd_retention04_r2_sthelens_20261118_0458Z/enhanced_B/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 193278,
+      "finding": "St. Helens enhanced_B native 4K proof sheet showing FBM plumes and safe-zone overlays; scene_diversity logs WARN for 2 adjacent setup pairs in multi-clause splits."
+    },
+    {
+      "file": "r2_boston_backtest_proof_sheet.jpg",
+      "source_path": "runs/sd_retention04_r2_boston_backtest_20261118/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 231504,
+      "finding": "Isolated R4.R2 Boston backtest proof sheet passing semantic causal QA with decoded_visual_quality advisory WARN."
+    },
+    {
+      "file": "r2_tacoma_backtest_proof_sheet.jpg",
+      "source_path": "runs/sd_retention04_r2_tacoma_backtest_20261118/qa/decoded_visual_proof_sheet.jpg",
+      "size_bytes": 314288,
+      "finding": "Isolated R4.R2 Tacoma backtest proof sheet showing reference_fixed towers in mid/wide shots and honest causal WARN on close-up shot_00 where fixed piers sit outside camera crop."
+    }
+  ]
+}

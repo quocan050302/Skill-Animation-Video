@@ -1,0 +1,38 @@
+{
+  "schema_version": "sd-final-acceptance-r2-1",
+  "run_id": "SD-RETENTION-04_R2_20261118_0458Z",
+  "evaluated_at_utc": "2026-11-18T07:22:00Z",
+  "acceptance_classification": "ENGINE_TECHNICAL_PASS_DEMO_EDITORIAL_REVIEW_REQUIRED",
+  "ENGINE_TECHNICAL_PASS": true,
+  "DEMO_EDITORIAL_REVIEW_REQUIRED": true,
+  "HUMAN_VISUAL_REVIEW_REQUIRED": true,
+  "HUMAN_VISUAL_REVIEW_STATUS": "NOT_VERIFIED",
+  "HUMAN_AUDIO_REVIEW_STATUS": "NOT_VERIFIED",
+  "PRODUCTION_RELEASE_READY": false,
+  "subjective_visual_review": "NOT_VERIFIED",
+  "subjective_editorial_listening": "NOT_VERIFIED",
+  "subjective_voice_quality_status": "NOT_VERIFIED",
+  "viewer_retention_status": "NOT_VERIFIED",
+  "capability_disclosures": {
+    "tts_backend": "windows_sapi",
+    "available_voices": [
+      "Microsoft David Desktop",
+      "Microsoft Zira Desktop"
+    ],
+    "neural_voice_available": false,
+    "neural_voice": "NOT_AVAILABLE",
+    "word_anchor_confidence": "ESTIMATED",
+    "london_r2_vo_note": "London R2 reused R1's pre-synthesized windows_sapi VO WAV via --voice-file for exact A/B parity (editorial_qa_report records backend='user_file'; underlying TTS engine remains windows_sapi without neural TTS).",
+    "atmospheric_physical_model": "stylized_atmospheric_visualization",
+    "atmospheric_disclaimer": "Volumetric-like soft-alpha FBM billboard plumes and geological cutaways; stylized educational illustration, NOT a computational fluid dynamics (CFD) or Navier-Stokes simulation."
+  },
+  "gate_summary": {
+    "G0_G1_env_and_six_skill_lock": "PASS",
+    "G2_G4_canonical_tests_N01_to_N60": "PASS (106/106 tests OK; 31/31 DAG modules covered; workers 1 & 2 parity verified)",
+    "G5_atmospheric_and_safezone_runtime": "PASS (exposed_dodecahedron_smoke=0; DOM glyph bounds verified in Chromium)",
+    "G6_london_r2_native_4k_and_ab": "ENGINE_TECHNICAL_PASS (QC=WARN advisory on shot_04 edge sep 10.6 < 12.0; causal=PASS; pacing=PASS; 8/8 unique setups)",
+    "G7_sthelens_native_4k_and_ab": "ENGINE_TECHNICAL_PASS (QC=WARN advisory on 2 multi-clause setup pairs; causal=PASS; pacing=PASS; baseline_A honest FAIL)",
+    "G8_isolated_backtests": "ENGINE_TECHNICAL_PASS (Boston causal=PASS; Tacoma causal=WARN advisory on shot_00 reference_fixed crop; legacy runs untouched; Skyscraper UNAVAILABLE_LOCAL_MP4)",
+    "G9_human_visual_audio_acceptance": "NOT_VERIFIED (mandatory 10-point human playback checklist required before production release)"
+  }
+}

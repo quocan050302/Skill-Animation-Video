@@ -1,0 +1,168 @@
+{
+  "schema_version": "sd-final-manifest-r2-1",
+  "run_id": "SD-RETENTION-04_R2_20261118_0458Z",
+  "recorded_at_utc": "2026-11-18T07:22:00Z",
+  "branch": "feat/sd-retention-01-expressive-editorial",
+  "base_sha": "742da8f4a53231d5cdd1c0c80d5733a28d6d6f45",
+  "master_head_sha": "6d9f31e5f3d4a9f9127543bb3648c031de09a3fb",
+  "submodule_vendor_sha": "5dbea55c23aa6a5c93dc3cfb5583840513b56b94",
+  "host": {
+    "os": "Windows 11 AMD64",
+    "cpu_cores": 12,
+    "ram_total_gib": 31.75,
+    "gpu": "Intel(R) UHD Graphics 730 (d3d11)",
+    "disk_free_gib_post_runs": 47.75,
+    "disk_free_pct_post_runs": 33.15
+  },
+  "demos": {
+    "london_smog_r2": {
+      "title": "The Day London Disappeared into Smog (R2)",
+      "run_dir": "runs/sd_retention04_r2_london_fix_20261118_0458Z/enhanced_B",
+      "baseline_r1_dir": "runs/sd_retention04_london_smog_20261118_0233Z/enhanced_B",
+      "ab_report_json": "docs/implementation_runs/SD-RETENTION-04_R2_20261118_0458Z/qa/london_ab_report.json",
+      "reused_baseline_a": true,
+      "voice_pcm_parity": true,
+      "voice_pcm_sha256": "027a43bfc362c91d688aee60375eca5e8a768bc1f20554b6b8fa65e4ca00ecca",
+      "duration_sec": 39.338,
+      "native_4k": true,
+      "delivery_4k_declaration": "native_4k",
+      "final_4k_mp4": {
+        "path": "runs/sd_retention04_r2_london_fix_20261118_0458Z/enhanced_B/final_4k.mp4",
+        "bytes": 58887223,
+        "sha256": "71a658436704763db17c9b366984191e62243fee81456e347a135625c782746c"
+      },
+      "preview_1080_mp4": {
+        "path": "runs/sd_retention04_r2_london_fix_20261118_0458Z/enhanced_B/preview_1080.mp4",
+        "bytes": 16800906,
+        "sha256": "6c86ab3608308638b9578de2d45e59ee352115cc133fe06d2fc810006556e98d"
+      },
+      "shots_total": 8,
+      "unique_setups": 8,
+      "adjacent_identical_setups": 0,
+      "audio_lufs": -15.0,
+      "audio_true_peak_dbtp": -2.4,
+      "mean_observed_proof_gain": 0.936,
+      "mean_planned_camera_info_gain": 0.897,
+      "qc_overall_status": "WARN",
+      "causal_status": "PASS",
+      "pacing_status": "PASS",
+      "smoke_geometry_status": "PASS",
+      "advisory_warnings": [
+        "Shot shot_04 low figure-ground edge separation (10.6 < 12.0)"
+      ]
+    },
+    "mount_st_helens_1980": {
+      "title": "The Day Mount St. Helens Exploded (1980)",
+      "enhanced_b_dir": "runs/sd_retention04_r2_sthelens_20261118_0458Z/enhanced_B",
+      "baseline_a_dir": "runs/sd_retention04_r2_sthelens_20261118_0458Z/baseline_A",
+      "ab_report_json": "docs/implementation_runs/SD-RETENTION-04_R2_20261118_0458Z/qa/sthelens_ab_report.json",
+      "reused_baseline_a": false,
+      "voice_pcm_parity": true,
+      "voice_pcm_sha256": "a420ac102371e5d487549540627a82529f91511bfd69bccc26377be8e990bca0",
+      "duration_sec": 40.027,
+      "native_4k": true,
+      "delivery_4k_declaration": "native_4k",
+      "final_4k_mp4": {
+        "path": "runs/sd_retention04_r2_sthelens_20261118_0458Z/enhanced_B/final_4k.mp4",
+        "bytes": 56760924,
+        "sha256": "7c5d5248fceea7cc0307d3779b2792b7f12a6a4abbf32e74b04082833c6932ba"
+      },
+      "preview_1080_mp4": {
+        "path": "runs/sd_retention04_r2_sthelens_20261118_0458Z/enhanced_B/preview_1080.mp4",
+        "bytes": 15317529,
+        "sha256": "fea174ae689e3eef95c51e0c7c6dd0f7c189744578f860e8e544883f5fe6fd20"
+      },
+      "baseline_a_status": "FAIL (N43 idle run 6.97s and scene_diversity on un-annotated baseline)",
+      "shots_total": 9,
+      "unique_setups": 7,
+      "unique_scene_families": 7,
+      "adjacent_identical_setups": 2,
+      "audio_lufs": -15.5,
+      "audio_true_peak_dbtp": -2.3,
+      "mean_observed_proof_gain": 0.9477,
+      "mean_planned_camera_info_gain": 0.896,
+      "qc_overall_status": "WARN",
+      "causal_status": "PASS",
+      "pacing_status": "PASS",
+      "smoke_geometry_status": "PASS",
+      "advisory_warnings": [
+        "scene_diversity_and_retention: WARN (2 adjacent setup pairs on multi-clause splits)"
+      ]
+    }
+  },
+  "isolated_backtests": {
+    "boston_molasses_1919": {
+      "legacy_dir": "runs/sd_retention03_r2_boston_proof_20261118",
+      "legacy_untouched": true,
+      "backtest_dir": "runs/sd_retention04_r2_boston_backtest_20261118",
+      "pre_R4_status": "WARN",
+      "new_R4_R2_qc_status": "WARN",
+      "new_R4_R2_causal_status": "PASS",
+      "native_4k": false,
+      "delivery_4k_declaration": "upscaled_lanczos_from_1080x1920",
+      "duration_sec": 31.636,
+      "final_4k_mp4_bytes": 38719450,
+      "final_4k_mp4_sha256": "d49e0a40402927199d0ebf812a017a60de99376f5527726a4c04946600ac4f2d",
+      "mean_observed_proof_gain": 0.9793,
+      "mean_planned_camera_info_gain": 0.886,
+      "audio_lufs": -15.4,
+      "audio_true_peak_dbtp": -2.4
+    },
+    "tacoma_narrows_1940": {
+      "legacy_dir": "runs/sd_retention03_r2_tacoma_proof_20261118",
+      "legacy_untouched": true,
+      "backtest_dir": "runs/sd_retention04_r2_tacoma_backtest_20261118",
+      "pre_R4_status": "WARN",
+      "new_R4_R2_qc_status": "WARN",
+      "new_R4_R2_causal_status": "WARN",
+      "native_4k": false,
+      "delivery_4k_declaration": "upscaled_lanczos_from_1080x1920",
+      "duration_sec": 43.343,
+      "final_4k_mp4_bytes": 65998482,
+      "final_4k_mp4_sha256": "e4d3f7a034f38b468ddc5fcb2a277c9fbf768c7481df71b0060a600bddb26ebf",
+      "mean_observed_proof_gain": 0.9659,
+      "mean_planned_camera_info_gain": 0.892,
+      "audio_lufs": -15.3,
+      "audio_true_peak_dbtp": -2.4,
+      "advisory_warnings": [
+        "Advisory: Shot shot_00 claims relative displacement without prominent `reference_fixed` pixels in matte"
+      ]
+    },
+    "skyscraper_tmd": {
+      "pre_R4_status": "UNAVAILABLE_LOCAL_MP4",
+      "new_R4_R2_status": "UNAVAILABLE_LOCAL_MP4"
+    }
+  },
+  "validation_suite": {
+    "async_w1": {
+      "status": "PASS",
+      "tasks_passed": 31,
+      "tasks_total": 31,
+      "discovered_modules": 31,
+      "covered_modules": 31,
+      "missing_modules": [],
+      "elapsed_sec": 689.25,
+      "summary_json": "docs/implementation_runs/SD-RETENTION-04_R2_20261118_0458Z/logs/async_w1/validation_summary.json"
+    },
+    "async_w2": {
+      "status": "PASS",
+      "tasks_passed": 31,
+      "tasks_total": 31,
+      "discovered_modules": 31,
+      "covered_modules": 31,
+      "missing_modules": [],
+      "elapsed_sec": 652.83,
+      "speedup_vs_w1_sec": 36.42,
+      "summary_json": "docs/implementation_runs/SD-RETENTION-04_R2_20261118_0458Z/logs/async_w2/validation_summary.json"
+    },
+    "unittest_discover_canonical": {
+      "status": "PASS",
+      "tests_run": 106,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsed_sec": 756.811,
+      "log_path": "docs/implementation_runs/SD-RETENTION-04_R2_20261118_0458Z/logs/unittest_discover_canonical.log"
+    }
+  }
+}

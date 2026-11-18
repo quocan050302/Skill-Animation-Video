@@ -361,10 +361,12 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
   const leftPlate = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.35, 0.08), plateMat);
   leftPlate.position.set(-0.57, 1.32, 0.36);
   leftPlate.rotation.y = -0.16;
+  tagSemantic(leftPlate, 'causal_feature');
 
   const rightPlate = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.35, 0.08), stressedMat);
   rightPlate.position.set(0.57, 1.32, 0.36);
   rightPlate.rotation.y = 0.16;
+  tagSemantic(rightPlate, 'causal_feature');
 
   const backFill = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.28, 24), molMat);
   backFill.position.set(0, 1.28, -0.78);
@@ -372,6 +374,7 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
 
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.26, 0.92), M.concrete || new THREE.MeshStandardMaterial({ color: 0x6f7275, roughness: 0.9 }));
   plinth.position.set(0, 0.13, 0.12);
+  tagSemantic(plinth, 'reference_fixed');
   root.add(backFill, leftPlate, rightPlate, plinth);
 
   // Seam rivets arrayed along central vertical seam
@@ -409,9 +412,11 @@ export function makeSeamLeakAndRivetFailureRig({ mode = 'rupture' } = {}) {
   jet.rotation.x = Math.PI * 0.46;
   jet.position.set(0, 0.95, 1.15);
   jet.visible = false;
+  tagSemantic(jet, 'causal_feature');
   const pool = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.75, 0.22, 28), molMat);
   pool.position.set(0, 0.11, 1.15);
   pool.scale.setScalar(0.01);
+  tagSemantic(pool, 'effect_result');
   root.add(jet, pool);
 
   const seamAnchor = new THREE.Object3D();

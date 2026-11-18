@@ -1,0 +1,15 @@
+TASK: character_performance
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_character_performance -v
+STATUS: PASS (exit=0, elapsed=9.75s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_g15_character_planner_and_negative_traps_n17_n18_n19 (tests.test_character_performance.TestCharacterPerformance.test_g15_character_planner_and_negative_traps_n17_n18_n19) ... ok
+test_g16_webgl_foot_contact_non_slide_retreat_and_seek_repeatability (tests.test_character_performance.TestCharacterPerformance.test_g16_webgl_foot_contact_non_slide_retreat_and_seek_repeatability) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 3.555s
+
+OK
+

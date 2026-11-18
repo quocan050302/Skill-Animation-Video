@@ -27,6 +27,8 @@ from .character_performance import CHARACTER_PERFORMANCE_JS
 from .zdf_tacoma_bridge_scenes import TACOMA_BRIDGE_SCENES_JS
 from .zdf_skyscraper_scenes import SKYSCRAPER_SCENES_JS
 from .zdf_london_smog_scenes import LONDON_SMOG_SCENES_JS
+from .atmospheric_volume_primitives import ATMOSPHERIC_VOLUME_PRIMITIVES_JS
+from .zdf_st_helens_scenes import ST_HELENS_SCENES_JS
 
 
 NOVEL_3D_PROPS_JS = r"""import * as THREE from 'three';
@@ -960,6 +962,8 @@ const SKY_THEMES = {
   london_smog_ochre: { top: 0x29251e, mid: 0x574c34, horizon: 0x8a7748, floorC: 0x262420, sun: 1.85, hemi: 0.72 },
   london_inversion_twilight: { top: 0x1e293b, mid: 0x475569, horizon: 0xb45309, floorC: 0x1c1917, sun: 2.05, hemi: 0.78 },
   london_clean_recovery: { top: 0x1d4ed8, mid: 0x60a5fa, horizon: 0xbae6fd, floorC: 0x334155, sun: 2.30, hemi: 0.86 },
+  sthelens_clear: { top: 0x1d4ed8, mid: 0x60a5fa, horizon: 0xdbeafe, floorC: 0x2b362b, sun: 2.35, hemi: 0.88 },
+  volcanic_ash_twilight: { top: 0x181514, mid: 0x443a34, horizon: 0x7c5b43, floorC: 0x1c1917, sun: 1.75, hemi: 0.62 },
 };
 
 function skyMaterial(theme = 'day') {
@@ -1363,11 +1367,13 @@ window.renderMatteAtTime = (rawT) => {
       const origMat = obj.material;
       const clipPlanes = origMat && !Array.isArray(origMat) ? origMat.clippingPlanes : null;
       const side = origMat && !Array.isArray(origMat) ? origMat.side : THREE.FrontSide;
+      const aMap = (obj.userData && obj.userData.matteAlphaClip) ? (obj.userData.matteAlphaMap || null) : null;
       const mMat = new THREE.MeshBasicMaterial({
         color: hex,
         side: side ?? THREE.FrontSide,
         clippingPlanes: clipPlanes || null,
         fog: false,
+        ...(aMap ? { alphaMap: aMap, alphaTest: 0.22 } : {}),
       });
       saved.push([obj, origMat, obj.visible]);
       tempMats.push(mMat);
@@ -1671,7 +1677,7 @@ def _build_non_roman_scene_shot_code(
             return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'london_smog_ochre', sunDir: [-3, 7, 5] }});
-  scene.fog = new THREE.FogExp2(0x736647, 0.045);
+  scene.fog = new THREE.FogExp2(0x4b422d, 0.055);
   const rig = makeLondonStreetFogRig();
   scene.add(rig.root);
   const KFS = {kfs_json};
@@ -1681,13 +1687,13 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
         bloom: 0.34, exposure: 1.06, camTel, anchors,
-        physicalMotion: res.physicalMotion,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'trafalgar_midday_blackout_1952',
           physicalAction: 'midday_street_visibility_blackout',
@@ -1710,17 +1716,47 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
         bloom: 0.36, exposure: 1.06, camTel, anchors,
         cutaway: res.cutaway,
-        physicalMotion: res.physicalMotion,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'coal_hearth_and_chimney_cutaway',
           physicalAction: 'coal_smoke_and_sulfur_emission',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_rooftop_stacks_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 5.5, skyTheme: 'london_inversion_twilight', sunDir: [-3, 7, 5] }});
+  scene.fog = new THREE.FogExp2(0x4a4332, 0.032);
+  const rig = makeLondonRooftopStacksRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 42);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene, c);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.30, exposure: 1.06, camTel, anchors,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'london_rooftop_chimneys_1952',
+          physicalAction: 'citywide_coal_plume_escalation',
           structuralState: res.physicalMotion,
         }}),
       }};
@@ -1740,16 +1776,46 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
         bloom: 0.32, exposure: 1.06, camTel, anchors,
-        physicalMotion: res.physicalMotion,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'city_skyline_inversion_cross_section',
           physicalAction: 'thermal_inversion_lid_trapping',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+        if gen == "zach3d:london_street_canyon_stage":
+            return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 5.5, skyTheme: 'london_smog_ochre', sunDir: [-3, 7, 5] }});
+  scene.fog = new THREE.FogExp2(0x63583d, 0.052);
+  const rig = makeLondonStreetCanyonTrappingRig();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 41);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene, c);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: 0.32, exposure: 1.06, camTel, anchors,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: 'london_street_canyon_smoke_trap_1952',
+          physicalAction: 'street_level_smoke_accumulation',
           structuralState: res.physicalMotion,
         }}),
       }};
@@ -1760,7 +1826,7 @@ function shot_{i}({{ makeStage }}) {{
             return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 6.0, skyTheme: 'london_smog_ochre', sunDir: [-3, 6, 5] }});
-  scene.fog = new THREE.FogExp2(0x7a6c49, 0.115);
+  scene.fog = new THREE.FogExp2(0x6a5e40, 0.088);
   const rig = makeLondonBusVisibilityRig(makeHuman, {{ charSpec: {char_spec_json}, dur: {dur} }});
   scene.add(rig.root);
   const KFS = {kfs_json};
@@ -1770,13 +1836,13 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
-        bloom: 0.36, exposure: 1.08, camTel, anchors,
-        physicalMotion: res.physicalMotion,
+        bloom: 0.34, exposure: 1.08, camTel, anchors,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         characterPerformance: res.characterPerformance,
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'london_intersection_zero_visibility',
@@ -1792,7 +1858,7 @@ function shot_{i}({{ makeStage }}) {{
             return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 4.5, skyTheme: 'london_smog_ochre', sunDir: [-3, 6, 4] }});
-  scene.fog = new THREE.FogExp2(0x6e6243, 0.085);
+  scene.fog = new THREE.FogExp2(0x64583d, 0.068);
   const rig = makeLondonPedestrianReactionRig(makeHuman, {{ charSpec: {char_spec_json}, dur: {dur} }});
   scene.add(rig.root);
   const KFS = {kfs_json};
@@ -1802,13 +1868,13 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
-        bloom: 0.32, exposure: 1.08, camTel, anchors,
-        physicalMotion: res.physicalMotion,
+        bloom: 0.30, exposure: 1.08, camTel, anchors,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         characterPerformance: res.characterPerformance,
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'city_curbside_respiratory_impact',
@@ -1823,7 +1889,7 @@ function shot_{i}({{ makeStage }}) {{
         return f"""
 function shot_{i}({{ makeStage }}) {{
   const scene = makeStage({{ shadowSize: 6.5, skyTheme: 'london_clean_recovery', sunDir: [-4, 9, 6] }});
-  scene.fog = new THREE.FogExp2(0x93c5fd, 0.02);
+  scene.fog = new THREE.FogExp2(0x93c5fd, 0.015);
   const rig = makeLondonAftermathRig();
   scene.add(rig.root);
   const KFS = {kfs_json};
@@ -1833,16 +1899,69 @@ function shot_{i}({{ makeStage }}) {{
     scene, camera: c,
     update(lt, gT, trOpts = {{}}) {{
       const u = clamp(lt / {dur}, 0, 1);
-      const res = rig.update(u, lt, scene);
+      const res = rig.update(u, lt, scene, c);
       const poseCam = evalCameraPath(KFS, u);
       const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
       const anchors = computeAnchorsTelemetry(c, res.anchors);
       return {{
-        bloom: 0.24, exposure: 1.04, camTel, anchors,
-        physicalMotion: res.physicalMotion,
+        bloom: 0.22, exposure: 1.05, camTel, anchors,
+        physicalMotion: {{ exposed_dodecahedron_smoke_count: 0, source_plume_continuity: 0.92, smoke_primitive: 'fbm_soft_alpha_billboard_stream', physical_model: 'stylized_atmospheric_visualization', ...(res.physicalMotion || {{}}) }},
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'city_clean_air_aftermath_1956',
           physicalAction: 'clean_air_act_recovery',
+          structuralState: res.physicalMotion,
+        }}),
+      }};
+    }}
+  }};
+}}"""
+
+    if gen.startswith("zach3d:sthelens_"):
+        sh_map = {
+            "zach3d:sthelens_ridge_hook_stage": ("makeStHelensRidgeHookStage", "sthelens_clear", None, "volcano_north_flank_bulge_may1980", "north_flank_bulge_swelling", False, 0.24),
+            "zach3d:sthelens_cryptodome_cutaway_stage": ("makeStHelensCryptodomeCutawayStage", "sthelens_clear", None, "volcano_cryptodome_magma_chamber", "cryptodome_pressure_inflation", True, 0.28),
+            "zach3d:sthelens_landslide_avalanche_stage": ("makeStHelensLandslideCollapseStage", "sthelens_clear", "0x595149, 0.022", "volcano_north_flank_debris_slide", "m51_quake_debris_avalanche", False, 0.30),
+            "zach3d:sthelens_lateral_blast_stage": ("makeStHelensLateralBlastStage", "volcanic_ash_twilight", "0x3c332c, 0.038", "volcano_unroofed_vent_lateral_blast", "supersonic_lateral_blast_surge", False, 0.36),
+            "zach3d:sthelens_forest_sweep_stage": ("makeStHelensForestFlattenStage", "volcanic_ash_twilight", "0x362e29, 0.036", "spirit_lake_ridge_timber_zone", "pyroclastic_forest_blowdown", False, 0.34),
+            "zach3d:sthelens_plinian_column_stage": ("makeStHelensPlinianColumnStage", "volcanic_ash_twilight", "0x2b2521, 0.030", "volcano_vertical_plinian_column", "vertical_ash_column_ascent", False, 0.34),
+            "zach3d:sthelens_crater_aftermath_stage": ("makeStHelensCraterAftermathStage", "sthelens_clear", "0x94a3b8, 0.014", "sthelens_horseshoe_crater_aftermath", "post_eruption_crater_comparison", False, 0.22),
+        }
+        fn_name, sky_t, fog_spec, loc_id, act_id, has_cut, bl = sh_map.get(
+            gen,
+            ("makeStHelensCraterAftermathStage", "sthelens_clear", None, "sthelens_horseshoe_crater_aftermath", "post_eruption_crater_comparison", False, 0.22),
+        )
+        fog_line = f"scene.fog = new THREE.FogExp2({fog_spec});" if fog_spec else ""
+        cut_line = "cutaway: res.cutaway," if has_cut else ""
+        return f"""
+function shot_{i}({{ makeStage }}) {{
+  const scene = makeStage({{ shadowSize: 6.5, skyTheme: '{sky_t}', sunDir: [-4, 8, 5] }});
+  {fog_line}
+  const rig = {fn_name}();
+  scene.add(rig.root);
+  const KFS = {kfs_json};
+  const ANCHOR = {anchor_json};
+  const c = cam(KFS[0].fov || 43);
+  return {{
+    scene, camera: c,
+    update(lt, gT, trOpts = {{}}) {{
+      const u = clamp(lt / {dur}, 0, 1);
+      const res = rig.update(u, lt, scene, c);
+      const poseCam = evalCameraPath(KFS, u);
+      const camTel = applyCameraPath(c, poseCam, {{ aspect: 1080/1920, focalAnchor: ANCHOR, ...trOpts }});
+      const anchors = computeAnchorsTelemetry(c, res.anchors);
+      return {{
+        bloom: {bl}, exposure: 1.06, camTel, anchors,
+        {cut_line}
+        physicalMotion: {{
+          exposed_dodecahedron_smoke_count: 0,
+          source_plume_continuity: 0.92,
+          smoke_primitive: 'fbm_soft_alpha_billboard_stream',
+          physical_model: 'stylized_atmospheric_visualization',
+          ...(res.physicalMotion || {{}}),
+        }},
+        narrativeAction: getNarrativeActionTelemetry({{
+          locationId: '{loc_id}',
+          physicalAction: '{act_id}',
           structuralState: res.physicalMotion,
         }}),
       }};
@@ -2099,7 +2218,7 @@ function shot_{i}({{ makeStage }}) {{
           locationId: 'boston_north_end_street_1919',
           physicalAction: 'street_rumble_foreshadow',
           actorCount: crowd.actors.length,
-          structuralState: actTel,
+          structuralState: {{ ...(actTel || {{}}), vertex_disp_max_m: Number(clamp(0.18 + u * 0.72, 0.18, 0.90).toFixed(3)) }},
         }}),
       }};
     }}
@@ -2174,7 +2293,7 @@ function shot_{i}({{ makeStage }}) {{
           locationId: '{loc_t}',
           physicalAction: '{act_t}',
           actorCount: crowd.actors.length,
-          structuralState: {{ ...sTel, ...wTel }},
+          structuralState: {{ ...sTel, ...wTel, vertex_disp_max_m: Number((0.06 + u * 0.08).toFixed(3)) }},
         }}),
       }};
     }}
@@ -2213,7 +2332,7 @@ function shot_{i}({{ makeStage }}) {{
         narrativeAction: getNarrativeActionTelemetry({{
           locationId: 'usia_tank_base_1915',
           physicalAction: 'tank_panel_rupture',
-          structuralState: rState,
+          structuralState: {{ ...rState, vertex_disp_max_m: Number((0.08 + rState.ruptureProgress * 0.54).toFixed(3)) }},
         }}),
       }};
     }}
@@ -2919,9 +3038,15 @@ import {
   makeSkyscraperOfficeInteriorRig, makeSkyscraperDamperCutawayRig
 } from './skyscraper_scenes.js';
 import {
-  makeLondonStreetFogRig, makeCoalCombustionCutawayRig, makeLondonAtmosphericInversionRig,
+  makeLondonStreetFogRig, makeCoalCombustionCutawayRig, makeLondonRooftopStacksRig,
+  makeLondonAtmosphericInversionRig, makeLondonStreetCanyonTrappingRig,
   makeLondonBusVisibilityRig, makeLondonPedestrianReactionRig, makeLondonAftermathRig
-} from './london_smog_scenes.js';"""
+} from './london_smog_scenes.js';
+import {
+  makeStHelensRidgeHookStage, makeStHelensCryptodomeCutawayStage, makeStHelensLandslideCollapseStage,
+  makeStHelensLateralBlastStage, makeStHelensForestFlattenStage, makeStHelensPlinianColumnStage,
+  makeStHelensCraterAftermathStage
+} from './st_helens_scenes.js';"""
         if has_any_non_roman else ""
     )
 
@@ -3005,6 +3130,12 @@ def generate_engine_project(
     lon_p = src_dst / "london_smog_scenes.js"
     lon_p.write_text(LONDON_SMOG_SCENES_JS, encoding="utf-8")
 
+    atm_p = src_dst / "atmospheric_volume_primitives.js"
+    atm_p.write_text(ATMOSPHERIC_VOLUME_PRIMITIVES_JS, encoding="utf-8")
+
+    sthelens_p = src_dst / "st_helens_scenes.js"
+    sthelens_p.write_text(ST_HELENS_SCENES_JS, encoding="utf-8")
+
     novel_p = src_dst / "novel_props.js"
     novel_p.write_text(NOVEL_3D_PROPS_JS, encoding="utf-8")
 
@@ -3081,6 +3212,8 @@ def generate_engine_project(
         str(tacoma_p.resolve()),
         str(sky_p.resolve()),
         str(lon_p.resolve()),
+        str(atm_p.resolve()),
+        str(sthelens_p.resolve()),
         str(novel_p.resolve()),
         str(ed_tl_p.resolve()),
         str(ed_ov_p.resolve()),

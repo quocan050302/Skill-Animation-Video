@@ -67,6 +67,11 @@ def find_curiosity_beats(
         hook_target = hook_target or "streetlamp_halo_visibility"
         hook_secondary = "lamppost_column_ref"
         hook_ptr_shape = "impact_arrow"
+    elif "st. helens" in full_low or "cryptodome" in full_low or "lateral blast" in full_low:
+        hook_text = "THE MOUNTAIN / WAS BULGING!"
+        hook_target = hook_target or "msh_north_flank_bulge"
+        hook_secondary = "msh_south_ridge_ref"
+        hook_ptr_shape = "sway_bracket"
     elif "boston" in full_low and "molasses" in full_low:
         hook_text = "WATCH THE / ALLEYWALL!" if "alley" in f_low else "SOMETHING / SHOOK BOSTON"
         hook_target = hook_target or "street_hero_look"
@@ -112,7 +117,7 @@ def find_curiosity_beats(
             intent = str(ev.get("editorial_intent") or "").lower()
             if intent == "twist_escalation" or any(
                 k in act or k in ev_low
-                for k in ("started twisting", "violent twist", "gave way", "rupture", "torsion", "fail-safe", "backup", "opposite phase", "counterphase")
+                for k in ("started twisting", "violent twist", "gave way", "rupture", "torsion", "fail-safe", "backup", "opposite phase", "counterphase", "lateral blast", "blew sideways", "unroofed")
             ):
                 twist_idx = idx
                 break
@@ -133,6 +138,10 @@ def find_curiosity_beats(
             elif "inversion" in tw_low or "thermal" in tw_act or "warm air" in tw_low:
                 tw_label = "TRAPPED BY / WARM AIR!"
                 tw_secondary = "st_pauls_dome_and_horizon_ref"
+                tw_ptr = "impact_arrow"
+            elif "lateral" in tw_low or "sideways" in tw_low or "unroof" in tw_low or "lateral_blast" in tw_act:
+                tw_label = "IT BLEW OUT / SIDEWAYS!"
+                tw_secondary = "msh_crater_lip_ref"
                 tw_ptr = "impact_arrow"
             elif "gave way" in tw_low or "rupture" in tw_act:
                 tw_label = "THEN THE / SEAM BLEW"
@@ -223,6 +232,15 @@ def plan_attention_pointer(
         "pedestrian_respiratory_brace": ["pedestrian_shielding_arm", "smog_aerosol_cloud"],
         "pedestrian_respiratory_stance_zone": ["pedestrian_shielding_arm", "smog_aerosol_cloud"],
         "smokeless_hearth_transition": ["clean_air_dome_silhouette", "smokeless_hearth_flue"],
+        "rooftop_chimney_plume": ["chimney_pots", "rooftop_soot_plumes"],
+        "street_canyon_smog_layer": ["canyon_smog_clouds", "rowhouse_facades"],
+        "msh_north_flank_bulge": ["north_flank_bulge_mesh", "south_slope_ref"],
+        "msh_cryptodome_core": ["cryptodome_magma_core", "conduit_dyke"],
+        "msh_landslide_scar": ["north_flank_slide_blocks", "amphitheater_scar"],
+        "msh_lateral_blast_front": ["lateral_blast_surge", "crater_rim_edge"],
+        "msh_blast_timber_front": ["flattened_timber_zone", "pyroclastic_sweep"],
+        "msh_plinian_ash_column": ["vertical_ash_column", "mushroom_cap_cloud"],
+        "msh_horseshoe_crater_rim": ["horseshoe_crater_cone", "original_summit_ghost"],
     }
     target_meshes = mesh_map.get(anchor_id, [anchor_id])
     pointer_reason = str(
@@ -234,7 +252,9 @@ def plan_attention_pointer(
                   if anchor_id in ("rooftop_sway_apex", "plumb_drift_tip")
                   else ("Highlights warm air inversion lid trapping rising sulfur/coal plumes over ground cold air"
                         if anchor_id == "inversion_thermal_boundary"
-                        else f"Draws viewer eye directly to physical feature `{anchor_id}`"))
+                        else ("Highlights bulging north volcanic slope pushed outward by trapped magma dome"
+                              if anchor_id in ("msh_north_flank_bulge", "msh_cryptodome_core")
+                              else f"Draws viewer eye directly to physical feature `{anchor_id}`")))
         )
     )
 

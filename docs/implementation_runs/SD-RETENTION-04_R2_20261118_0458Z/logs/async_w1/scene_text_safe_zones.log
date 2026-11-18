@@ -1,0 +1,16 @@
+TASK: scene_text_safe_zones
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_scene_text_safe_zones -v
+STATUS: PASS (exit=0, elapsed=5.16s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_n46_no_clipped_3d_card_in_london_scene (tests.test_scene_text_safe_zones.TestSceneTextSafeZones.test_n46_no_clipped_3d_card_in_london_scene) ... ok
+test_n47_n48_n49_dom_clipping_tiny_font_and_caption_overlap_traps (tests.test_scene_text_safe_zones.TestSceneTextSafeZones.test_n47_n48_n49_dom_clipping_tiny_font_and_caption_overlap_traps) ... ok
+test_n50_live_chromium_dom_clamping_across_mobile_safe_zones (tests.test_scene_text_safe_zones.TestSceneTextSafeZones.test_n50_live_chromium_dom_clamping_across_mobile_safe_zones) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 3.723s
+
+OK
+

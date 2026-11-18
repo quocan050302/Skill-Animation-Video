@@ -1,0 +1,23 @@
+TASK: sd_retention04_causality
+CMD: C:\Users\QuocAn\AppData\Local\Programs\Python\Python312\python.exe -m unittest tests.test_sd_retention04_causality -v
+STATUS: PASS (exit=0, elapsed=16.75s)
+
+--- STDOUT ---
+
+--- STDERR ---
+test_domain_generalization_four_unrelated_topics (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_domain_generalization_four_unrelated_topics)
+Prove build_causal_event_graph generalizes cleanly across non-London domains. ... ok
+test_n01_n02_n05_frozen_pixels_and_missing_matte_fail (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n01_n02_n05_frozen_pixels_and_missing_matte_fail) ... ok
+test_n03_world_state_conservation_and_n12_cycle (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n03_world_state_conservation_and_n12_cycle) ... ok
+test_n04_n06_fake_camera_motion_fails_telemetry (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n04_n06_fake_camera_motion_fails_telemetry) ... ok
+test_n07_unsupported_claim_never_faked (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n07_unsupported_claim_never_faked) ... ok
+test_n08_n09_pointer_semantic_rejection_and_tip_error (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n08_n09_pointer_semantic_rejection_and_tip_error) ... ok
+test_n10_transition_black_frame_fails (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n10_transition_black_frame_fails) ... ok
+test_n11_n13_n14_n15_n16_n17_causality_period_claims (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n11_n13_n14_n15_n16_n17_causality_period_claims) ... ok
+test_n18_n19_n20_proxies_and_honesty_invariants (tests.test_sd_retention04_causality.TestSdRetention04CausalityAndTraps.test_n18_n19_n20_proxies_and_honesty_invariants) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 14.464s
+
+OK
+

@@ -157,6 +157,20 @@ def audit_overlay_render(
                 issues.append(
                     f"Overlay {ov.get('overlay_id')} claims visible=True at {t_mid:.2f}s but dom_rendered={tr_match.get('dom_rendered')}, alpha={tr_match.get('alpha')}"
                 )
+            vis_proof = tr_match.get("overlay_visibility_proof")
+            if isinstance(vis_proof, dict):
+                if vis_proof.get("clipped_by_viewport") or tr_match.get("clipped_by_viewport"):
+                    issues.append(
+                        f"P0-B: Overlay {ov.get('overlay_id')} clipped by viewport at {t_mid:.2f}s (glyph_bbox={vis_proof.get('rendered_glyph_bbox')})"
+                    )
+                if vis_proof.get("char_overflow") or tr_match.get("char_overflow"):
+                    issues.append(
+                        f"P0-B: Overlay {ov.get('overlay_id')} character overflow at {t_mid:.2f}s"
+                    )
+                if vis_proof.get("fits_mobile_360") is False:
+                    issues.append(
+                        f"P0-B: Overlay {ov.get('overlay_id')} unreadable at 360px mobile width (font={vis_proof.get('mobile_360_font_px')}px)"
+                    )
             anc_px = tr_match.get("anchor_px")
             if anc_px and ov.get("type") in ("focus_ring", "tracked_arrow"):
                 cx = 0.5 * (x0 + x1)
@@ -387,6 +401,10 @@ def compare_ab_versions(
     out_dir: Path,
     sample_times: Optional[List[float]] = None,
     require_voice_parity: bool = False,
+    reused_baseline_a: bool = False,
+    baseline_source_run: Optional[str] = None,
+    neural_voice_available: Optional[bool] = None,
+    active_tts_backend: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run honest decoded A/B comparison (Version A baseline vs Version B enhanced)."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -427,10 +445,27 @@ def compare_ab_versions(
     cue_a = json.loads((run_a / "audio" / "sfx_cue_sheet.json").read_text(encoding="utf-8")) if (run_a / "audio" / "sfx_cue_sheet.json").exists() else {}
     cue_b = json.loads((run_b / "audio" / "sfx_cue_sheet.json").read_text(encoding="utf-8")) if (run_b / "audio" / "sfx_cue_sheet.json").exists() else {}
 
+    inferred_neural_avail = neural_voice_available
+    if inferred_neural_avail is None:
+        inferred_neural_avail = any(
+            str((rep or {}).get("active_tts_backend") or (rep or {}).get("backend_selected") or "") not in ("", "windows_sapi", "pyttsx3_sapi")
+            for rep in (rep_a, rep_b)
+        )
+    active_backend = active_tts_backend or str(
+        rep_b.get("active_tts_backend") or rep_b.get("backend_selected") or rep_a.get("active_tts_backend") or "unknown"
+    )
+
     report = {
         "schema_version": "sd-ab-compare-1",
         "version_a_dir": str(run_a.resolve()),
         "version_b_dir": str(run_b.resolve()),
+        "baseline_origin": "REUSED_BASELINE" if reused_baseline_a else "FRESH_RENDER",
+        "reused_baseline_a": bool(reused_baseline_a),
+        "baseline_source_run": baseline_source_run or (str(run_a.resolve()) if reused_baseline_a else None),
+        "voice_backend_status": {
+            "neural_voice_available": bool(inferred_neural_avail),
+            "active_tts_backend": active_backend,
+        },
         "subjective_preference_status": "NOT_VERIFIED",
         "viewer_retention_status": "NOT_VERIFIED",
         "voice_pcm_sha256_a": vo_a,
@@ -452,6 +487,8 @@ def compare_ab_versions(
     md = [
         "# A/B Objective Comparison Report (`Version A Baseline` vs `Version B Enhanced`)",
         "",
+        f"- **Baseline A Origin**: `{report['baseline_origin']}`" + (f" (`{report['baseline_source_run']}`)" if report["baseline_source_run"] else ""),
+        f"- **Voice Backend**: `active_tts_backend={active_backend}`, `neural_voice_available={bool(inferred_neural_avail)}`",
         "- **Subjective Preference / Human Retention Status**: `NOT_VERIFIED` (objective proxies only)",
         f"- **Version A Voice Dynamic Span**: `wps_span={ma.get('wps_dynamic_span_pct')}%`, `f0_span={ma.get('f0_median_span_hz')}Hz`, `rms_span={ma.get('rms_dynamic_span_db')}dB`",
         f"- **Version B Voice Dynamic Span**: `wps_span={mb.get('wps_dynamic_span_pct')}%`, `f0_span={mb.get('f0_median_span_hz')}Hz`, `rms_span={mb.get('rms_dynamic_span_db')}dB`",

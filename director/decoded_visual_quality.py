@@ -820,16 +820,32 @@ def audit_phone_composition(
             if fs_scaled < 9.5:
                 view_issues.append(f"Overlay {ov.get('overlay_id')} font size {fs_scaled:.1f}px unreadable at {vw}px width")
 
-        # Check decoded caption DOM layout from traces
+        # Check decoded caption & overlay DOM glyph proofs from traces
         for rec in (raw_traces or []):
-            cap = ((rec.get("telemetry") or {}).get("overlay") or {}).get("caption") or {}
+            ov_root = (rec.get("telemetry") or {}).get("overlay") or {}
+            cap = ov_root.get("caption") or {}
             lay = cap.get("caption_layout")
             if isinstance(lay, dict):
                 if int(lay.get("word_overlap_count", 0)) > 0:
                     view_issues.append(f"Caption word overlap at {vw}px (t={rec.get('time')}s)")
+                if lay.get("clipped_by_viewport"):
+                    view_issues.append(f"Caption clipped horizontally/vertically at {vw}px (t={rec.get('time')}s)")
                 mgap = lay.get("min_word_gap_px")
                 if mgap is not None and float(mgap) * scale < 0.45:
                     view_issues.append(f"Caption word gap cramped at {vw}px ({float(mgap)*scale:.2f}px)")
+            for ov_t in (ov_root.get("overlays") or []):
+                if not ov_t.get("visible"):
+                    continue
+                vp = ov_t.get("overlay_visibility_proof")
+                if isinstance(vp, dict):
+                    if vp.get("clipped_by_viewport") or vp.get("char_overflow"):
+                        view_issues.append(
+                            f"DOM glyph overflow/clip for {ov_t.get('overlay_id')} at {vw}px (t={rec.get('time')}s)"
+                        )
+                    if vw == 360 and vp.get("fits_mobile_360") is False:
+                        view_issues.append(
+                            f"DOM mobile-360 readability fail for {ov_t.get('overlay_id')} ({vp.get('mobile_360_font_px')}px)"
+                        )
 
         # Check visibility_by_shot feature scale & overlay occlusion at 360px
         min_feat_seen: Optional[float] = None
